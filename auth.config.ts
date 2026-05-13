@@ -21,6 +21,7 @@ export const authConfig = {
         pathname.startsWith("/login") ||
         pathname.startsWith("/api/auth") ||
         pathname.startsWith("/api/intake") ||
+        pathname.startsWith("/intake") ||
         pathname === "/";
       if (isPublic) return true;
       return isLoggedIn;

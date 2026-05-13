@@ -23,6 +23,7 @@
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",
     "@base-ui/react": "^1.4.1",
+    "@marsidev/react-turnstile": "^1.5.2",
     "@prisma/adapter-mssql": "^7.6.0",
     "@prisma/client": "^7.6.0",
     "bcryptjs": "^3.0.3",

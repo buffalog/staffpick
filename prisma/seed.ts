@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { Secret, TOTP } from "otpauth";
 import { prismaBase } from "../lib/prisma";
+import { ICD10_CODES } from "./seed-data/icd10";
 
 const PASSWORD = "LocalDev_Pa55word!";
 
@@ -227,6 +228,37 @@ async function main() {
             },
           ],
         },
+      },
+    });
+  }
+
+  // ─── Reference data: ICD-10 codes ───────────────────────────────────────────
+  const icd10List = await prismaBase.list.upsert({
+    where: { tenant_id_key: { tenant_id: fcts.id, key: "icd10_codes" } },
+    update: { label: "ICD-10 Diagnosis Codes" },
+    create: {
+      tenant_id: fcts.id,
+      key: "icd10_codes",
+      label: "ICD-10 Diagnosis Codes",
+    },
+  });
+  for (let i = 0; i < ICD10_CODES.length; i++) {
+    const code = ICD10_CODES[i];
+    await prismaBase.listItem.upsert({
+      where: { list_id_value: { list_id: icd10List.id, value: code.value } },
+      update: {
+        label: code.label,
+        display_order: i,
+        metadata: JSON.stringify({ category: code.category }),
+      },
+      create: {
+        tenant_id: fcts.id,
+        list_id: icd10List.id,
+        value: code.value,
+        label: code.label,
+        display_order: i,
+        active: true,
+        metadata: JSON.stringify({ category: code.category }),
       },
     });
   }

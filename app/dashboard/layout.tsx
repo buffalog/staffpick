@@ -12,7 +12,7 @@ type NavItem = {
 // 7-role-aware nav. `roles` undefined means visible to everyone.
 const NAV: ReadonlyArray<NavItem> = [
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/dashboard/intake", label: "Intake Inbox", roles: ["TenantStaff", "TenantAdmin"] },
+  { href: "/dashboard/inbox", label: "Intake Inbox", roles: ["TenantStaff", "TenantAdmin"] },
   { href: "/dashboard/cases", label: "Cases", roles: ["TenantStaff", "TenantAdmin", "Provider"] },
   { href: "/dashboard/providers", label: "Providers", roles: ["TenantStaff", "TenantAdmin"] },
   { href: "/dashboard/invoices", label: "Invoices", roles: ["TenantStaff", "TenantAdmin", "Source"] },

@@ -11,8 +11,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ci:
-    name: typecheck · lint · test
+  unit:
+    name: typecheck · lint · vitest
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -45,3 +45,71 @@ jobs:
 
       - name: Test (unit)
         run: pnpm test
+
+  e2e:
+    name: playwright (intake + auth)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: unit
+    services:
+      db:
+        image: mcr.microsoft.com/azure-sql-edge:latest
+        ports:
+          - 1433:1433
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: "LocalDev_Pa55word!StaffPick"
+
+    env:
+      DATABASE_URL: "sqlserver://localhost:1433;database=staffpick;user=sa;password=LocalDev_Pa55word!StaffPick;encrypt=true;trustServerCertificate=true"
+      NEXTAUTH_SECRET: "ci-secret-do-not-use-in-prod"
+      AUTH_SECRET: "ci-secret-do-not-use-in-prod"
+      NEXTAUTH_URL: "http://localhost:3000"
+      AUTH_URL: "http://localhost:3000"
+      NEXT_PUBLIC_TURNSTILE_SITE_KEY: "1x00000000000000000000AA"
+      TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA"
+      RESEND_FROM: "StaffPick <noreply@staffpick.local>"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install sqlcmd
+        run: |
+          curl -sSL -O https://github.com/microsoft/go-sqlcmd/releases/download/v1.8.0/sqlcmd-v1.8.0-linux-amd64.tar.bz2
+          tar -xjf sqlcmd-v1.8.0-linux-amd64.tar.bz2 sqlcmd
+          sudo mv sqlcmd /usr/local/bin/
+
+      - name: Wait for SQL Edge & create database
+        run: |
+          for i in {1..30}; do
+            sqlcmd -S localhost,1433 -U sa -P "LocalDev_Pa55word!StaffPick" --trust-server-certificate -Q "SELECT 1" && break
+            echo "waiting for sql edge…"; sleep 2
+          done
+          sqlcmd -S localhost,1433 -U sa -P "LocalDev_Pa55word!StaffPick" --trust-server-certificate -Q "CREATE DATABASE staffpick"
+
+      - name: Apply migrations
+        run: pnpm prisma migrate deploy
+
+      - name: Seed
+        run: pnpm tsx prisma/seed.ts
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build Next.js
+        run: pnpm build
+
+      - name: Run Playwright E2E
+        run: pnpm exec playwright test
