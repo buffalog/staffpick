@@ -1,0 +1,784 @@
+// StaffPick — Prisma schema (Phase 0)
+//
+// Conventions (every domain table):
+//   - id: cuid PK
+//   - tenant_id: required, indexed; FK to Tenant
+//   - created_at / updated_at / created_by / updated_by audit columns
+//   - custom_properties Json on entities flagged [+JSON] in <context_carry_forward>
+//
+// Provider note: sqlserver driver adapter (@prisma/adapter-mssql) is wired
+// at PrismaClient construction time; no Prisma config needed for that.
+// Json columns map to nvarchar(max) under SQL Server.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../prisma/generated"
+}
+
+datasource db {
+  provider = "sqlserver"
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Enum-typed columns
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// SQL Server connector does NOT support Prisma `enum` blocks (P1012). All
+// enum-typed columns below are `String` at the DB layer; TS-level enum types
+// and runtime validation live in `lib/enums.ts` (Phase 1). Allowed values:
+//
+//   CasePhase:           Phase1_IntakeReceived | Phase2_IntakeReview |
+//                        Phase3_MatchingKickoff | Phase4_MatchReview |
+//                        Phase5_MatchNotification | Phase6_Collaboration |
+//                        Phase7_InitialAssessment | Phase8_PlanDocumentation |
+//                        Phase9_ServiceDelivery | Phase10_SubsequentAssessment |
+//                        Phase11_PlanCompletion | Phase12_InvoicePayment |
+//                        Phase13_ProviderPayment | Phase14_Closed
+//   CaseStatus:          Active | OnHold | Cancelled | Closed
+//   AssessmentType:      Initial | Subsequent | Final
+//   MeasureType:         MultipleChoice | FreeText | NumericRange
+//   InvoiceStatus:       Draft | Sent | Paid | Disputed | Voided
+//   NotificationChannel: Email | SMS | InApp | Push
+//   NotificationStatus:  Queued | Sent | Delivered | Failed | Bounced
+//   SignatureType:       TypedName | ImageBlob | SignedLink
+//   UserRoleType:        PlatformAdmin | TenantAdmin | TenantStaff | Provider | Source
+//   AuditAction:         Create | Read | Update | Delete | Login | Logout | Export
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tenant + config
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Tenant {
+  id           String   @id @default(cuid())
+  name         String
+  slug         String   @unique
+  active       Boolean  @default(true)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+  created_by   String?
+  updated_by   String?
+
+  labels                  TenantLabel[]
+  settings                TenantSetting[]
+  service_rates           TenantServiceRate[]
+  users                   User[]
+  staff                   TenantStaff[]
+  subjects                Subject[]
+  providers               Provider[]
+  agencies                Source[]
+  caregivers              CareGiver[]
+  intake_requests         IntakeRequest[]
+  resolution_plans        ResolutionPlan[]
+  assessments             Assessment[]
+  services                Service[]
+  invoices                Invoice[]
+  notification_logs       NotificationLog[]
+  user_activity_logs      UserActivityLog[]
+  assessment_measures     AssessmentMeasure[]
+  lists                   List[]
+}
+
+model TenantLabel {
+  id            String   @id @default(cuid())
+  tenant_id     String
+  entity        String   // canonical entity name (Subject, Provider, …)
+  label         String   // override label ("Patient", "Clinician", …)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  created_by    String?
+  updated_by    String?
+
+  tenant        Tenant   @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([tenant_id, entity])
+  @@index([tenant_id])
+}
+
+model TenantSetting {
+  id            String   @id @default(cuid())
+  tenant_id     String
+  key           String
+  value         String   // JSON-encoded
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  created_by    String?
+  updated_by    String?
+
+  tenant        Tenant   @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([tenant_id, key])
+  @@index([tenant_id])
+}
+
+model TenantServiceRate {
+  id            String   @id @default(cuid())
+  tenant_id     String
+  service_code  String   // e.g. "PT-EVAL", "PT-VISIT"
+  description   String?
+  rate_cents    Int
+  currency      String   @default("USD")
+  effective_at  DateTime @default(now())
+  expires_at    DateTime?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  created_by    String?
+  updated_by    String?
+
+  tenant        Tenant   @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([tenant_id, service_code, effective_at])
+  @@index([tenant_id])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Auth + audit
+// ─────────────────────────────────────────────────────────────────────────────
+
+model User {
+  id              String    @id @default(cuid())
+  tenant_id       String?   // nullable for platform-level admins
+  email           String    @unique
+  email_verified  DateTime?
+  name            String?
+  password_hash   String?
+  totp_secret     String?
+  totp_enabled    Boolean   @default(false)
+  active          Boolean   @default(true)
+  last_login_at   DateTime?
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+  created_by      String?
+  updated_by      String?
+
+  tenant          Tenant?   @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  roles           UserRole[]
+  staff_record    TenantStaff?
+  provider_record Provider?
+
+  @@index([tenant_id])
+  @@index([email])
+}
+
+model UserRole {
+  id          String       @id @default(cuid())
+  user_id     String
+  role        String       // UserRoleType
+  created_at  DateTime     @default(now())
+  created_by  String?
+
+  user        User         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([user_id, role])
+}
+
+model UserActivityLog {
+  id            String       @id @default(cuid())
+  tenant_id     String?      // nullable for platform-level events
+  user_id       String?
+  action        String       // AuditAction
+  entity_type   String?
+  entity_id     String?
+  ip            String?
+  user_agent    String?
+  metadata      String?      // JSON-encoded extra context
+  occurred_at   DateTime     @default(now())
+
+  tenant        Tenant?      @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([tenant_id, occurred_at])
+  @@index([user_id, occurred_at])
+  @@index([entity_type, entity_id])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Platform actors
+// ─────────────────────────────────────────────────────────────────────────────
+
+model TenantStaff {
+  id              String    @id @default(cuid())
+  tenant_id       String
+  user_id         String    @unique
+  staff_type      String?   // free-form per tenant
+  role_title      String?   // e.g. "Scheduler", "Lead"
+  phone           String?
+  active          Boolean   @default(true)
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+  created_by      String?
+  updated_by      String?
+
+  tenant          Tenant    @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user            User      @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  assignments     IntakeRequestTenantStaff[]
+
+  @@index([tenant_id])
+}
+
+model Subject {
+  id                  String    @id @default(cuid())
+  tenant_id           String
+  external_id         String?   // tenant-defined identifier (e.g. MRN)
+  given_name          String
+  family_name         String
+  date_of_birth       DateTime?
+  preferred_language  String?
+  email               String?
+  phone               String?
+  // Home address (denormalized; single primary address for MVP)
+  address_line1       String?
+  address_line2       String?
+  city                String?
+  state               String?
+  postal_code         String?
+  country             String?   @default("US")
+  // Emergency contact (single for MVP)
+  emergency_name      String?
+  emergency_phone     String?
+  emergency_relation  String?
+  custom_properties   String?   // JSON
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+  created_by          String?
+  updated_by          String?
+
+  tenant              Tenant    @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  notes               SubjectNotes[]
+  intake_requests     IntakeRequest[]
+
+  @@index([tenant_id])
+  @@index([tenant_id, family_name, given_name])
+}
+
+model SubjectNotes {
+  id          String   @id @default(cuid())
+  tenant_id   String
+  subject_id  String
+  body        String
+  author_id   String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  created_by  String?
+  updated_by  String?
+
+  subject     Subject  @relation(fields: [subject_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([tenant_id])
+  @@index([subject_id])
+}
+
+model Provider {
+  id                  String    @id @default(cuid())
+  tenant_id           String
+  user_id             String?   @unique // optional — providers may exist without portal accounts
+  given_name          String
+  family_name         String
+  email               String?
+  phone               String?
+  specialty           String?
+  provider_type       String?   // "PT", "OT", "SLP", or generic
+  npi                 String?
+  tax_id              String?
+  classification      String?   // "W2" | "1099" — flagged in mvp-gaps
+  active              Boolean   @default(true)
+  custom_properties   String?   // JSON
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+  created_by          String?
+  updated_by          String?
+
+  tenant              Tenant    @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user                User?     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  addresses           ProviderAddress[]
+  availability        ProviderAvailability[]
+  assignments         IntakeRequestProvider[]
+  assessments         Assessment[]
+  services            Service[]
+
+  @@index([tenant_id])
+  @@index([tenant_id, family_name, given_name])
+}
+
+model ProviderAddress {
+  id            String   @id @default(cuid())
+  tenant_id     String
+  provider_id   String
+  label         String?  // "Home", "Office", etc.
+  address_line1 String
+  address_line2 String?
+  city          String
+  state         String
+  postal_code   String
+  country       String   @default("US")
+  is_primary    Boolean  @default(false)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  created_by    String?
+  updated_by    String?
+
+  provider      Provider @relation(fields: [provider_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([tenant_id])
+  @@index([provider_id])
+}
+
+model ProviderAvailability {
+  id            String   @id @default(cuid())
+  tenant_id     String
+  provider_id   String
+  // Weekly recurring schedule: 0=Sun..6=Sat
+  day_of_week   Int
+  start_minute  Int      // minute-of-day, 0-1439
+  end_minute    Int
+  effective_at  DateTime @default(now())
+  expires_at    DateTime?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  created_by    String?
+  updated_by    String?
+
+  provider      Provider @relation(fields: [provider_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([tenant_id])
+  @@index([provider_id, day_of_week])
+}
+
+model Source {
+  id                String    @id @default(cuid())
+  tenant_id         String
+  name              String
+  external_id       String?
+  email             String?
+  phone             String?
+  // Primary address
+  address_line1     String?
+  address_line2     String?
+  city              String?
+  state             String?
+  postal_code       String?
+  country           String?   @default("US")
+  active            Boolean   @default(true)
+  created_at        DateTime  @default(now())
+  updated_at        DateTime  @updatedAt
+  created_by        String?
+  updated_by        String?
+
+  tenant            Tenant    @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  contacts          AgencyContact[]
+  intake_requests   IntakeRequest[]
+  invoices          Invoice[]
+
+  @@index([tenant_id])
+  @@index([tenant_id, name])
+}
+
+model AgencyContact {
+  id          String   @id @default(cuid())
+  tenant_id   String
+  source_id   String
+  given_name  String?
+  family_name String?
+  email       String?
+  phone       String?
+  role_title  String?
+  is_primary  Boolean  @default(false)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  created_by  String?
+  updated_by  String?
+
+  source      Source   @relation(fields: [source_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([tenant_id])
+  @@index([source_id])
+}
+
+model CareGiver {
+  id                  String    @id @default(cuid())
+  tenant_id           String
+  given_name          String
+  family_name         String
+  email               String?
+  phone               String?
+  preferred_language  String?
+  relation_to_subject String?
+  address_line1       String?
+  address_line2       String?
+  city                String?
+  state               String?
+  postal_code         String?
+  country             String?   @default("US")
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+  created_by          String?
+  updated_by          String?
+
+  tenant              Tenant    @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  request_links       IntakeRequestCareGiver[]
+
+  @@index([tenant_id])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Case lifecycle: Request → Plan → Assessment → Service → Invoice
+// ─────────────────────────────────────────────────────────────────────────────
+
+model IntakeRequest {
+  id                  String      @id @default(cuid())
+  tenant_id           String
+  source_id           String?
+  subject_id          String?
+  // Lifecycle
+  phase               String      @default("Phase1_IntakeReceived")
+  status              String      @default("Active")
+  // Submission
+  ingestion_channel   String      @default("webform") // webform | email | api | file
+  raw_payload         String?     // JSON of the original submission
+  requested_service   String?
+  schedule_preference String?
+  notes               String?
+  custom_properties   String?     // JSON
+  closed_at           DateTime?
+  created_at          DateTime    @default(now())
+  updated_at          DateTime    @updatedAt
+  created_by          String?
+  updated_by          String?
+
+  tenant              Tenant      @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  source              Source?     @relation(fields: [source_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subject             Subject?    @relation(fields: [subject_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  staff_assignments   IntakeRequestTenantStaff[]
+  provider_assignments IntakeRequestProvider[]
+  diagnoses           IntakeRequestDiagnosis[]
+  caregivers          IntakeRequestCareGiver[]
+  resolution_plans    ResolutionPlan[]
+  assessments         Assessment[]
+  measure_responses   IntakeRequestAssessmentMeasureResponse[]
+  services            Service[]
+  invoices            Invoice[]
+
+  @@index([tenant_id, phase])
+  @@index([tenant_id, status])
+  @@index([tenant_id, created_at])
+}
+
+model IntakeRequestTenantStaff {
+  id              String       @id @default(cuid())
+  tenant_id       String
+  request_id      String
+  tenant_staff_id String
+  role            String?      // "owner", "watcher", etc.
+  created_at      DateTime     @default(now())
+  created_by      String?
+
+  request         IntakeRequest @relation(fields: [request_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tenant_staff    TenantStaff   @relation(fields: [tenant_staff_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([request_id, tenant_staff_id])
+  @@index([tenant_id])
+}
+
+model IntakeRequestProvider {
+  id              String       @id @default(cuid())
+  tenant_id       String
+  request_id      String
+  provider_id     String
+  approved        Boolean      @default(false)
+  approved_at     DateTime?
+  approved_by     String?
+  rank_score      Float?
+  rank_factors    String?      // JSON
+  created_at      DateTime     @default(now())
+  updated_at      DateTime     @updatedAt
+  created_by      String?
+  updated_by      String?
+
+  request         IntakeRequest @relation(fields: [request_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  provider        Provider      @relation(fields: [provider_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([request_id, provider_id])
+  @@index([tenant_id])
+}
+
+model IntakeRequestDiagnosis {
+  id              String       @id @default(cuid())
+  tenant_id       String
+  request_id      String
+  code            String       // ICD-10 or tenant-defined
+  description     String?
+  is_primary      Boolean      @default(false)
+  created_at      DateTime     @default(now())
+  created_by      String?
+
+  request         IntakeRequest @relation(fields: [request_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([request_id, code])
+  @@index([tenant_id])
+}
+
+model IntakeRequestCareGiver {
+  id              String       @id @default(cuid())
+  tenant_id       String
+  request_id      String
+  caregiver_id    String
+  relation_type   String?
+  created_at      DateTime     @default(now())
+  created_by      String?
+
+  request         IntakeRequest @relation(fields: [request_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  caregiver       CareGiver     @relation(fields: [caregiver_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([request_id, caregiver_id])
+  @@index([tenant_id])
+}
+
+model ResolutionPlan {
+  id                  String       @id @default(cuid())
+  tenant_id           String
+  request_id          String
+  start_date          DateTime
+  end_date            DateTime?
+  frequency           String?      // free-form for MVP: "3x/week for 6 weeks"
+  services_summary    String?      // free-form services list
+  active              Boolean      @default(true)
+  custom_properties   String?      // JSON
+  created_at          DateTime     @default(now())
+  updated_at          DateTime     @updatedAt
+  created_by          String?
+  updated_by          String?
+
+  tenant              Tenant       @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  request             IntakeRequest @relation(fields: [request_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  services            Service[]
+  invoices            Invoice[]
+
+  @@index([tenant_id])
+  @@index([request_id])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Assessments + measures (dynamic-form schema, static for MVP)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Assessment {
+  id                  String         @id @default(cuid())
+  tenant_id           String
+  request_id          String
+  provider_id         String
+  assessment_type     String         // AssessmentType
+  performed_at        DateTime       @default(now())
+  notes               String?
+  custom_properties   String?        // JSON
+  created_at          DateTime       @default(now())
+  updated_at          DateTime       @updatedAt
+  created_by          String?
+  updated_by          String?
+
+  tenant              Tenant         @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  request             IntakeRequest  @relation(fields: [request_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  provider            Provider       @relation(fields: [provider_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([tenant_id])
+  @@index([request_id])
+}
+
+model AssessmentMeasure {
+  id              String       @id @default(cuid())
+  tenant_id       String
+  code            String
+  label           String
+  measure_type    String       // MeasureType
+  unit            String?      // for NumericRange
+  min_value       Float?
+  max_value       Float?
+  active          Boolean      @default(true)
+  display_order   Int?
+  created_at      DateTime     @default(now())
+  updated_at      DateTime     @updatedAt
+  created_by      String?
+  updated_by      String?
+
+  tenant          Tenant       @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  options         AssessmentMeasureOption[]
+  responses       IntakeRequestAssessmentMeasureResponse[]
+
+  @@unique([tenant_id, code])
+  @@index([tenant_id])
+}
+
+model AssessmentMeasureOption {
+  id              String       @id @default(cuid())
+  tenant_id       String
+  measure_id      String
+  value           String
+  label           String
+  display_order   Int?
+  created_at      DateTime     @default(now())
+  updated_at      DateTime     @updatedAt
+  created_by      String?
+  updated_by      String?
+
+  measure         AssessmentMeasure @relation(fields: [measure_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([measure_id, value])
+  @@index([tenant_id])
+}
+
+model IntakeRequestAssessmentMeasureResponse {
+  id              String       @id @default(cuid())
+  tenant_id       String
+  request_id      String
+  measure_id      String
+  response_text   String?
+  response_number Float?
+  response_option String?  // option value when MultipleChoice
+  responded_at    DateTime     @default(now())
+  created_at      DateTime     @default(now())
+  updated_at      DateTime     @updatedAt
+  created_by      String?
+  updated_by      String?
+
+  request         IntakeRequest     @relation(fields: [request_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  measure         AssessmentMeasure @relation(fields: [measure_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([tenant_id])
+  @@index([request_id])
+  @@index([measure_id])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Service delivery + financials
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Service {
+  id                      String        @id @default(cuid())
+  tenant_id               String
+  request_id              String
+  plan_id                 String?
+  provider_id             String
+  service_code            String?       // links to TenantServiceRate.service_code
+  visit_date              DateTime
+  duration_minutes        Int?
+  notes                   String?
+  // Sign-off
+  subject_signature_type  String?       // SignatureType
+  subject_signature_value String?       // typed name (MVP) or Blob URL
+  proxy_signature_type    String?       // SignatureType
+  proxy_signature_value   String?
+  signed_at               DateTime?
+  billable                Boolean       @default(true)
+  billed_invoice_id       String?
+  created_at              DateTime      @default(now())
+  updated_at              DateTime      @updatedAt
+  created_by              String?
+  updated_by              String?
+
+  tenant                  Tenant        @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  request                 IntakeRequest @relation(fields: [request_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  plan                    ResolutionPlan? @relation(fields: [plan_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  provider                Provider      @relation(fields: [provider_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([tenant_id])
+  @@index([request_id])
+  @@index([provider_id])
+  @@index([visit_date])
+}
+
+model Invoice {
+  id              String        @id @default(cuid())
+  tenant_id       String
+  request_id      String
+  plan_id         String?
+  source_id       String
+  invoice_number  String
+  status          String        @default("Draft") // InvoiceStatus
+  subtotal_cents  Int
+  total_cents     Int
+  currency        String        @default("USD")
+  issued_at       DateTime?
+  due_at          DateTime?
+  paid_at         DateTime?
+  external_link   String?       // magic-link slug for Source-facing review
+  notes           String?
+  created_at      DateTime      @default(now())
+  updated_at      DateTime      @updatedAt
+  created_by      String?
+  updated_by      String?
+
+  tenant          Tenant        @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  request         IntakeRequest @relation(fields: [request_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  plan            ResolutionPlan? @relation(fields: [plan_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  source          Source        @relation(fields: [source_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([tenant_id, invoice_number])
+  @@index([tenant_id, status])
+  @@index([request_id])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Notifications + reference data
+// ─────────────────────────────────────────────────────────────────────────────
+
+model NotificationLog {
+  id            String              @id @default(cuid())
+  tenant_id     String
+  channel       String              // NotificationChannel
+  status        String              @default("Queued") // NotificationStatus
+  recipient     String              // email, phone, or user_id depending on channel
+  subject_line  String?
+  body          String?
+  entity_type   String?             // e.g. "IntakeRequest", "Invoice"
+  entity_id     String?
+  metadata      String?             // JSON
+  scheduled_at  DateTime?
+  sent_at       DateTime?
+  delivered_at  DateTime?
+  failed_at     DateTime?
+  error_message String?
+  created_at    DateTime            @default(now())
+  updated_at    DateTime            @updatedAt
+  created_by    String?
+  updated_by    String?
+
+  tenant        Tenant              @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([tenant_id, status])
+  @@index([entity_type, entity_id])
+  @@index([created_at])
+}
+
+model List {
+  id          String     @id @default(cuid())
+  tenant_id   String
+  key         String     // e.g. "diagnosis_codes", "service_types"
+  label       String
+  created_at  DateTime   @default(now())
+  updated_at  DateTime   @updatedAt
+  created_by  String?
+  updated_by  String?
+
+  tenant      Tenant     @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  items       ListItem[]
+
+  @@unique([tenant_id, key])
+  @@index([tenant_id])
+}
+
+model ListItem {
+  id            String   @id @default(cuid())
+  tenant_id     String
+  list_id       String
+  value         String
+  label         String
+  display_order Int?
+  active        Boolean  @default(true)
+  metadata      String?  // JSON
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  created_by    String?
+  updated_by    String?
+
+  list          List     @relation(fields: [list_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([list_id, value])
+  @@index([tenant_id])
+}
