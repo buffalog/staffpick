@@ -2,17 +2,38 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { withSession } from "@/lib/with-session";
 import { prisma } from "@/lib/tenant-context";
-import { submitInitialAssessment } from "./actions";
-import type { CasePhase } from "@/lib/enums";
+import { submitAssessment } from "./actions";
+import { ASSESSMENT_TYPES, type AssessmentType, type CasePhase } from "@/lib/enums";
 
 export const dynamic = "force-dynamic";
 
+type SearchParams = Promise<{ type?: string }>;
+
+function parseType(raw: string | undefined): AssessmentType {
+  if (raw && (ASSESSMENT_TYPES as readonly string[]).includes(raw)) {
+    return raw as AssessmentType;
+  }
+  return "Initial";
+}
+
+function legalForType(phase: CasePhase, type: AssessmentType): boolean {
+  if (type === "Initial") return phase === "Phase7_InitialAssessment";
+  if (type === "Subsequent")
+    return phase === "Phase9_ServiceDelivery" || phase === "Phase10_SubsequentAssessment";
+  if (type === "Final") return phase === "Phase10_SubsequentAssessment";
+  return false;
+}
+
 export default async function AssessPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: SearchParams;
 }) {
   const { id } = await params;
+  const { type: typeParam } = await searchParams;
+  const type = parseType(typeParam);
 
   const data = await withSession(async () => {
     const request = await prisma.intakeRequest.findFirst({
@@ -35,12 +56,18 @@ export default async function AssessPage({
 
   if (!data.request) notFound();
   const phase = data.request.phase as CasePhase;
-  if (phase !== "Phase7_InitialAssessment") {
-    // Don't render the form if the case is in the wrong phase.
+  if (!legalForType(phase, type)) {
     redirect(`/dashboard/cases/${id}`);
   }
 
   const assignedProvider = data.request.provider_assignments[0]?.provider ?? null;
+
+  const heading =
+    type === "Initial"
+      ? "Initial Assessment"
+      : type === "Subsequent"
+      ? "Subsequent Assessment"
+      : "Final Assessment";
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -51,7 +78,7 @@ export default async function AssessPage({
           </Link>
         </p>
         <h1 className="text-2xl font-semibold tracking-tight">
-          Initial Assessment —{" "}
+          {heading} —{" "}
           {data.request.subject
             ? `${data.request.subject.given_name} ${data.request.subject.family_name}`
             : "(no subject)"}
@@ -62,6 +89,12 @@ export default async function AssessPage({
             {assignedProvider.specialty ?? assignedProvider.provider_type}
           </p>
         )}
+        {type === "Final" && (
+          <p className="text-sm text-amber-700 dark:text-amber-300">
+            Submitting the Final Assessment completes the plan and triggers
+            automated invoice generation.
+          </p>
+        )}
       </header>
 
       {!assignedProvider ? (
@@ -70,7 +103,7 @@ export default async function AssessPage({
         </div>
       ) : (
         <form
-          action={submitInitialAssessment.bind(null, id)}
+          action={submitAssessment.bind(null, id, type)}
           className="space-y-6"
         >
           <input type="hidden" name="provider_id" value={assignedProvider.id} />
@@ -103,7 +136,11 @@ export default async function AssessPage({
             type="submit"
             className="rounded-md bg-primary text-primary-foreground px-6 py-2 text-sm font-medium hover:opacity-90"
           >
-            Submit assessment & advance to Phase 8
+            {type === "Final"
+              ? "Submit final assessment & generate invoice"
+              : type === "Subsequent"
+              ? "Submit subsequent assessment"
+              : "Submit assessment & advance to Phase 8"}
           </button>
         </form>
       )}

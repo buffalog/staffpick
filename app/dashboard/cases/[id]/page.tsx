@@ -12,6 +12,7 @@ import {
 import type { CasePhase, CaseStatus } from "@/lib/enums";
 import { transitionPhase, transitionStatus } from "./actions";
 import { startInitialAssessment } from "./assess/actions";
+import { sendInvoice } from "@/app/dashboard/invoices/actions";
 import { MessageThread } from "./messages/message-thread";
 
 export const dynamic = "force-dynamic";
@@ -32,8 +33,13 @@ export default async function CaseDetailPage({
         diagnoses: { orderBy: { is_primary: "desc" } },
         caregivers: { include: { caregiver: true } },
         provider_assignments: { include: { provider: true } },
-        resolution_plans: true,
+        resolution_plans: { orderBy: { start_date: "desc" } },
         assessments: { orderBy: { performed_at: "desc" } },
+        services: {
+          orderBy: { visit_date: "desc" },
+          include: { provider: true },
+        },
+        invoices: { orderBy: { created_at: "desc" } },
       },
     });
     // UserActivityLog is not tenant-scoped (nullable tenant_id); filter manually.
@@ -111,6 +117,46 @@ export default async function CaseDetailPage({
               >
                 Record initial assessment
               </a>
+            )}
+            {currentPhase === "Phase8_PlanDocumentation" && (
+              <a
+                href={`/dashboard/cases/${request.id}/plan/new`}
+                className="rounded-md bg-primary text-primary-foreground px-3 py-1.5 text-xs font-medium hover:opacity-90"
+              >
+                Document resolution plan
+              </a>
+            )}
+            {currentPhase === "Phase9_ServiceDelivery" && (
+              <>
+                <a
+                  href={`/dashboard/cases/${request.id}/visits/new`}
+                  className="rounded-md bg-primary text-primary-foreground px-3 py-1.5 text-xs font-medium hover:opacity-90"
+                >
+                  Record visit
+                </a>
+                <a
+                  href={`/dashboard/cases/${request.id}/assess?type=Subsequent`}
+                  className="rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-accent"
+                >
+                  Subsequent assessment
+                </a>
+              </>
+            )}
+            {currentPhase === "Phase10_SubsequentAssessment" && (
+              <>
+                <a
+                  href={`/dashboard/cases/${request.id}/assess?type=Final`}
+                  className="rounded-md bg-primary text-primary-foreground px-3 py-1.5 text-xs font-medium hover:opacity-90"
+                >
+                  Final assessment
+                </a>
+                <a
+                  href={`/dashboard/cases/${request.id}/plan/new`}
+                  className="rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-accent"
+                >
+                  Update plan
+                </a>
+              </>
             )}
             {nextPhases
               .filter((p) => p !== currentPhase) // hide self-loop button
@@ -288,6 +334,126 @@ export default async function CaseDetailPage({
           )}
         </Card>
       </div>
+
+      {/* ── Resolution Plans + visits ────────────────────────────────────────*/}
+      {request.resolution_plans.length > 0 && (
+        <Card title="Resolution plan & visits">
+          {request.resolution_plans.map((plan) => {
+            const planVisits = request.services.filter((s) => s.plan_id === plan.id);
+            return (
+              <div key={plan.id} className="space-y-2">
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Plan: </span>
+                  <span className="font-medium">{plan.frequency}</span>
+                  <span className="text-muted-foreground">
+                    {" "}· {plan.start_date.toLocaleDateString()}
+                    {plan.end_date ? ` → ${plan.end_date.toLocaleDateString()}` : " → open"}
+                  </span>
+                  {plan.services_summary && (
+                    <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap">
+                      {plan.services_summary}
+                    </p>
+                  )}
+                </div>
+                {planVisits.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    No visits recorded under this plan yet.
+                  </p>
+                ) : (
+                  <div className="overflow-hidden rounded-md border bg-background">
+                    <table className="w-full text-xs">
+                      <thead className="bg-muted/50 text-left">
+                        <tr>
+                          <th className="px-2 py-1 font-medium">Date</th>
+                          <th className="px-2 py-1 font-medium">Provider</th>
+                          <th className="px-2 py-1 font-medium">Service</th>
+                          <th className="px-2 py-1 font-medium">Min</th>
+                          <th className="px-2 py-1 font-medium">Signed by</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {planVisits.map((v) => (
+                          <tr key={v.id}>
+                            <td className="px-2 py-1 tabular-nums">
+                              {v.visit_date.toLocaleDateString()}
+                            </td>
+                            <td className="px-2 py-1">
+                              {v.provider.given_name} {v.provider.family_name}
+                            </td>
+                            <td className="px-2 py-1 font-mono">{v.service_code ?? "—"}</td>
+                            <td className="px-2 py-1 tabular-nums">{v.duration_minutes ?? "—"}</td>
+                            <td className="px-2 py-1">
+                              {v.subject_signature_value ?? "—"}
+                              {v.proxy_signature_value && ` (proxy: ${v.proxy_signature_value})`}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </Card>
+      )}
+
+      {/* ── Invoices ─────────────────────────────────────────────────────────*/}
+      {request.invoices.length > 0 && (
+        <Card title="Invoices">
+          <ul className="space-y-2 text-sm">
+            {request.invoices.map((inv) => (
+              <li
+                key={inv.id}
+                className="flex items-center justify-between gap-3 rounded-md border bg-background px-3 py-2"
+              >
+                <span>
+                  <span className="font-mono font-medium">{inv.invoice_number}</span>
+                  <span className="text-muted-foreground"> · {inv.status}</span>
+                  <span className="text-muted-foreground">
+                    {" "}· ${(inv.total_cents / 100).toFixed(2)}
+                  </span>
+                  {inv.paid_at && (
+                    <span className="text-muted-foreground">
+                      {" "}· paid {inv.paid_at.toLocaleDateString()}
+                    </span>
+                  )}
+                </span>
+                <span className="flex items-center gap-2 text-xs">
+                  {inv.status === "Draft" && (
+                    <form action={sendInvoice.bind(null, inv.id)}>
+                      <button
+                        type="submit"
+                        className="rounded-md bg-primary text-primary-foreground px-2 py-1 text-xs font-medium hover:opacity-90"
+                      >
+                        Send to source
+                      </button>
+                    </form>
+                  )}
+                  {inv.external_link && (
+                    <a
+                      href={`/invoices/${inv.external_link}`}
+                      target="_blank"
+                      rel="noopener"
+                      className="underline"
+                    >
+                      Source view
+                    </a>
+                  )}
+                  {inv.status === "Paid" && (
+                    <a
+                      href={`/dashboard/invoices/${inv.id}/payroll.csv`}
+                      className="underline"
+                    >
+                      Payroll CSV
+                    </a>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       {/* ── Conversation ─────────────────────────────────────────────────────*/}
       <Card title="Conversation">

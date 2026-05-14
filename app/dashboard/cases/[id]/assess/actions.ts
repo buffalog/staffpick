@@ -8,7 +8,8 @@ import {
   assertPhaseTransition,
   isPhaseTransitionLegal,
 } from "@/lib/case-state-machine";
-import type { CasePhase } from "@/lib/enums";
+import type { AssessmentType, CasePhase } from "@/lib/enums";
+import { generateInvoice } from "@/lib/invoicing/generate-invoice";
 
 /** Advance from Phase 6 → Phase 7 to begin the initial assessment. */
 export async function startInitialAssessment(requestId: string): Promise<void> {
@@ -33,16 +34,17 @@ export async function startInitialAssessment(requestId: string): Promise<void> {
 }
 
 /**
- * Submit the initial assessment: writes Assessment + per-measure responses,
- * then advances Phase 7 → Phase 8 (Plan Documentation).
+ * Submit an Assessment. Behavior per `type`:
  *
- * FormData keys:
- *   provider_id           — assigned provider performing the assessment
- *   measure_<measureId>   — response value (numeric / option value / text)
- *   notes                 — optional Assessment.notes
+ *   Initial      — current phase must be Phase 7. Advances Phase 7 → 8.
+ *   Subsequent   — current phase must be Phase 9 or 10. Phase 9 → 10 on first
+ *                  subsequent; further subsequents stay at 10.
+ *   Final        — current phase must be Phase 10. Advances Phase 10 → 11
+ *                  and triggers invoice generation.
  */
-export async function submitInitialAssessment(
+export async function submitAssessment(
   requestId: string,
+  type: AssessmentType,
   formData: FormData,
 ): Promise<void> {
   await withSession(async (ctx) => {
@@ -53,22 +55,33 @@ export async function submitInitialAssessment(
       where: { id: requestId },
     });
     if (!req) throw new Error(`IntakeRequest ${requestId} not found`);
-    if ((req.phase as CasePhase) !== "Phase7_InitialAssessment") {
-      throw new Error(
-        `Cannot submit assessment from phase ${req.phase} — expected Phase7_InitialAssessment.`,
-      );
+    const phase = req.phase as CasePhase;
+
+    // Phase gating per assessment type
+    if (type === "Initial" && phase !== "Phase7_InitialAssessment") {
+      throw new Error(`Initial assessment requires Phase 7, got ${phase}`);
+    }
+    if (
+      type === "Subsequent" &&
+      phase !== "Phase9_ServiceDelivery" &&
+      phase !== "Phase10_SubsequentAssessment"
+    ) {
+      throw new Error(`Subsequent assessment requires Phase 9 or 10, got ${phase}`);
+    }
+    if (type === "Final" && phase !== "Phase10_SubsequentAssessment") {
+      throw new Error(`Final assessment requires Phase 10, got ${phase}`);
     }
 
     const measures = await prisma.assessmentMeasure.findMany({
       where: { active: true },
     });
 
-    const assessment = await prisma.assessment.create({
+    await prisma.assessment.create({
       data: {
         tenant_id: ctx.tenantId,
         request_id: requestId,
         provider_id: providerId,
-        assessment_type: "Initial",
+        assessment_type: type,
         notes: String(formData.get("notes") ?? "") || null,
         performed_at: new Date(),
       },
@@ -106,16 +119,28 @@ export async function submitInitialAssessment(
       });
     }
 
-    assertPhaseTransition("Phase7_InitialAssessment", "Phase8_PlanDocumentation");
-    await prisma.intakeRequest.update({
-      where: { id: requestId },
-      data: { phase: "Phase8_PlanDocumentation" },
-    });
-
-    // Touch the assessment so the IDE sees it's used (assessment.id is the
-    // entity_id we want surfaced via audit metadata, but for MVP the audit
-    // extension already captures the create).
-    void assessment;
+    // Phase transitions
+    if (type === "Initial") {
+      assertPhaseTransition("Phase7_InitialAssessment", "Phase8_PlanDocumentation");
+      await prisma.intakeRequest.update({
+        where: { id: requestId },
+        data: { phase: "Phase8_PlanDocumentation" },
+      });
+    } else if (type === "Subsequent" && phase === "Phase9_ServiceDelivery") {
+      assertPhaseTransition("Phase9_ServiceDelivery", "Phase10_SubsequentAssessment");
+      await prisma.intakeRequest.update({
+        where: { id: requestId },
+        data: { phase: "Phase10_SubsequentAssessment" },
+      });
+    } else if (type === "Final") {
+      assertPhaseTransition("Phase10_SubsequentAssessment", "Phase11_PlanCompletion");
+      await prisma.intakeRequest.update({
+        where: { id: requestId },
+        data: { phase: "Phase11_PlanCompletion" },
+      });
+      // Phase 11(a) — automated invoice generation
+      await generateInvoice(requestId, ctx.tenantId);
+    }
   });
 
   revalidatePath(`/dashboard/cases/${requestId}`);
