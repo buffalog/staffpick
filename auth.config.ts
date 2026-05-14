@@ -8,6 +8,10 @@ import type { UserRoleType } from "@/lib/enums";
  */
 export const authConfig = {
   session: { strategy: "jwt" },
+  // Trust the proxy-set Host header. Required in production behind a reverse
+  // proxy (Railway, etc.) — without it NextAuth throws UntrustedHost. Safe
+  // here because the app only ever runs behind a trusted PaaS proxy.
+  trustHost: true,
   pages: {
     signIn: "/login",
     verifyRequest: "/login/verify",

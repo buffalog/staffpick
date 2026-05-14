@@ -7,14 +7,14 @@
 # ── deps ─────────────────────────────────────────────────────────────────────
 FROM node:24-slim AS deps
 WORKDIR /app
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
 # ── build ────────────────────────────────────────────────────────────────────
 FROM node:24-slim AS build
 WORKDIR /app
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Prisma client is gitignored — generate it inside the image.
@@ -30,7 +30,7 @@ RUN pnpm build
 FROM node:24-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
 
 # Standalone server + static assets + public dir
 COPY --from=build /app/.next/standalone ./
