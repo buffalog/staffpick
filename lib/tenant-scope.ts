@@ -36,6 +36,7 @@ export const TENANT_SCOPED_MODELS: ReadonlySet<string> = new Set([
   "NotificationLog",
   "List",
   "ListItem",
+  "CaseMessage",
 ]);
 
 const READ_OPS = new Set([

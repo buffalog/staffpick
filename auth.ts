@@ -8,8 +8,9 @@ import { TOTP } from "otpauth";
 import { z } from "zod";
 import { authConfig } from "@/auth.config";
 import { prismaBase } from "@/lib/prisma";
-import { MFA_REQUIRED_ROLES, type UserRoleType } from "@/lib/enums";
+import { MFA_REQUIRED_ROLES, EMAIL_OTP_ROLES, type UserRoleType } from "@/lib/enums";
 import { writeAudit } from "@/lib/audit";
+import { verifyAndConsumeProviderOtp } from "@/lib/provider-otp";
 
 type SessionUserExtras = {
   id: string;
@@ -40,6 +41,7 @@ const credentialsSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
   totpCode: z.string().optional(),
+  emailOtpCode: z.string().optional(),
 });
 
 function verifyTotp(secret: string, token: string): boolean {
@@ -63,12 +65,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
-        totpCode: { label: "TOTP code (if enabled)", type: "text" },
+        totpCode: { label: "TOTP code", type: "text" },
+        emailOtpCode: { label: "Email OTP code", type: "text" },
       },
       async authorize(raw) {
         const parsed = credentialsSchema.safeParse(raw);
         if (!parsed.success) return null;
-        const { email, password, totpCode } = parsed.data;
+        const { email, password, totpCode, emailOtpCode } = parsed.data;
 
         const user = await prismaBase.user.findUnique({
           where: { email },
@@ -80,12 +83,21 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!passwordOk) return null;
 
         const roles = user.roles.map((r) => r.role as UserRoleType);
-        const requiresMfa = roles.some((r) => MFA_REQUIRED_ROLES.has(r));
+        const wantsTotp = roles.some((r) => MFA_REQUIRED_ROLES.has(r));
+        const wantsEmailOtp =
+          !wantsTotp && roles.some((r) => EMAIL_OTP_ROLES.has(r));
 
-        if (requiresMfa) {
+        let mfaMethod: "totp" | "email-otp" | "none" = "none";
+        if (wantsTotp) {
           if (!user.totp_enabled || !user.totp_secret) return null;
           if (!totpCode) return null;
           if (!verifyTotp(user.totp_secret, totpCode)) return null;
+          mfaMethod = "totp";
+        } else if (wantsEmailOtp) {
+          if (!emailOtpCode) return null;
+          const ok = await verifyAndConsumeProviderOtp(email, emailOtpCode);
+          if (!ok) return null;
+          mfaMethod = "email-otp";
         }
 
         await prismaBase.user.update({
@@ -98,7 +110,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           entity_id: user.id,
           user_id: user.id,
           tenant_id: user.tenant_id,
-          metadata: { method: "credentials", mfa: requiresMfa },
+          metadata: { method: "credentials", mfa: mfaMethod },
         });
 
         return {

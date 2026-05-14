@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import { Secret, TOTP } from "otpauth";
 import { prismaBase } from "../lib/prisma";
 import { ICD10_CODES } from "./seed-data/icd10";
+import { ASSESSMENT_MEASURES } from "./seed-data/assessment-measures";
 
 const PASSWORD = "LocalDev_Pa55word!";
 
@@ -182,30 +183,53 @@ async function main() {
     staffOutputs.push({ email: s.email, totp: totpProvisioningUri(totp_secret, s.email) });
   }
 
-  // ─── Providers (5 clinicians) ───────────────────────────────────────────────
+  // ─── Providers (5 clinicians, each with a portal User account) ──────────────
   const providerSeeds = [
-    { given: "Maria", family: "Alvarez", specialty: "PT", phone: "561-555-0101" },
-    { given: "Jordan", family: "Patel", specialty: "OT", phone: "561-555-0102" },
-    { given: "Sam", family: "Nguyen", specialty: "SLP", phone: "561-555-0103" },
-    { given: "Riley", family: "Cohen", specialty: "PT", phone: "561-555-0104" },
-    { given: "Quinn", family: "Adebayo", specialty: "OT", phone: "561-555-0105" },
+    { given: "Maria", family: "Alvarez", specialty: "PT", phone: "561-555-0101", zip: "33401" },
+    { given: "Jordan", family: "Patel", specialty: "OT", phone: "561-555-0102", zip: "33444" },
+    { given: "Sam", family: "Nguyen", specialty: "SLP", phone: "561-555-0103", zip: "33401" },
+    { given: "Riley", family: "Cohen", specialty: "PT", phone: "561-555-0104", zip: "33444" },
+    { given: "Quinn", family: "Adebayo", specialty: "OT", phone: "561-555-0105", zip: "33401" },
   ];
   for (const p of providerSeeds) {
-    // Find-or-create by composite (tenant_id + name) — no unique constraint
-    // exists for this combo, so we check explicitly.
+    const email = `${p.given.toLowerCase()}.${p.family.toLowerCase()}@providers.local`;
+    // Provider portal User account — Provider role uses email-OTP MFA, no TOTP.
+    const providerUser = await prismaBase.user.upsert({
+      where: { email },
+      update: {},
+      create: {
+        email,
+        name: `${p.given} ${p.family}`,
+        password_hash,
+        totp_enabled: false,
+        email_verified: new Date(),
+        tenant_id: fcts.id,
+        roles: { create: [{ role: "Provider" }] },
+      },
+    });
+
     const existing = await prismaBase.provider.findFirst({
       where: { tenant_id: fcts.id, given_name: p.given, family_name: p.family },
     });
-    if (existing) continue;
+    if (existing) {
+      if (!existing.user_id) {
+        await prismaBase.provider.update({
+          where: { id: existing.id },
+          data: { user_id: providerUser.id },
+        });
+      }
+      continue;
+    }
     await prismaBase.provider.create({
       data: {
         tenant_id: fcts.id,
+        user_id: providerUser.id,
         given_name: p.given,
         family_name: p.family,
         specialty: p.specialty,
         provider_type: p.specialty,
         phone: p.phone,
-        email: `${p.given.toLowerCase()}.${p.family.toLowerCase()}@providers.local`,
+        email,
         active: true,
         classification: "1099",
         availability: {
@@ -223,7 +247,7 @@ async function main() {
               address_line1: "123 Palm Beach Dr",
               city: "West Palm Beach",
               state: "FL",
-              postal_code: "33401",
+              postal_code: p.zip,
               is_primary: true,
             },
           ],
@@ -261,6 +285,48 @@ async function main() {
         metadata: JSON.stringify({ category: code.category }),
       },
     });
+  }
+
+  // ─── Reference data: AssessmentMeasures + options ───────────────────────────
+  for (const m of ASSESSMENT_MEASURES) {
+    const measure = await prismaBase.assessmentMeasure.upsert({
+      where: { tenant_id_code: { tenant_id: fcts.id, code: m.code } },
+      update: {
+        label: m.label,
+        measure_type: m.measure_type,
+        unit: m.unit ?? null,
+        min_value: m.min_value ?? null,
+        max_value: m.max_value ?? null,
+        display_order: m.display_order,
+      },
+      create: {
+        tenant_id: fcts.id,
+        code: m.code,
+        label: m.label,
+        measure_type: m.measure_type,
+        unit: m.unit ?? null,
+        min_value: m.min_value ?? null,
+        max_value: m.max_value ?? null,
+        display_order: m.display_order,
+        active: true,
+      },
+    });
+    if (m.options) {
+      for (let i = 0; i < m.options.length; i++) {
+        const opt = m.options[i];
+        await prismaBase.assessmentMeasureOption.upsert({
+          where: { measure_id_value: { measure_id: measure.id, value: opt.value } },
+          update: { label: opt.label, display_order: i },
+          create: {
+            tenant_id: fcts.id,
+            measure_id: measure.id,
+            value: opt.value,
+            label: opt.label,
+            display_order: i,
+          },
+        });
+      }
+    }
   }
 
   // ─── Sources / Agencies (2) ─────────────────────────────────────────────────
@@ -302,14 +368,21 @@ async function main() {
   console.log(`  email: admin@staffpick.local`);
   console.log(`  TOTP otpauth URI: ${totpProvisioningUri(adminTotpSecret, "admin@staffpick.local")}`);
   console.log("");
-  console.log(`FCTS Tenant Staff:`);
+  console.log(`FCTS Tenant Staff (sign in at /login):`);
   for (const s of staffOutputs) {
     console.log(`  ${s.email}`);
     console.log(`    TOTP otpauth URI: ${s.totp}`);
   }
-  console.log("\nScan the otpauth:// URIs above with any TOTP app (Google");
-  console.log("Authenticator, 1Password, iCloud Keychain). Use the 6-digit");
-  console.log("code at login. TOTP is required for all staff/admin roles.\n");
+  console.log("");
+  console.log(`FCTS Providers (sign in at /login/provider — email-OTP, no TOTP):`);
+  for (const p of providerSeeds) {
+    const email = `${p.given.toLowerCase()}.${p.family.toLowerCase()}@providers.local`;
+    console.log(`  ${email}  (${p.specialty})`);
+  }
+  console.log("");
+  console.log("Staff/admin: scan the otpauth:// URIs above with any TOTP app.");
+  console.log("Providers: an OTP is emailed at login; check console if");
+  console.log("RESEND_API_KEY is unset.\n");
 }
 
 main()

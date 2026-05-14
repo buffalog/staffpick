@@ -66,9 +66,13 @@ export const AUDIT_ACTIONS = [
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
-// Roles that require TOTP MFA on every session.
+// Roles that require TOTP MFA on every session (authenticator-app code).
 export const MFA_REQUIRED_ROLES: ReadonlySet<UserRoleType> = new Set([
   "PlatformAdmin",
   "TenantAdmin",
   "TenantStaff",
 ]);
+
+// Roles that use emailed 6-digit OTPs as the second factor (no authenticator
+// app required — clinicians on a phone in the field).
+export const EMAIL_OTP_ROLES: ReadonlySet<UserRoleType> = new Set(["Provider"]);

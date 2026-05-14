@@ -158,6 +158,7 @@ model User {
   // (SQL Server unique permits one NULL, blocking multiple portal-less
   // providers). App layer asserts at most one Provider per User.
   provider_records Provider[]
+  case_messages   CaseMessage[]
 
   @@index([tenant_id])
   @@index([email])
@@ -492,10 +493,26 @@ model IntakeRequest {
   measure_responses   IntakeRequestAssessmentMeasureResponse[]
   services            Service[]
   invoices            Invoice[]
+  messages            CaseMessage[]
 
   @@index([tenant_id, phase])
   @@index([tenant_id, status])
   @@index([tenant_id, created_at])
+}
+
+model CaseMessage {
+  id              String        @id @default(cuid())
+  tenant_id       String
+  request_id      String
+  sender_user_id  String
+  body            String        @db.NVarChar(4000)
+  created_at      DateTime      @default(now())
+
+  request         IntakeRequest @relation(fields: [request_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sender          User          @relation(fields: [sender_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([tenant_id])
+  @@index([request_id, created_at])
 }
 
 model IntakeRequestTenantStaff {

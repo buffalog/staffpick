@@ -11,6 +11,8 @@ import {
 } from "@/lib/case-state-machine";
 import type { CasePhase, CaseStatus } from "@/lib/enums";
 import { transitionPhase, transitionStatus } from "./actions";
+import { startInitialAssessment } from "./assess/actions";
+import { MessageThread } from "./messages/message-thread";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +23,7 @@ export default async function CaseDetailPage({
 }) {
   const { id } = await params;
 
-  const { request, audit } = await withSession(async (ctx) => {
+  const { request, audit, messages, userEmail } = await withSession(async (ctx) => {
     const request = await prisma.intakeRequest.findFirst({
       where: { id },
       include: {
@@ -44,7 +46,13 @@ export default async function CaseDetailPage({
       orderBy: { occurred_at: "desc" },
       take: 50,
     });
-    return { request, audit };
+    const messages = await prisma.caseMessage.findMany({
+      where: { request_id: id },
+      orderBy: { created_at: "asc" },
+      include: { sender: { select: { email: true, name: true } } },
+      take: 200,
+    });
+    return { request, audit, messages, userEmail: ctx.email };
   });
 
   if (!request) notFound();
@@ -77,6 +85,33 @@ export default async function CaseDetailPage({
         <section className="rounded-md border bg-card p-4 space-y-3">
           <h2 className="text-sm font-medium">Actions</h2>
           <div className="flex flex-wrap gap-2">
+            {(currentPhase === "Phase3_MatchingKickoff" ||
+              currentPhase === "Phase4_MatchReview") && (
+              <a
+                href={`/dashboard/cases/${request.id}/match`}
+                className="rounded-md bg-primary text-primary-foreground px-3 py-1.5 text-xs font-medium hover:opacity-90"
+              >
+                Find providers
+              </a>
+            )}
+            {currentPhase === "Phase6_Collaboration" && (
+              <form action={startInitialAssessment.bind(null, request.id)}>
+                <button
+                  type="submit"
+                  className="rounded-md bg-primary text-primary-foreground px-3 py-1.5 text-xs font-medium hover:opacity-90"
+                >
+                  Start initial assessment
+                </button>
+              </form>
+            )}
+            {currentPhase === "Phase7_InitialAssessment" && (
+              <a
+                href={`/dashboard/cases/${request.id}/assess`}
+                className="rounded-md bg-primary text-primary-foreground px-3 py-1.5 text-xs font-medium hover:opacity-90"
+              >
+                Record initial assessment
+              </a>
+            )}
             {nextPhases
               .filter((p) => p !== currentPhase) // hide self-loop button
               .map((p) => (
@@ -253,6 +288,21 @@ export default async function CaseDetailPage({
           )}
         </Card>
       </div>
+
+      {/* ── Conversation ─────────────────────────────────────────────────────*/}
+      <Card title="Conversation">
+        <MessageThread
+          requestId={request.id}
+          initialMessages={messages.map((m) => ({
+            id: m.id,
+            body: m.body,
+            senderEmail: m.sender.email,
+            senderName: m.sender.name,
+            createdAt: m.created_at.toISOString(),
+          }))}
+          currentUserEmail={userEmail}
+        />
+      </Card>
 
       {/* ── Timeline ─────────────────────────────────────────────────────────*/}
       <Card title="Activity timeline">
