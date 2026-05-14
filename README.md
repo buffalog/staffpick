@@ -6,6 +6,8 @@ Multi-tenant, industry-agnostic agency lead-placement & case management platform
 > **Architecture**: [`docs/architecture.md`](docs/architecture.md)
 > **MVP cuts**: [`docs/mvp-gaps.md`](docs/mvp-gaps.md)
 > **Tech debt**: [`docs/tech-debt.md`](docs/tech-debt.md)
+> **Admin flow diagrams** (FigJam): [Platform Bootstrap + Operational Case Lifecycle](https://www.figma.com/board/tZKJVYK7sNhem3NbQud2EH)
+> **Deploy runbook**: [`docs/railway-deploy.md`](docs/railway-deploy.md)
 
 ## Stack
 
