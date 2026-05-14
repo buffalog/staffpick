@@ -1,133 +1,159 @@
 # StaffPick — Railway deploy runbook
 
-Stands up a live StaffPick demo on Railway: two services in one project — a
+How the live demo is deployed on Railway: two services in one project — a
 SQL Server database (`db`) and the Next.js app (`app`).
 
 > **Why this shape**: Railway has no managed SQL Server. StaffPick's data
 > layer is Prisma's `sqlserver` provider, so the `db` service runs the stock
 > `mcr.microsoft.com/azure-sql-edge` Docker image with a volume for
-> persistence. Azure SQL Edge is **EOL'd by Microsoft** — this is a
-> demo-grade posture, not production. The production path is Ed's Azure SQL;
-> see `docs/tech-debt.md`.
+> persistence. Azure SQL Edge is **EOL'd by Microsoft** — demo-grade, not
+> production. The production path is Ed's Azure SQL; migrating there is a
+> `DATABASE_URL` swap, no code change. See `docs/tech-debt.md`.
+
+> **This runbook reflects the actual deploy**, not the original plan. Two
+> things that bit us and are now baked in below: (1) the Go-based `sqlcmd`
+> CLI rejects Azure SQL Edge's self-signed cert ("negative serial number"),
+> so DB setup uses the JS `mssql` driver instead — `scripts/railway-db-create.mjs`;
+> (2) `railway add --repo` needs Railway's GitHub App connected to the
+> account, which we skipped — the app deploys from the local directory via
+> `railway up`.
+
+## Live demo coordinates
+
+- **Project**: `staffpick` (`railway open` from the repo dir to view)
+- **App URL**: https://app-production-58e5.up.railway.app
+- **Services**: `db` (Azure SQL Edge + 50 GB volume at `/var/opt/mssql`),
+  `app` (this repo, Dockerfile build)
 
 ## Prerequisites
 
-- `railway` CLI installed (`brew install railway`) — v4.44+ confirmed working.
-- The repo pushed to GitHub (done: `jeremy1745/staffpick`, private).
-- `sqlcmd` installed locally (`brew install sqlcmd`) — used for one-off DB setup.
-- A strong SA password ready. SQL Server requires 8+ chars, 3 of 4 classes
-  (upper/lower/digit/symbol). Example shape: `Demo_StaffPick_2026!`
-  Generate one and keep it handy — you'll use it in three places.
+- `railway` CLI v4.44+ (`brew install railway`), logged in (`railway login`).
+- Run every `railway` command from `~/projects/staffpick` — the project link
+  is stored per-directory in Railway's global config.
+- A strong SA password: SQL Server needs 8+ chars, 3 of 4 classes.
 
-## 1. Create the project
+## 1. Project + db service
 
 ```bash
 cd ~/projects/staffpick
-railway login          # opens browser
-railway init           # name it "staffpick"
+railway init -n staffpick                       # creates + links the project
+
+# db service: Azure SQL Edge image + EULA + SA password, one shot
+railway add --service db \
+  --image mcr.microsoft.com/azure-sql-edge:latest \
+  --variables 'ACCEPT_EULA=Y' \
+  --variables 'MSSQL_SA_PASSWORD=<SA_PASSWORD>'
+
+# persistence volume — without it the DB is wiped on every redeploy
+railway service db                              # link db so `volume add` targets it
+railway volume add -m /var/opt/mssql
 ```
 
-## 2. Add the `db` service (Azure SQL Edge)
+The `db` service deploys automatically. Confirm `railway service status
+--service db` shows SUCCESS / Online before continuing (SQL Server takes
+~1–2 min to boot).
 
-In the Railway dashboard, inside the `staffpick` project:
+## 2. TCP proxy (the one dashboard step)
 
-1. **+ New → Docker Image** → `mcr.microsoft.com/azure-sql-edge:latest`
-2. Rename the service to **`db`** (Settings → Service name). The internal
-   hostname becomes `db.railway.internal`.
-3. **Variables** — add:
-   - `ACCEPT_EULA` = `Y`
-   - `MSSQL_SA_PASSWORD` = your strong SA password
-4. **Settings → Volumes** — add a volume, mount path **`/var/opt/mssql`**.
-   Without this the database is wiped on every redeploy.
-5. **Settings → Resources** — give it **at least 2 GB RAM**. SQL Server will
-   not start under ~2 GB.
-6. **Settings → Networking → TCP Proxy** — enable it on port **1433**. Railway
-   gives you a public `host:port` (e.g. `roundhouse.proxy.rlwy.net:43219`).
-   You need this temporarily for DB setup from your laptop; you can disable it
-   afterward.
-7. Deploy. Wait for the service to go green (~1–2 min for SQL Server to boot).
+The CLI has no TCP-proxy command. In the dashboard (`railway open`):
+`db` service → **Settings → Networking → TCP Proxy** → port **1433**. Railway
+gives you a public `host:port` (e.g. `autorack.proxy.rlwy.net:15928`). You
+need this to reach the DB from your laptop for setup.
 
-## 3. Create the `staffpick` database + load schema and seed
+The proxy domain + port are also exposed as service variables:
+```bash
+railway variables --service db | grep RAILWAY_TCP_PROXY
+```
 
-All run from your laptop, pointed at the TCP proxy from step 2.6. Substitute
-`<PROXY_HOST>`, `<PROXY_PORT>`, `<SA_PASSWORD>`.
+## 3. Create the database, migrate, seed — from your laptop
+
+> **Do not use `sqlcmd`.** The Homebrew Go-based `sqlcmd` fails on Azure SQL
+> Edge's self-signed cert. The JS `mssql` driver (what Prisma's adapter uses)
+> has no such problem — the helper script and `prisma` both use it.
+
+Substitute `<PROXY_HOST>`, `<PROXY_PORT>`, `<SA_PASSWORD>`:
 
 ```bash
-# Create the database (Prisma's sqlserver provider does NOT create it)
-sqlcmd -S <PROXY_HOST>,<PROXY_PORT> -U sa -P "<SA_PASSWORD>" \
-  --trust-server-certificate -Q "CREATE DATABASE staffpick"
+# create the staffpick database (Prisma's sqlserver provider won't create it)
+DATABASE_HOST=<PROXY_HOST> DATABASE_PORT=<PROXY_PORT> SA_PASSWORD='<SA_PASSWORD>' \
+  node scripts/railway-db-create.mjs
 
-# Point a throwaway env at the proxy and run migrations + seed
+# migrations + seed, pointed at the proxy
 export DATABASE_URL="sqlserver://<PROXY_HOST>:<PROXY_PORT>;database=staffpick;user=sa;password=<SA_PASSWORD>;encrypt=true;trustServerCertificate=true"
 pnpm prisma migrate deploy
 pnpm exec tsx prisma/seed.ts
 unset DATABASE_URL
 ```
 
-The seed prints the platform admin + tenant-staff TOTP `otpauth://` URIs and
+The seed prints the platform-admin + tenant-staff TOTP `otpauth://` URIs and
 the provider emails — **copy that output**, you need the TOTP URIs to log in.
 
-You can now disable the TCP proxy (step 2.6) if you want the DB private-only —
-the `app` service reaches it over `db.railway.internal` regardless.
+You can disable the TCP proxy afterward if you want the DB private-only — the
+`app` service reaches it over `db.railway.internal` regardless.
 
-## 4. Add the `app` service (Next.js)
+## 4. App service
 
-1. **+ New → GitHub Repo** → select `jeremy1745/staffpick`. Railway detects
-   the `Dockerfile` and builds from it.
-2. Rename the service to **`app`**.
-3. **Variables** — set everything from `.env.production.example`:
-   - `DATABASE_URL` = `sqlserver://db.railway.internal:1433;database=staffpick;user=sa;password=<SA_PASSWORD>;encrypt=true;trustServerCertificate=true`
-     (note: **internal** host `db.railway.internal`, not the proxy)
-   - `AUTH_SECRET` and `NEXTAUTH_SECRET` = `openssl rand -base64 32` (same value both)
-   - `RESEND_API_KEY` = your Resend key, or leave empty (emails log to `railway logs`)
-   - `RESEND_FROM` = `StaffPick <noreply@staffpick.local>`
-   - `NEXT_PUBLIC_TURNSTILE_SITE_KEY` = `1x00000000000000000000AA`
-   - `TURNSTILE_SECRET_KEY` = `1x0000000000000000000000000000000AA`
-   - `NODE_ENV` = `production`
-   - `LOG_LEVEL` = `info`
-   - (`AUTH_URL`, `NEXTAUTH_URL`, `ALLOWED_ORIGINS` — set in step 5, after the
-     domain exists)
-4. Deploy. The Dockerfile runs `prisma generate` + `next build`.
+```bash
+railway add --service app                       # empty service
 
-## 5. Public domain + auth URLs
+# base env vars — DATABASE_URL via stdin (its embedded '=' chars break the
+# KEY=VALUE flag parser); AUTH_SECRET as hex (no base64 padding chars)
+SECRET=$(openssl rand -hex 32)
+echo 'sqlserver://db.railway.internal:1433;database=staffpick;user=sa;password=<SA_PASSWORD>;encrypt=true;trustServerCertificate=true' \
+  | railway variable set --service app --skip-deploys --stdin DATABASE_URL
+railway variable set --service app --skip-deploys \
+  "AUTH_SECRET=$SECRET" "NEXTAUTH_SECRET=$SECRET" \
+  "RESEND_FROM=StaffPick <noreply@staffpick.local>" \
+  "NEXT_PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA" \
+  "TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA" \
+  "NODE_ENV=production" "LOG_LEVEL=info"
 
-1. `app` service → **Settings → Networking → Generate Domain**. You get
-   `https://<something>.up.railway.app`.
-2. Add the remaining `app` variables with that domain:
-   - `AUTH_URL` = `https://<domain>`
-   - `NEXTAUTH_URL` = `https://<domain>`
-   - `ALLOWED_ORIGINS` = `https://<domain>`
-3. Redeploy the `app` service (Railway does this automatically on a variable
-   change).
+# deploy from the local directory (Railway detects the Dockerfile)
+railway up --service app --ci
 
-## 6. Verify
+# public domain
+railway domain --service app
 
-- `https://<domain>/login` → renders the staff login form.
-- `https://<domain>/intake` → renders the public referral webform.
-- Log in as a seeded tenant-staff user (`angela.searcy@fcts.local`,
-  password `LocalDev_Pa55word!`, TOTP from the seed output in step 3).
-  Lands on `/dashboard`.
-- Walk one case through the lifecycle (see the FigJam operational diagram
-  linked in the README).
+# domain-dependent vars — triggers one redeploy
+railway variable set --service app \
+  "AUTH_URL=https://<domain>" "NEXTAUTH_URL=https://<domain>" \
+  "ALLOWED_ORIGINS=https://<domain>"
+```
+
+`DATABASE_URL` on the app uses the **internal** host `db.railway.internal:1433`
+— not the proxy. `RESEND_API_KEY` is intentionally unset: without it, emails
+(provider OTP codes, notifications, invoices) fall back to structured logs,
+visible via `railway logs --service app`.
+
+## 5. Verify
+
+```bash
+curl -sI https://<domain>/login    # 200
+curl -sI https://<domain>/intake   # 200 — proves the app reaches the DB
+railway logs --service app         # "Ready", no errors, no UntrustedHost
+```
+
+Then log in as a seeded tenant-staff user (`angela.searcy@fcts.local`,
+password `LocalDev_Pa55word!`, TOTP from the seed output in step 3) and walk
+a case through the lifecycle — see the FigJam operational diagram in the README.
 
 ## Ongoing deploys
 
-The `app` service auto-deploys on every push to `main`. Schema changes need a
-migration applied to the live DB: re-enable the TCP proxy and run
-`pnpm prisma migrate deploy` against it (step 3), or add a Railway pre-deploy
-command of `pnpm prisma migrate deploy` to the `app` service.
+`railway up --service app --ci` from the repo dir redeploys. For
+auto-deploy-on-push, connect Railway's GitHub App to the account
+(`railway open` → app service → Settings → connect the `jeremy1745/staffpick`
+repo) — then pushes to `main` deploy automatically.
+
+Schema changes: re-enable the TCP proxy, `export DATABASE_URL=<proxy>`, run
+`pnpm prisma migrate deploy`.
 
 ## Notes / gotchas
 
-- **EOL database** — Azure SQL Edge is not maintained by Microsoft. Fine for a
-  demo Judd can click through; not a production answer. Migrating to Ed's
-  Azure SQL is a `DATABASE_URL` swap — no code change, the Prisma provider is
-  identical.
+- **EOL database** — Azure SQL Edge is unmaintained. Fine for a clickable
+  demo; not a production answer. Swap to Ed's Azure SQL when available — it's
+  a `DATABASE_URL` change, the Prisma provider is identical.
 - **Seed credentials are dev-grade** — `LocalDev_Pa55word!` and the fixed E2E
-  TOTP secret ship in `prisma/seed.ts`. Acceptable for a private demo; rotate
-  before anything real.
-- **Resend without a key** — Provider OTP login codes fall back to logs. To
-  actually log in as a Provider on the demo, either set `RESEND_API_KEY` or
-  pull the code from `railway logs` on the `app` service.
-- **Memory** — if the `db` service crashloops, it's almost always RAM. SQL
-  Server needs ≥2 GB.
+  TOTP secret ship in `prisma/seed.ts`. Rotate before anything real.
+- **Resend without a key** — provider OTP login codes go to `railway logs`.
+  Set `RESEND_API_KEY` to deliver them to real inboxes.
+- **Memory** — if the `db` service crashloops, it's RAM. SQL Server needs ≥2 GB.
