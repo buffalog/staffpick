@@ -11,7 +11,7 @@ One-page Phase 0 summary. Authoritative source of intent: `docs/discovery-v0.2.m
 | Extensibility | Fixed schema + JSON `custom_properties` bag on Subject, Provider, IntakeRequest, ResolutionPlan, Assessment. Per-tenant labels in `tenant_labels`. No per-tenant schema generation. |
 | Matching | Auto-rank candidate Providers by availability + zip-proximity. Mandatory Tenant Staff approval gate before assignment binds. No provider self-accept poll for MVP. |
 | CliniConnect | Legacy being fully replaced. No integration surface. |
-| Stack | Node 22+ LTS / TS strict, Next.js 15 App Router, Prisma 7 + `@prisma/adapter-mssql`, NextAuth v5 beta + TOTP MFA for Tenant Staff, Tailwind v4 + shadcn/ui, Resend, Azure Blob (SAS), Railway app + Azure SQL/Blob. Cron via host scheduler; Inngest deferred. Vitest + Playwright. Pino → stdout JSON. |
+| Stack | Node 22+ LTS / TS strict, Next.js 15 App Router, Prisma 7 + `@prisma/adapter-mssql`, NextAuth v5 beta — WebAuthn passkeys (day-to-day) + email/password (bootstrap), Tailwind v4 + shadcn/ui, Resend, Azure Blob (SAS), Railway app + Azure SQL/Blob. Cron via host scheduler; Inngest deferred. Vitest + Playwright. Pino → stdout JSON. |
 | Security baseline | TLS in transit; Azure SQL TDE at rest. Every API route auth + tenant scope. `UserActivityLog` records every PHI read and every mutation. Secrets via env only. No PHI in URLs / logs. Rate limiting on auth endpoints. |
 | Out of MVP (stubbed or deferred) | TheraHealth EMR, real payments, native mobile, branching dynamic forms, email/API/file intake, HIPAA cert chase, external chat, EP-01007–01010. |
 
@@ -32,7 +32,7 @@ flowchart TB
         notifications["notifications/<br/>in-app threads + email<br/>(phase 5–6, 11b)"]
 
         tenancy["tenancy/<br/>tenant context middleware<br/>labels, settings, rates"]
-        auth["auth/<br/>NextAuth v5 + TOTP MFA"]
+        auth["auth/<br/>NextAuth v5 — passkeys + password bootstrap"]
         audit["audit/<br/>UserActivityLog +<br/>Prisma extension for PHI reads"]
     end
 

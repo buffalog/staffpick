@@ -71,14 +71,22 @@ export default async function DashboardLayout({
             <span className="mx-2">·</span>
             <span className="font-mono">{userRoles.join(", ") || "(no roles)"}</span>
           </div>
-          <form action={handleSignOut}>
-            <button
-              type="submit"
+          <div className="flex items-center gap-2">
+            <Link
+              href="/dashboard/account"
               className="text-sm rounded-md border px-3 py-1 hover:bg-accent"
             >
-              Sign out
-            </button>
-          </form>
+              Account
+            </Link>
+            <form action={handleSignOut}>
+              <button
+                type="submit"
+                className="text-sm rounded-md border px-3 py-1 hover:bg-accent"
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
         </header>
         <main className="flex-1 p-6 overflow-auto">{children}</main>
       </div>

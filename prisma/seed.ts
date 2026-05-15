@@ -1,37 +1,21 @@
 import bcrypt from "bcryptjs";
-import { Secret, TOTP } from "otpauth";
 import { prismaBase } from "../lib/prisma";
 import { ICD10_CODES } from "./seed-data/icd10";
 import { ASSESSMENT_MEASURES } from "./seed-data/assessment-measures";
 
 const PASSWORD = "LocalDev_Pa55word!";
-
-// Fixed TOTP secret for the E2E user only — never used by real users.
-// Allows Playwright tests to generate valid codes deterministically.
-export const E2E_TOTP_SECRET = "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP";
 const E2E_EMAIL = "e2e@staffpick.local";
 
-function newTotpSecret(): string {
-  return new Secret({ size: 20 }).base32;
-}
-
-function totpProvisioningUri(secret: string, label: string): string {
-  return new TOTP({
-    issuer: "StaffPick",
-    label,
-    algorithm: "SHA1",
-    digits: 6,
-    period: 30,
-    secret,
-  }).toString();
-}
+// Every seeded user gets password_hash only. That password is the BOOTSTRAP
+// factor — first login. The day-to-day factor is a WebAuthn passkey, which
+// the user enrolls after that first login (passkeys are device-bound and
+// cannot be seeded). See docs/architecture.md § Auth.
 
 async function main() {
-  console.log("→ Seeding StaffPick local dev DB");
+  console.log("→ Seeding StaffPick dev DB");
   const password_hash = await bcrypt.hash(PASSWORD, 10);
 
   // ─── Platform admin (no tenant) ─────────────────────────────────────────────
-  const adminTotpSecret = newTotpSecret();
   await prismaBase.user.upsert({
     where: { email: "admin@staffpick.local" },
     update: {},
@@ -39,8 +23,6 @@ async function main() {
       email: "admin@staffpick.local",
       name: "Platform Admin",
       password_hash,
-      totp_secret: adminTotpSecret,
-      totp_enabled: true,
       email_verified: new Date(),
       roles: { create: [{ role: "PlatformAdmin" }] },
     },
@@ -120,22 +102,20 @@ async function main() {
     });
   }
 
-  // ─── E2E test user (Tenant Staff with fixed TOTP secret) ────────────────────
-  await prismaBase.user.upsert({
+  // ─── E2E test user (Tenant Staff) ───────────────────────────────────────────
+  // E2E tests sign in via the email+password bootstrap path.
+  const e2eUser = await prismaBase.user.upsert({
     where: { email: E2E_EMAIL },
-    update: { totp_secret: E2E_TOTP_SECRET, totp_enabled: true },
+    update: {},
     create: {
       email: E2E_EMAIL,
       name: "E2E Test User",
       password_hash,
-      totp_secret: E2E_TOTP_SECRET,
-      totp_enabled: true,
       email_verified: new Date(),
       tenant_id: fcts.id,
       roles: { create: [{ role: "TenantStaff" }] },
     },
   });
-  const e2eUser = await prismaBase.user.findUniqueOrThrow({ where: { email: E2E_EMAIL } });
   await prismaBase.tenantStaff.upsert({
     where: { user_id: e2eUser.id },
     update: { role_title: "E2E Test User" },
@@ -153,9 +133,7 @@ async function main() {
     { email: "tena.stafson@fcts.local", name: "Tena Stafson", title: "Operations" },
     { email: "gregg@fcts.local", name: "Dr. Gregg", title: "Clinical Director" },
   ];
-  const staffOutputs: Array<{ email: string; totp: string }> = [];
   for (const s of staffSeeds) {
-    const totp_secret = newTotpSecret();
     const u = await prismaBase.user.upsert({
       where: { email: s.email },
       update: {},
@@ -163,8 +141,6 @@ async function main() {
         email: s.email,
         name: s.name,
         password_hash,
-        totp_secret,
-        totp_enabled: true,
         email_verified: new Date(),
         tenant_id: fcts.id,
         roles: { create: [{ role: "TenantStaff" }] },
@@ -180,7 +156,6 @@ async function main() {
         active: true,
       },
     });
-    staffOutputs.push({ email: s.email, totp: totpProvisioningUri(totp_secret, s.email) });
   }
 
   // ─── Providers (5 clinicians, each with a portal User account) ──────────────
@@ -193,7 +168,8 @@ async function main() {
   ];
   for (const p of providerSeeds) {
     const email = `${p.given.toLowerCase()}.${p.family.toLowerCase()}@providers.local`;
-    // Provider portal User account — Provider role uses email-OTP MFA, no TOTP.
+    // Provider portal User account — same auth model as everyone else:
+    // password bootstrap, then enroll a passkey.
     const providerUser = await prismaBase.user.upsert({
       where: { email },
       update: {},
@@ -201,7 +177,6 @@ async function main() {
         email,
         name: `${p.given} ${p.family}`,
         password_hash,
-        totp_enabled: false,
         email_verified: new Date(),
         tenant_id: fcts.id,
         roles: { create: [{ role: "Provider" }] },
@@ -362,27 +337,19 @@ async function main() {
 
   // ─── Output credentials ─────────────────────────────────────────────────────
   console.log("\n✅ Seed complete.\n");
-  console.log("─── Login credentials (local dev only) ────────────────────────");
-  console.log(`Password for ALL seeded users: ${PASSWORD}\n`);
-  console.log(`Platform Admin (no tenant):`);
-  console.log(`  email: admin@staffpick.local`);
-  console.log(`  TOTP otpauth URI: ${totpProvisioningUri(adminTotpSecret, "admin@staffpick.local")}`);
-  console.log("");
-  console.log(`FCTS Tenant Staff (sign in at /login):`);
-  for (const s of staffOutputs) {
-    console.log(`  ${s.email}`);
-    console.log(`    TOTP otpauth URI: ${s.totp}`);
-  }
-  console.log("");
-  console.log(`FCTS Providers (sign in at /login/provider — email-OTP, no TOTP):`);
-  for (const p of providerSeeds) {
-    const email = `${p.given.toLowerCase()}.${p.family.toLowerCase()}@providers.local`;
-    console.log(`  ${email}  (${p.specialty})`);
-  }
-  console.log("");
-  console.log("Staff/admin: scan the otpauth:// URIs above with any TOTP app.");
-  console.log("Providers: an OTP is emailed at login; check console if");
-  console.log("RESEND_API_KEY is unset.\n");
+  console.log("─── Login credentials (dev only) ──────────────────────────────");
+  console.log(`Password for ALL seeded users: ${PASSWORD}`);
+  console.log(`Sign in at /login — password is the bootstrap factor; enroll a`);
+  console.log(`passkey from the dashboard after first login.\n`);
+  console.log(`Platform Admin (no tenant):  admin@staffpick.local`);
+  console.log(`FCTS Tenant Staff:           angela.searcy@fcts.local`);
+  console.log(`                             tena.stafson@fcts.local`);
+  console.log(`                             gregg@fcts.local`);
+  console.log(`FCTS Providers:              maria.alvarez@providers.local  (PT)`);
+  console.log(`                             jordan.patel@providers.local   (OT)`);
+  console.log(`                             sam.nguyen@providers.local     (SLP)`);
+  console.log(`                             riley.cohen@providers.local    (PT)`);
+  console.log(`                             quinn.adebayo@providers.local  (OT)\n`);
 }
 
 main()

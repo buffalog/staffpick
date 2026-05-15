@@ -85,8 +85,9 @@ pnpm exec tsx prisma/seed.ts
 unset DATABASE_URL
 ```
 
-The seed prints the platform-admin + tenant-staff TOTP `otpauth://` URIs and
-the provider emails — **copy that output**, you need the TOTP URIs to log in.
+The seed prints the seeded account emails and the shared dev password. Auth
+is passkey-first with an email+password bootstrap — sign in with the password,
+then enroll a passkey from `/dashboard/account`.
 
 You can disable the TCP proxy afterward if you want the DB private-only — the
 `app` service reaches it over `db.railway.internal` regardless.
@@ -134,8 +135,9 @@ railway logs --service app         # "Ready", no errors, no UntrustedHost
 ```
 
 Then log in as a seeded tenant-staff user (`angela.searcy@fcts.local`,
-password `LocalDev_Pa55word!`, TOTP from the seed output in step 3) and walk
-a case through the lifecycle — see the FigJam operational diagram in the README.
+password `LocalDev_Pa55word!` via the "Sign in with email & password" path)
+and walk a case through the lifecycle — see the FigJam operational diagram in
+the README. Optionally enroll a passkey from `/dashboard/account`.
 
 ## Ongoing deploys
 
@@ -152,8 +154,9 @@ Schema changes: re-enable the TCP proxy, `export DATABASE_URL=<proxy>`, run
 - **EOL database** — Azure SQL Edge is unmaintained. Fine for a clickable
   demo; not a production answer. Swap to Ed's Azure SQL when available — it's
   a `DATABASE_URL` change, the Prisma provider is identical.
-- **Seed credentials are dev-grade** — `LocalDev_Pa55word!` and the fixed E2E
-  TOTP secret ship in `prisma/seed.ts`. Rotate before anything real.
-- **Resend without a key** — provider OTP login codes go to `railway logs`.
-  Set `RESEND_API_KEY` to deliver them to real inboxes.
+- **Seed credentials are dev-grade** — the shared `LocalDev_Pa55word!` bootstrap
+  password ships in `prisma/seed.ts`. Rotate before anything real; have users
+  enroll passkeys and treat the password as recovery-only.
+- **Resend without a key** — magic-link / notification emails go to
+  `railway logs`. Set `RESEND_API_KEY` to deliver them to real inboxes.
 - **Memory** — if the `db` service crashloops, it's RAM. SQL Server needs ≥2 GB.

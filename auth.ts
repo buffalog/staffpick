@@ -1,16 +1,15 @@
 import NextAuth, { type DefaultSession } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Resend from "next-auth/providers/resend";
+import Passkey from "next-auth/providers/passkey";
 import type { JWT } from "next-auth/jwt";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
-import { TOTP } from "otpauth";
 import { z } from "zod";
 import { authConfig } from "@/auth.config";
 import { prismaBase } from "@/lib/prisma";
-import { MFA_REQUIRED_ROLES, EMAIL_OTP_ROLES, type UserRoleType } from "@/lib/enums";
+import type { UserRoleType } from "@/lib/enums";
 import { writeAudit } from "@/lib/audit";
-import { verifyAndConsumeProviderOtp } from "@/lib/provider-otp";
 
 type SessionUserExtras = {
   id: string;
@@ -40,38 +39,30 @@ declare module "next-auth/jwt" {
 const credentialsSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
-  totpCode: z.string().optional(),
-  emailOtpCode: z.string().optional(),
 });
-
-function verifyTotp(secret: string, token: string): boolean {
-  const totp = new TOTP({
-    issuer: "StaffPick",
-    label: "StaffPick",
-    algorithm: "SHA1",
-    digits: 6,
-    period: 30,
-    secret,
-  });
-  return totp.validate({ token, window: 1 }) !== null;
-}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
   adapter: PrismaAdapter(prismaBase),
+  experimental: { enableWebAuthn: true },
   providers: [
+    // Passkey (WebAuthn) — the day-to-day factor for every role. Phishing-
+    // resistant, NIST AAL2/3. Enrolled after a first password login; see the
+    // /login page and the dashboard "Add a passkey" surface.
+    Passkey,
+    // Email + password — bootstrap (first login, before a passkey exists)
+    // and account recovery only. Single-factor by design; hardening the
+    // bootstrap is tracked in docs/mvp-gaps.md.
     Credentials({
       name: "Email & password",
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
-        totpCode: { label: "TOTP code", type: "text" },
-        emailOtpCode: { label: "Email OTP code", type: "text" },
       },
       async authorize(raw) {
         const parsed = credentialsSchema.safeParse(raw);
         if (!parsed.success) return null;
-        const { email, password, totpCode, emailOtpCode } = parsed.data;
+        const { email, password } = parsed.data;
 
         const user = await prismaBase.user.findUnique({
           where: { email },
@@ -83,22 +74,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!passwordOk) return null;
 
         const roles = user.roles.map((r) => r.role as UserRoleType);
-        const wantsTotp = roles.some((r) => MFA_REQUIRED_ROLES.has(r));
-        const wantsEmailOtp =
-          !wantsTotp && roles.some((r) => EMAIL_OTP_ROLES.has(r));
-
-        let mfaMethod: "totp" | "email-otp" | "none" = "none";
-        if (wantsTotp) {
-          if (!user.totp_enabled || !user.totp_secret) return null;
-          if (!totpCode) return null;
-          if (!verifyTotp(user.totp_secret, totpCode)) return null;
-          mfaMethod = "totp";
-        } else if (wantsEmailOtp) {
-          if (!emailOtpCode) return null;
-          const ok = await verifyAndConsumeProviderOtp(email, emailOtpCode);
-          if (!ok) return null;
-          mfaMethod = "email-otp";
-        }
 
         await prismaBase.user.update({
           where: { id: user.id },
@@ -110,7 +85,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           entity_id: user.id,
           user_id: user.id,
           tenant_id: user.tenant_id,
-          metadata: { method: "credentials", mfa: mfaMethod },
+          metadata: { method: "credentials-bootstrap" },
         });
 
         return {
@@ -137,7 +112,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         trigger,
       } as Parameters<NonNullable<typeof authConfig.callbacks.jwt>>[0]);
       const next = base as JWT;
-      // Server-only: re-enrich from DB if tenantId/roles are stale.
+      // Server-only: re-enrich from DB. Also covers passkey sign-in, where
+      // the WebAuthn provider returns the adapter User without our extras.
       if (next.id) {
         const u = await prismaBase.user.findUnique({
           where: { id: next.id },

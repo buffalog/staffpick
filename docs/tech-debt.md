@@ -5,10 +5,16 @@ Running log of choices that work for MVP but should be revisited. Each entry: wh
 ## Phase 0 entries
 
 ### NextAuth v5 beta
-- **What**: Locked stack pins `next-auth@beta` (currently 5.0.0-beta.x). v5 has been beta for years; production-grade in practice but officially pre-GA.
+- **What**: Locked stack pins `next-auth@beta` (currently 5.0.0-beta.31). v5 has been beta for years; production-grade in practice but officially pre-GA.
 - **Why deferred**: v4 → v5 swap loses universal `auth()` method and App-Router-first ergonomics. Bailing to Clerk/WorkOS costs $.
 - **Action post-MVP**: Track v5 GA release. Swap pin to GA when available.
 - **Effort**: trivial pin update + smoke test.
+
+### WebAuthn / passkeys are experimental in NextAuth v5
+- **What**: Auth uses NextAuth's `Passkey` provider behind `experimental: { enableWebAuthn: true }` — flagged experimental by NextAuth. `@simplewebauthn/browser`+`/server` pinned at `^9` (the range next-auth beta.31 expects; latest is v10+/v11+ and incompatible).
+- **Why accepted**: deliberate "bleeding edge" call — passkeys are the only factor that's both lower-friction than TOTP and valid MFA under NIST 800-63B. Sessions are still JWT (WebAuthn worked without forcing database sessions — the edge middleware stays DB-call-free).
+- **Action post-MVP**: re-test on each next-auth bump (experimental API can shift); bump `@simplewebauthn/*` when next-auth's peer range moves; consider Playwright CDP virtual authenticators for real passkey E2E coverage (currently E2E uses the password bootstrap path).
+- **Effort**: ongoing watch; a few hours per next-auth major bump.
 
 ### Prisma 7 enum support on SQL Server
 - **What**: Prisma 7's `sqlserver` connector does not support `enum` blocks (P1012). All enum-typed fields are `String` columns with validation deferred to `lib/enums.ts` (TS string-literal types).

@@ -140,9 +140,7 @@ model User {
   email           String    @unique
   email_verified  DateTime?
   name            String?
-  password_hash   String?
-  totp_secret     String?
-  totp_enabled    Boolean   @default(false)
+  password_hash   String?   // bootstrap + recovery factor only; day-to-day auth is passkeys
   active          Boolean   @default(true)
   last_login_at   DateTime?
   created_at      DateTime  @default(now())
@@ -153,6 +151,7 @@ model User {
   tenant          Tenant?   @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   roles           UserRole[]
   accounts        Account[]
+  authenticators  Authenticator[]
   staff_record    TenantStaff?
   // Semantically 0..1 — Prisma + SQL Server can't model a nullable 1-1 cleanly
   // (SQL Server unique permits one NULL, blocking multiple portal-less
@@ -165,8 +164,8 @@ model User {
 }
 
 // NextAuth v5 PrismaAdapter tables. `Account` covers OAuth providers (unused
-// in MVP — credentials + magic-link only). `VerificationToken` stores
-// magic-link tokens. Sessions are JWT (no Session table needed).
+// in MVP). `VerificationToken` stores magic-link tokens. `Authenticator`
+// stores WebAuthn/passkey credentials. Sessions are JWT (no Session table).
 model Account {
   id                  String  @id @default(cuid())
   userId              String
@@ -193,6 +192,24 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+// WebAuthn / passkey credential storage. One row per enrolled passkey.
+// Cascades are NoAction per the SQL Server convention used throughout.
+model Authenticator {
+  id                   String  @id @default(cuid())
+  credentialID         String  @unique
+  userId               String
+  providerAccountId    String
+  credentialPublicKey  String
+  counter              Int
+  credentialDeviceType String
+  credentialBackedUp   Boolean
+  transports           String?
+
+  user                 User    @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([userId])
 }
 
 model UserRole {

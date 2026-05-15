@@ -74,6 +74,11 @@ Architectural prerequisites in place (TLS, TDE, audit log, RBAC, secrets discipl
 
 **Post-MVP**: execute BAAs with Resend, Azure, Railway. Pursue SOC2 / HITRUST when revenue justifies.
 
+### Password bootstrap is single-factor
+Auth is WebAuthn passkeys (day-to-day, phishing-resistant, NIST AAL2/3) with email+password as the bootstrap/recovery factor. The bootstrap step itself is single-factor — a user with only a password (no passkey enrolled yet) is one credential away from access. Acceptable for MVP: passkeys are the real factor and the bootstrap exists only because passkeys are device-bound and can't be pre-provisioned. (TOTP and email-OTP were both removed — email-OTP isn't valid MFA under NIST 800-63B, which HHS uses as the HIPAA benchmark.)
+
+**Post-MVP**: harden the bootstrap — require email-verification on password login, or force passkey enrollment before granting full PHI access, or fall the password path back to a magic-link.
+
 ## Cut epics (entirely deferred from MVP)
 
 - **EP-01007 Provider Recruitment** — sourcing and pipelining new Providers.

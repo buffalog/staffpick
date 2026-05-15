@@ -72,13 +72,17 @@ pnpm dev
 | `pnpm db:format` | Format `schema.prisma` |
 | `pnpm db:validate` | Validate `schema.prisma` |
 
-## Login flow (Phase 1+ — not implemented at Phase 0 closeout)
+## Login flow
+
+Auth model: **passkey (WebAuthn) is the day-to-day factor; email+password is the bootstrap/recovery factor.** Same flow for every role.
 
 1. Visit `/login`.
-2. Enter email → magic link sent via Resend, **or** email + password.
-3. For Tenant Staff: TOTP challenge after password.
-4. Successful auth lands on the tenant-scoped dashboard (`/(dashboard)`).
+2. **Returning users**: "Sign in with a passkey" — Face ID / Touch ID / Windows Hello / security key.
+3. **First login / no passkey yet**: email + password (the bootstrap factor), then enroll a passkey from `/dashboard/account`.
+4. Successful auth lands on the tenant-scoped dashboard.
 5. Session middleware injects `tenant_id` into every Prisma query via `lib/tenant-context.ts`.
+
+Passkeys can't be seeded (they're device-bound) — seeded users sign in with the shared dev password first, then enroll. TOTP and email-OTP were removed; see `docs/mvp-gaps.md` for the rationale (NIST 800-63B / HIPAA MFA validity).
 
 Seed data (Phase 1):
 - 1 platform admin

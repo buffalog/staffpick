@@ -1,21 +1,9 @@
 import { test, expect, type Page } from "@playwright/test";
-import { TOTP } from "otpauth";
-import { E2E_TOTP_SECRET } from "../../prisma/seed";
 
+// E2E signs in via the email+password bootstrap path (passkeys need a CDP
+// virtual authenticator — out of scope here; password is a real login route).
 const E2E_EMAIL = "e2e@staffpick.local";
 const E2E_PASSWORD = "LocalDev_Pa55word!";
-
-function currentTotpCode(): string {
-  const totp = new TOTP({
-    issuer: "StaffPick",
-    label: "StaffPick",
-    algorithm: "SHA1",
-    digits: 6,
-    period: 30,
-    secret: E2E_TOTP_SECRET,
-  });
-  return totp.generate();
-}
 
 // Stamp keeps every test run's source/subject unique.
 const stamp = Date.now().toString(36);
@@ -25,10 +13,10 @@ const SUBJECT_LAST = `Patient-${stamp}`;
 
 async function loginAsTenantStaff(page: Page) {
   await page.goto("/login");
+  await page.click('button:has-text("Sign in with email & password")');
   await page.fill('input[name="email"]', E2E_EMAIL);
   await page.fill('input[name="password"]', E2E_PASSWORD);
-  await page.fill('input[name="totpCode"]', currentTotpCode());
-  await page.click('button[type="submit"]:has-text("Sign in")');
+  await page.click('button[type="submit"]:has-text("Sign in with password")');
   await page.waitForURL(/\/dashboard$/, { timeout: 15_000 });
 }
 
