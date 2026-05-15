@@ -3,8 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { withSession } from "@/lib/with-session";
 import { prisma } from "@/lib/tenant-context";
-import { prismaBase } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
+
+// markInvoicePaid (the public magic-link payment path) lives in
+// app/invoices/[link]/actions.ts — it has no session and isn't a
+// dashboard action.
 
 /**
  * Phase 11(c) — Tenant Staff sends a Draft invoice to the Source.
@@ -87,49 +90,4 @@ export async function sendInvoice(invoiceId: string): Promise<void> {
     });
   });
   revalidatePath(`/dashboard/cases`);
-}
-
-/**
- * Phase 12 — Source marks an Invoice paid via the magic-link page.
- * No session required; the external_link slug is the auth factor.
- * Bypasses tenant-scope via prismaBase.
- */
-export async function markInvoicePaid(externalLink: string): Promise<{
-  invoiceId: string;
-  requestId: string;
-}> {
-  const inv = await prismaBase.invoice.findFirst({
-    where: { external_link: externalLink },
-  });
-  if (!inv) throw new Error("Invoice not found");
-  if (inv.status === "Paid") {
-    return { invoiceId: inv.id, requestId: inv.request_id };
-  }
-  if (inv.status !== "Sent") {
-    throw new Error(`Cannot mark paid from status ${inv.status}`);
-  }
-
-  await prismaBase.invoice.update({
-    where: { id: inv.id },
-    data: { status: "Paid", paid_at: new Date() },
-  });
-  // Advance Phase 12 → Phase 13
-  await prismaBase.intakeRequest.update({
-    where: { id: inv.request_id },
-    data: { phase: "Phase13_ProviderPayment" },
-  });
-  await prismaBase.userActivityLog.create({
-    data: {
-      tenant_id: inv.tenant_id,
-      action: "Update",
-      entity_type: "Invoice",
-      entity_id: inv.id,
-      metadata: JSON.stringify({
-        event: "MarkedPaid",
-        via: "source-magic-link",
-      }),
-    },
-  });
-
-  return { invoiceId: inv.id, requestId: inv.request_id };
 }

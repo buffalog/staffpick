@@ -43,11 +43,14 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Route security audit
+        run: pnpm exec tsx scripts/audit-routes.ts
+
       - name: Test (unit)
         run: pnpm test
 
   e2e:
-    name: playwright (intake + auth)
+    name: playwright (full lifecycle + auth)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: unit
