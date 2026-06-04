@@ -1,103 +1,32 @@
-# StaffPick
+<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://saasykit.com/images/logo-dark.png" width="400" alt="Laravel Logo"></a></p>
 
-Multi-tenant, industry-agnostic agency lead-placement & case management platform. First tenant: First Class Therapy Solutions (FCTS) — therapy staffing (PT/OT/SLP).
+## About SaaSykit
+**SaaSykit** is a SaaS starter kit (boilerplate) that comes packed with all components required to run a modern SaaS software.
 
-> **Source of intent**: [`docs/discovery-v0.2.md`](docs/discovery-v0.2.md)
-> **Architecture**: [`docs/architecture.md`](docs/architecture.md)
-> **MVP cuts**: [`docs/mvp-gaps.md`](docs/mvp-gaps.md)
-> **Tech debt**: [`docs/tech-debt.md`](docs/tech-debt.md)
-> **Admin flow diagrams** (FigJam): [Platform Bootstrap + Operational Case Lifecycle](https://www.figma.com/board/tZKJVYK7sNhem3NbQud2EH)
-> **Deploy runbook**: [`docs/railway-deploy.md`](docs/railway-deploy.md)
+**SaaSykit** is built using the beautiful Laravel framework (using [TALL](https://tallstack.dev/)) and offers an intuitive Filament admin panel that houses all the pre-built components like product, plans, discounts, payment providers, email providers, transactions, blog, user & role management, and much more.
 
-## Stack
+**SaaSykit** is developer-friendly, uses best coding practices, comes with an ever-growing automated tests that cover the critical components that it offers.
 
-Next.js 15 (App Router) · TypeScript strict · Tailwind v4 · shadcn/ui · Prisma 7 + `@prisma/adapter-mssql` · Azure SQL · NextAuth v5 (beta) · Resend · Vitest · Playwright
+## Features in a nutshell
 
-## Prerequisites
+* Customize Styles: Customize the styles & colors, error page of your application to fit your brand.
+* Product, Plans & Pricing: Create and manage your products, plans, and pricing from a beautiful and easy-to-use admin panel.
+* Beautiful checkout process: Your customers can subscribe to your plans from a beautiful checkout process.
+* Huge list of ready-to-use components: Plans & Pricing, hero section, features section, testimonials, FAQ, Call to action, tab slider, and much more.
+* User authentication: Comes with user authentication out of the box, whether classic email/password or social login (Google, Facebook, Twitter, Github, LinkedIn, and more).
+* Discounts: Create and manage your discounts and reward your customers.
+* SaaS metric stats: View your MRR, Churn rates, ARPU, and other SaaS metrics.
+* Multiple payment providers: Stripe, Paddle, and more coming soon.
+* Multiple email providers: Mailgun, Postmark, Amazon SES, and more coming soon.
+* Blog: Create and manage your blog posts.
+* User & Role Management: Create and manage your users and roles, and assign permissions to your users.
+* Fully translatable: Translate your application to any language you want.
+* Sitemap & SEO: Sitemap and SEO optimization out of the box.
+* Admin Panel: Manage your SaaS application from a beautiful admin panel powered by [Filament](https://filamentphp.com/).
+* User Dashboard: Your customers can manage their subscriptions, change payment method, upgrade plan, cancel subscription, and more from a beautiful user dashboard powered by [Filament](https://filamentphp.com/).
+* Automated Tests: Comes with automated tests for critical components of the application.
+* One-line deployment: Provision your server and deploy your application easily with integrated [Deployer](https://deployer.org/) support.
+* Developer-friendly: Built with developers in mind, uses best coding practices.
+* And much more...
 
-- macOS Apple Silicon (or Linux ARM64/x86_64). Windows untested.
-- Node.js 24 LTS preferred; 22 LTS works. Node 25 used during early dev but **not the supported runtime** — see `docs/tech-debt.md`.
-- pnpm 10+
-- Colima + Docker CLI (`brew install colima docker docker-compose`) for the local SQL container.
-
-## Local dev quickstart
-
-```bash
-# 1. Clone, install deps
-git clone <repo-url>
-cd staffpick
-pnpm install
-
-# 2. Start the local SQL container (Azure SQL Edge, ARM64-friendly)
-colima start --cpu 4 --memory 6 --arch aarch64
-docker run -d --name staffpick-db \
-  -e "ACCEPT_EULA=Y" \
-  -e "MSSQL_SA_PASSWORD=ChangeMe_StrongPwd_123" \
-  -p 1433:1433 \
-  mcr.microsoft.com/azure-sql-edge:latest
-
-# 3. Wait ~10s for DB to boot, then create the staffpick database
-docker exec staffpick-db /opt/mssql-tools18/bin/sqlcmd \
-  -S localhost -U sa -P "ChangeMe_StrongPwd_123" -No \
-  -Q "CREATE DATABASE staffpick"
-
-# 4. Env vars
-cp .env.example .env.local
-# Generate AUTH_SECRET / NEXTAUTH_SECRET:
-echo "AUTH_SECRET=\"$(openssl rand -base64 32)\"" >> .env.local
-echo "NEXTAUTH_SECRET=\"$(openssl rand -base64 32)\"" >> .env.local
-
-# 5. Generate Prisma client, apply migrations, seed
-pnpm prisma generate
-pnpm prisma migrate dev       # Phase 1+ once migrations exist
-pnpm tsx prisma/seed.ts        # Phase 1+
-
-# 6. Run the dev server
-pnpm dev
-# → http://localhost:3000
-```
-
-## Scripts
-
-| Script | What it does |
-|---|---|
-| `pnpm dev` | Next.js dev server on :3000 |
-| `pnpm build` | Production build |
-| `pnpm start` | Run the production build |
-| `pnpm lint` | ESLint |
-| `pnpm typecheck` | `tsc --noEmit` |
-| `pnpm test` | Vitest (unit) |
-| `pnpm test:watch` | Vitest watch mode |
-| `pnpm db:generate` | Regenerate Prisma client |
-| `pnpm db:format` | Format `schema.prisma` |
-| `pnpm db:validate` | Validate `schema.prisma` |
-
-## Login flow
-
-Auth model: **passkey (WebAuthn) is the day-to-day factor; email+password is the bootstrap/recovery factor.** Same flow for every role.
-
-1. Visit `/login`.
-2. **Returning users**: "Sign in with a passkey" — Face ID / Touch ID / Windows Hello / security key.
-3. **First login / no passkey yet**: email + password (the bootstrap factor), then enroll a passkey from `/dashboard/account`.
-4. Successful auth lands on the tenant-scoped dashboard.
-5. Session middleware injects `tenant_id` into every Prisma query via `lib/tenant-context.ts`.
-
-Passkeys can't be seeded (they're device-bound) — seeded users sign in with the shared dev password first, then enroll. TOTP and email-OTP were removed; see `docs/mvp-gaps.md` for the rationale (NIST 800-63B / HIPAA MFA validity).
-
-Seed data (Phase 1):
-- 1 platform admin
-- FCTS tenant
-- Tenant Staff: Angela Searcy, Tena Stafson, Dr. Gregg
-- 5 seeded Providers, 2 Source/Agency records
-
-## Project layout
-
-See `docs/architecture.md` § Folder layout.
-
-## Stopping the local DB
-
-```bash
-docker stop staffpick-db
-docker rm staffpick-db          # if you want a fresh DB next start
-colima stop                     # to release the VM
-```
+For more details, check the [documentation](https://saasykit.com/docs). 

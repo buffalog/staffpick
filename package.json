@@ -1,83 +1,27 @@
 {
-  "name": "staffpick",
-  "version": "0.1.0",
-  "private": true,
-  "packageManager": "pnpm@10.33.0",
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests",
-    "test:watch": "vitest",
-    "db:generate": "prisma generate",
-    "db:format": "prisma format",
-    "db:validate": "prisma validate",
-    "db:migrate": "dotenv -e .env.local -- prisma migrate dev",
-    "db:migrate:deploy": "dotenv -e .env.local -- prisma migrate deploy",
-    "db:studio": "dotenv -e .env.local -- prisma studio",
-    "db:seed": "dotenv -e .env.local -- tsx prisma/seed.ts",
-    "db:seed:demo": "dotenv -e .env.local -- tsx prisma/seed-demo.ts",
-    "e2e": "dotenv -e .env.local -- playwright test",
-    "e2e:install": "playwright install --with-deps chromium"
-  },
-  "dependencies": {
-    "@auth/prisma-adapter": "^2.11.2",
-    "@base-ui/react": "^1.4.1",
-    "@marsidev/react-turnstile": "^1.5.2",
-    "@prisma/adapter-mssql": "^7.6.0",
-    "@prisma/client": "^7.6.0",
-    "@react-pdf/renderer": "^4.5.1",
-    "@simplewebauthn/browser": "^9.0.1",
-    "@simplewebauthn/server": "^9.0.3",
-    "bcryptjs": "^3.0.3",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "lucide-react": "^1.14.0",
-    "mssql": "^11.0.1",
-    "next": "15.5.18",
-    "next-auth": "5.0.0-beta.31",
-    "pino": "^10.3.1",
-    "qrcode": "^1.5.4",
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
-    "resend": "^6.12.3",
-    "shadcn": "^4.7.0",
-    "tailwind-merge": "^3.6.0",
-    "tw-animate-css": "^1.4.0",
-    "zod": "^4.4.3"
-  },
-  "devDependencies": {
-    "@eslint/eslintrc": "^3",
-    "@playwright/test": "^1.60.0",
-    "@tailwindcss/postcss": "^4",
-    "@types/bcryptjs": "^3.0.0",
-    "@types/mssql": "^9.1.7",
-    "@types/node": "^24",
-    "@types/qrcode": "^1.5.6",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "@vitest/coverage-v8": "^3.2.4",
-    "dotenv-cli": "^11.0.0",
-    "eslint": "^9",
-    "eslint-config-next": "15.5.18",
-    "prisma": "^7.6.0",
-    "tailwindcss": "^4",
-    "tsx": "^4.21.0",
-    "typescript": "^5",
-    "vitest": "^3.2.4"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@prisma/engines",
-      "esbuild",
-      "prisma",
-      "sharp",
-      "unrs-resolver"
-    ],
-    "ignoredBuiltDependencies": [
-      "msw"
-    ]
-  }
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build"
+    },
+    "devDependencies": {
+        "@popperjs/core": "^2.11.6",
+        "@tailwindcss/forms": "^0.5.7",
+        "@tailwindcss/typography": "^0.5.10",
+        "@tailwindcss/vite": "^4.1.11",
+        "autoprefixer": "^10.4.16",
+        "axios": "^1.1.2",
+        "concurrently": "^9.0.1",
+        "daisyui": "^5.0.50",
+        "laravel-vite-plugin": "^2.0.0",
+        "tailwindcss": "^4.1.11",
+        "vite": "^7.1.2"
+    },
+    "dependencies": {
+        "@alpinejs/intersect": "^3.13.3",
+        "alpinejs": "^3.13.3",
+        "clipboard": "^2.0.11",
+        "highlight.js": "^11.9.0"
+    }
 }
