@@ -28,6 +28,6 @@
     </div>
 
     <div class="flex justify-end content-end pb-4 pr-4 text-xs font-light">
-        <a href="{{route('blog.view', $post->slug)}}">{{ __('Read more >') }}</a>
+        <a href="{{route('blog.view', $post->slug)}}">{{ __('Read more →') }}</a>
     </div>
 </div>

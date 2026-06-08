@@ -15,9 +15,9 @@
     <div class="text-primary-500 text-sm text-center mx-auto mt-8">
         {{ __('Share this post.') }}
     </div>
-    <div class="flex gap-3 justify-center pt-3">
-        <x-link.social-icon name="x" title="{{ __('Twitter page') }}" link="https://x.com/intent/post?text={{ urlencode($post->title) }}&url={{ urlencode(url()->current()) }}" class="hover:text-primary-500"/>
-        <x-link.social-icon name="linkedin" title="{{ __('LinkedIn community') }}" link="https://www.linkedin.com/shareArticle?url={{ urlencode(url()->current()) }}&title={{ urlencode($post->title) }}" class="hover:text-primary-500"/>
+    <div class="flex gap-6 justify-center pt-3">
+        <x-link.social-icon name="x" title="{{ __('X') }}" link="https://x.com/intent/post?text={{ urlencode($post->title) }}&url={{ urlencode(url()->current()) }}" class="hover:text-primary-500"/>
+        <x-link.social-icon name="linkedin" title="{{ __('LinkedIn') }}" link="https://www.linkedin.com/shareArticle?url={{ urlencode(url()->current()) }}&title={{ urlencode($post->title) }}" class="hover:text-primary-500"/>
     </div>
 
     <div class="text-center">

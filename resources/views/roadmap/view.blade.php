@@ -12,7 +12,7 @@
 
         <div class="max-w-none md:max-w-4xl mx-auto">
             <div class="text-end  my-6">
-                <x-button-link.primary-outline href="{{route('roadmap')}}">{{ __('<< Back to Roadmap') }}</x-button-link.primary-outline>
+                <x-button-link.primary-outline href="{{route('roadmap')}}">{{ __('⇽ Back to Roadmap') }}</x-button-link.primary-outline>
             </div>
 
             <livewire:roadmap.view :slug="$slug"></livewire:roadmap.view>

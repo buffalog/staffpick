@@ -13,7 +13,7 @@
             @endfor
         </a>
     </div>
-    <div class="mt-2 text-primary-50 text-sm italic">
+    <div class="mt-2 text-neutral-500 text-sm italic">
         {{ $slot }}
     </div>
 </div>

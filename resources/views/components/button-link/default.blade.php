@@ -1,7 +1,7 @@
 @props(['elementType' => 'a', 'isDisabled' => false])
 
 @php
-    $class = 'inline-block drop-shadow-xl cursor-pointer leading-6 focus:ring-4 focus:outline-none focus:ring-secondary-300 rounded-full text-sm font-medium px-4 py-2 text-center transition hover:scale-103 ';
+    $class = 'inline-block drop-shadow-xl cursor-pointer leading-6 focus:ring-4 focus:outline-none focus:ring-secondary-300 rounded-lg text-sm font-medium px-4 py-2 text-center transition hover:scale-103 ';
 @endphp
 
 @if($elementType === 'a')

@@ -22,7 +22,7 @@
 
                      {{$left}}
                  </div>
-                <div class="md:basis-2/5 md:min-h-screen md:bg-linear-to-r md:from-primary-400 md:to-primary-700 flex flex-col md:text-white text-primary-900 text-center md:text-left left-shadow">
+                <div class="md:basis-2/5 md:min-h-screen md:bg-linear-to-r md:from-primary-400 md:to-primary-700 flex flex-col md:text-white text-primary-900 text-center md:text-left left-shadow relative overflow-hidden">
                     <div class="flex justify-between md:justify-end">
                         <div class="md:hidden">
                             <a href="{{route('home')}}">
@@ -31,11 +31,20 @@
                         </div>
 
                         <div class="self-end text-primary-200 m-4 text-xs">
-                            <x-link href="{{route('home')}}" class="flex items-center text-primary-100">{{__('< back home')}}</x-link>
+                            <x-link href="{{route('home')}}" class="flex items-center text-primary-100">{{__('⇽ back home')}}</x-link>
                         </div>
                     </div>
 
-                    {{$right}}
+                    <div class="bg-primary-200  w-96 h-96 rounded-3xl absolute opacity-10 -z-0 hidden md:block -right-56 bottom-14 rotate-45">
+
+                    </div>
+                    <div class="bg-primary-200  w-96 h-96 rounded-3xl absolute opacity-20 -z-0 hidden md:block -right-56 bottom-36 rotate-45">
+
+                    </div>
+
+                    <div class="relative z-10">
+                        {{$right}}
+                    </div>
                 </div>
             </div>
         </div>

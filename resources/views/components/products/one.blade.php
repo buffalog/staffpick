@@ -6,7 +6,7 @@
         $price = $productService->getProductPrice($product);
     @endphp
 
-    <div {{ $attributes->merge(['class' => 'max-w-none md:max-w-lg border border-primary-500 rounded-2xl p-8 mt-6 mx-4 md:mx-auto']) }}>
+    <div {{ $attributes->merge(['class' => 'max-w-none md:max-w-lg border border-neutral-200 rounded-2xl p-8 mt-6 mx-4 md:mx-auto']) }}>
 
         <x-heading.h4 class="text-center">
             {{$product->name}}

@@ -38,11 +38,9 @@
                 @else
                     <div class="flex flex-row items-center gap-3 mt-6">
                         <x-input.field wire:model="code" placeholder="{{ __('Discount code') }}" type="text" class="input-sm mx-0! px-0!"
-                               wire:keydown.enter.prevent="add"
                                value="{{$addedCode ?? ''}}" disabled="{{$isDiscountCodeAdded}}"/>
 
-                        <x-button-link.primary-outline wire:click.prevent="add" tabindex="0"
-                                                       @keydown.enter.prevent="$wire.add()"
+                        <x-button-link.primary-outline wire:click.prevent="add"
                                                        class="!text-primary-500 !border-primary-500 text-xs! py-1! whitespace-nowrap">
                             {{ __('Add Discount') }}
                         </x-button-link.primary-outline>
@@ -56,52 +54,13 @@
 
     <hr class="mb-6 mt-4 text-neutral-200">
 
-    @if ($planPriceType === \App\Constants\PlanPriceType::SEAT_BASED_WITH_INCLUDED_SEATS->value && $basePrice !== null)
-        <div class="flex flex-row justify-between">
-            <div class="text-primary-900">
-                {{ __('Base price') }} <span class="text-xs text-neutral-400">({{ __('includes :count seats', ['count' => $includedSeats]) }})</span>
-            </div>
-            <div class="text-primary-900">
-                @money($basePrice, $currencyCode)
-            </div>
-        </div>
-        @if ($extraSeats > 0)
-            <div class="flex flex-row justify-between mt-2">
-                <div class="text-primary-900">
-                    {{ __('Extra seats') }} <span class="text-xs text-neutral-400">({{ $extraSeats }} &times; @money($extraSeatPrice, $currencyCode))</span>
-                </div>
-                <div class="text-primary-900">
-                    @money($extraSeats * $extraSeatPrice, $currencyCode)
-                </div>
-            </div>
-        @endif
-        <hr class="my-4 text-neutral-200">
+    @if ($subtotal > 0)
         <div class="flex flex-row justify-between">
             <div class="text-primary-900">
                 {{ __('Subscription price') }}
             </div>
             <div class="text-primary-900">
                 @money($subtotal, $currencyCode)
-            </div>
-        </div>
-    @elseif ($subtotal > 0)
-        <div class="flex flex-row justify-between">
-            <div class="text-primary-900">
-                {{ __('Subscription price') }}
-            </div>
-            <div class="text-primary-900">
-                @money($subtotal, $currencyCode)
-            </div>
-        </div>
-    @endif
-
-    @if ($setupFee > 0)
-        <div class="flex flex-row justify-between mt-2">
-            <div class="text-primary-900">
-                {{ __('Setup fee') }} <span class="text-xs text-neutral-400">({{ __('one-time') }})</span>
-            </div>
-            <div class="text-primary-900">
-                @money($setupFee, $currencyCode)
             </div>
         </div>
     @endif
@@ -176,7 +135,7 @@
         </div>
         <div class="text-primary-500 text-xl font-bold">
             @if ($planHasTrial && !$isTrailSkipped)
-                @money($setupFee, $currencyCode)
+                @money(0, $currencyCode)
             @else
                 @money($amountDue, $currencyCode)
             @endif

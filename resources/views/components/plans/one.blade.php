@@ -4,9 +4,10 @@
 
 @php
     $price = $planService->getPlanPrice($plan);
+    $borderColor = $plan->product->is_popular ? 'border-primary-500' : 'border-neutral-200';
 @endphp
 
-<div {{$attributes->merge(['class' => 'relative px-5 py-10 flex flex-col gap-4 mx-auto text-center border-2 border-primary-500 rounded-2xl shadow-xl hover:shadow-2xl hover:-translate-y-2 transition'])}}>
+<div {{$attributes->merge(['class' => 'relative px-5 py-10 flex flex-col gap-4 mx-auto text-center border-2 rounded-2xl shadow-xl hover:shadow-2xl hover:-translate-y-2 transition ' . $borderColor])}}>
     @if ($plan->product->is_popular)
     <div class="absolute border-0 top-0 -mt-3 left-1/2 transform -translate-x-1/2 bg-primary-500 text-primary-50 mx-auto rounded z-0 text-xs px-2 py-1">
         {{ __('Most popular') }}
@@ -23,23 +24,11 @@
                 @money($price->price, $price->currency->code)
             </div>
             <div class="text-neutral-400 text-sm">
-                @if($plan->type === \App\Constants\PlanType::SEAT_BASED->value && $price->type === \App\Constants\PlanPriceType::SEAT_BASED_WITH_INCLUDED_SEATS->value)
-                    / {{$plan->interval_count > 1 ? $plan->interval_count : '' }} {{ __($plan->interval->name) }}
-                    <div class="text-xs mt-1">
-                        {{ __('Includes :count seats, +:price/extra seat', ['count' => $price->included_seats, 'price' => money($price->extra_seat_price, $price->currency->code)]) }}
-                    </div>
-                @else
-                    @if($plan->type === \App\Constants\PlanType::SEAT_BASED->value)
-                        <span class="text-sm">{{__('Per seat')}}</span>
-                    @endif
-                    / {{$plan->interval_count > 1 ? $plan->interval_count : '' }} {{ __($plan->interval->name) }}
+                @if($plan->type === \App\Constants\PlanType::SEAT_BASED->value)
+                    <span class="text-sm">{{__('Per seat')}}</span>
                 @endif
+                / {{$plan->interval_count > 1 ? $plan->interval_count : '' }} {{ __($plan->interval->name) }}
             </div>
-            @if(($price->setup_fee ?? 0) > 0)
-                <div class="text-sm text-neutral-500 mt-1">
-                    + @money($price->setup_fee, $price->currency->code) {{ __('setup fee') }}
-                </div>
-            @endif
         @endif
 
         @if($price->type === \App\Constants\PlanPriceType::USAGE_BASED_PER_UNIT->value)
@@ -86,7 +75,13 @@
         </ul>
     </div>
 
-    <x-button-link.primary href="{{route('checkout.subscription', $plan->slug)}}">
-        {{ __('Buy') }} {{ $plan->product->name }}
-    </x-button-link.primary>
+    @if ($plan->product->is_popular)
+        <x-button-link.primary href="{{route('checkout.subscription', $plan->slug)}}">
+            {{ __('Buy') }} {{ $plan->product->name }}
+        </x-button-link.primary>
+    @else
+        <x-button-link.primary-outline href="{{route('checkout.subscription', $plan->slug)}}">
+            {{ __('Buy') }} {{ $plan->product->name }}
+        </x-button-link.primary-outline>
+    @endif
 </div>

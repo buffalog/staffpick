@@ -20,7 +20,7 @@
 
             @if($backButton)
                 <div class="self-end text-primary-300 m-4 text-xs">
-                    <x-link href="{{route('home')}}" class="flex items-center text-primary-200">{{__('<< back')}}</x-link>
+                    <x-link href="{{route('home')}}" class="flex items-center text-primary-200">{{__('⇽ back')}}</x-link>
                 </div>
             @endif
         </div>
