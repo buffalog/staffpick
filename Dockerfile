@@ -8,7 +8,7 @@ ENV TZ=UTC
 # System dependencies
 RUN apt-get update && apt-get install -y \
     curl git unzip zip gnupg ca-certificates \
-    libpng-dev libzip-dev libicu-dev libxml2-dev \
+    libpng-dev libzip-dev libicu-dev libxml2-dev libexif-dev \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Microsoft ODBC driver for SQL Server (required for pdo_sqlsrv)
@@ -22,9 +22,11 @@ RUN curl -sSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor 
 # PHP extensions
 RUN docker-php-ext-install \
     bcmath \
+    exif \
     intl \
     pcntl \
     pdo \
+    sockets \
     xml \
     zip
 
@@ -44,7 +46,7 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 COPY . .
 
 # Install PHP dependencies (no dev, optimized autoloader)
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+RUN COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader --no-interaction
 
 # Install and build frontend assets
 RUN npm ci && npm run build && rm -rf node_modules
