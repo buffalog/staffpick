@@ -19,7 +19,9 @@ return new class extends Migration
             $table->foreignId('product_id')->constrained()->cascadeOnDelete()->cascadeOnUpdate();
             $table->boolean('is_active')->default(true);
             $table->boolean('has_trial')->default(false);
-            $table->foreignId('trial_interval_id')->nullable()->constrained('intervals')->cascadeOnDelete()->cascadeOnUpdate();
+            // SQL Server does not allow multiple cascade paths to the same table.
+            // trial_interval_id is nullable, so nullOnDelete is safe and correct.
+            $table->foreignId('trial_interval_id')->nullable()->constrained('intervals')->nullOnDelete()->noActionOnUpdate();
             $table->unsignedInteger('interval_count');
             $table->integer('trial_interval_count')->nullable();
             $table->text('description')->nullable();
