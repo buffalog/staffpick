@@ -15,6 +15,9 @@ php artisan config:clear
 echo "Running migrations..."
 php artisan migrate --force
 
+echo "Seeding base data..."
+php artisan db:seed --force
+
 echo "Caching routes and views..."
 php artisan route:cache
 php artisan view:cache
