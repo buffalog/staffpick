@@ -6,9 +6,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('blog_posts', function (Blueprint $table) {
@@ -19,11 +16,13 @@ return new class extends Migration
             $table->boolean('is_published')->default(false);
             $table->timestamp('published_at')->nullable();
             $table->foreignId('user_id')->constrained();
-            $table->foreignId('author_id')->nullable()->constrained('users');
+            // SQL Server rejects two FKs to the same table — store as plain integer
+            $table->unsignedBigInteger('author_id')->nullable();
             $table->foreignId('blog_post_category_id')->nullable()->constrained();
 
-            // only if the database is not sqlite (which doesn't support fulltext)
-            if (config('database.default') !== 'sqlite') {
+            // fulltext index not supported by sqlsrv driver
+            $db = config('database.default');
+            if ($db !== 'sqlite' && $db !== 'sqlsrv') {
                 $table->fullText(['title', 'body']);
             }
 
@@ -32,9 +31,6 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('blog_posts');
