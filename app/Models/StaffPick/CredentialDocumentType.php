@@ -1,0 +1,41 @@
+<?php
+
+namespace App\Models\StaffPick;
+
+use App\Models\StaffPick\Concerns\BelongsToTenant;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class CredentialDocumentType extends Model
+{
+    use BelongsToTenant, HasFactory;
+
+    protected $table = 'sp_credential_document_types';
+
+    protected $fillable = [
+        'tenant_id',
+        'name',
+        'is_required',
+        'has_expiry',
+        'expiry_warning_days',
+        'deactivate_on_expiry',
+        'is_active',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_required' => 'boolean',
+            'has_expiry' => 'boolean',
+            'expiry_warning_days' => 'integer',
+            'deactivate_on_expiry' => 'boolean',
+            'is_active' => 'boolean',
+        ];
+    }
+
+    public function credentials(): HasMany
+    {
+        return $this->hasMany(ProviderCredential::class, 'document_type_id');
+    }
+}
