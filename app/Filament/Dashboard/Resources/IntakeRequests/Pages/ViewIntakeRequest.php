@@ -1,0 +1,19 @@
+<?php
+
+namespace App\Filament\Dashboard\Resources\IntakeRequests\Pages;
+
+use App\Filament\Dashboard\Resources\IntakeRequests\IntakeRequestResource;
+use Filament\Actions\EditAction;
+use Filament\Resources\Pages\ViewRecord;
+
+class ViewIntakeRequest extends ViewRecord
+{
+    protected static string $resource = IntakeRequestResource::class;
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            EditAction::make(),
+        ];
+    }
+}
