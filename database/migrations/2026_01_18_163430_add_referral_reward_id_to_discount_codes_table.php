@@ -6,20 +6,17 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::table('discount_codes', function (Blueprint $table) {
-            $table->foreignId('referral_reward_id')->nullable()->after('discount_id')->constrained('referral_rewards')->onDelete('cascade');
+            // SQL Server cascade cycle: discount_codes already has discount_id FK.
+            // Adding referral_reward_id with cascade creates a second cascade path.
+            // Use nullOnDelete (safe since column is nullable) instead of cascade.
+            $table->foreignId('referral_reward_id')->nullable()->after('discount_id')->constrained('referral_rewards')->nullOnDelete();
             $table->boolean('is_referral_reward')->default(false)->after('referral_reward_id');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::table('discount_codes', function (Blueprint $table) {
