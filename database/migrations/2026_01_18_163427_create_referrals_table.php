@@ -7,15 +7,14 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('referrals', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('referrer_user_id')->constrained('users')->onDelete('cascade');
-            $table->foreignId('referred_user_id')->constrained('users')->onDelete('cascade');
+            // SQL Server does not allow multiple cascade paths to the same table.
+            // referred_user_id uses nullOnDelete as a safe alternative.
+            $table->foreignId('referrer_user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('referred_user_id')->constrained('users')->nullOnDelete();
             $table->string('referral_code')->index();
             $table->string('status')->default(ReferralConstants::STATUS_PENDING);
             $table->timestamp('verified_at')->nullable();
@@ -28,9 +27,6 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('referrals');
