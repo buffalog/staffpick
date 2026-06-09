@@ -15,8 +15,13 @@ php artisan config:clear
 echo "Running migrations..."
 php artisan migrate --force
 
-echo "Seeding base data..."
-php artisan db:seed --force
+echo "Seeding base data (first boot only)..."
+php artisan db:seed --force --class=Database\\Seeders\\IntervalsSeeder
+php artisan db:seed --force --class=Database\\Seeders\\CurrenciesSeeder
+php artisan db:seed --force --class=Database\\Seeders\\OAuthLoginProvidersSeeder
+php artisan db:seed --force --class=Database\\Seeders\\PaymentProvidersSeeder
+php artisan db:seed --force --class=Database\\Seeders\\ConfigsSeeder 2>/dev/null || true
+php artisan db:seed --force --class=Database\\Seeders\\RolesAndPermissionsSeeder 2>/dev/null || true
 
 echo "Caching routes and views..."
 php artisan route:cache
