@@ -2,7 +2,7 @@
 set -e
 
 echo "Creating database if it does not exist..."
-sqlcmd \
+/opt/mssql-tools18/bin/sqlcmd \
   -S "${DB_HOST},${DB_PORT:-1433}" \
   -U "${DB_USERNAME}" \
   -P "${DB_PASSWORD}" \
