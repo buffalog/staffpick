@@ -17,25 +17,38 @@ class SetupTenant extends Command
      *
      * @var string
      */
-    protected $signature = 'staffpick:setup-tenant {--password= : Password to set when the admin user is first created}';
+    protected $signature = 'staffpick:setup-tenant
+        {--email= : Admin user email (default: the bootstrap admin)}
+        {--user-name= : Admin display name (default: derived from the email)}
+        {--name= : Tenant name (default: the bootstrap tenant)}
+        {--slug= : Tenant slug / URL identifier (default: derived from the name)}
+        {--password= : Password to set when the admin user is first created}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Bootstrap the default admin user and tenant (idempotent — safe to run repeatedly).';
+    protected $description = 'Bootstrap an admin user and tenant (idempotent — safe to run repeatedly).';
 
-    private const ADMIN_NAME = 'Jeremy Pihl';
+    private const DEFAULT_ADMIN_NAME = 'Jeremy Pihl';
 
-    private const ADMIN_EMAIL = 'jeremy@thepihls.org';
+    private const DEFAULT_ADMIN_EMAIL = 'jeremy@thepihls.org';
 
-    private const TENANT_NAME = 'First Class Therapy Solutions';
+    private const DEFAULT_TENANT_NAME = 'First Class Therapy Solutions';
 
-    private const TENANT_SLUG = 'fcts';
+    private const DEFAULT_TENANT_SLUG = 'fcts';
 
     public function handle(TenantPermissionService $tenantPermissionService): int
     {
+        $email = $this->option('email') ?: self::DEFAULT_ADMIN_EMAIL;
+        $tenantName = $this->option('name') ?: self::DEFAULT_TENANT_NAME;
+        // A custom name derives its slug; the default tenant keeps its 'fcts' slug.
+        $slug = $this->option('slug')
+            ?: ($this->option('name') ? Str::slug($this->option('name')) : self::DEFAULT_TENANT_SLUG);
+        $userName = $this->option('user-name')
+            ?: ($this->option('email') ? Str::headline(Str::before($email, '@')) : self::DEFAULT_ADMIN_NAME);
+
         // The tenant role templates and the global admin role come from the
         // RolesAndPermissionsSeeder; bail early with a clear hint if it hasn't run.
         $globalAdminRole = Role::query()
@@ -51,15 +64,15 @@ class SetupTenant extends Command
 
         // 1. Admin user.
         $newPassword = null;
-        $user = User::query()->where('email', self::ADMIN_EMAIL)->first();
+        $user = User::query()->where('email', $email)->first();
 
         if ($user === null) {
             // The password cast hashes this automatically.
             $newPassword = $this->option('password') ?: Str::password(16);
 
             $user = User::create([
-                'name' => self::ADMIN_NAME,
-                'email' => self::ADMIN_EMAIL,
+                'name' => $userName,
+                'email' => $email,
                 'password' => $newPassword,
                 'is_admin' => true,
             ]);
@@ -79,9 +92,9 @@ class SetupTenant extends Command
 
         // 2. Tenant — keyed on the uuid, which is the tenant's URL slug.
         $tenant = Tenant::firstOrCreate(
-            ['uuid' => self::TENANT_SLUG],
+            ['uuid' => $slug],
             [
-                'name' => self::TENANT_NAME,
+                'name' => $tenantName,
                 'is_name_auto_generated' => false,
                 'created_by' => $user->id,
             ],
