@@ -7,9 +7,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('invitations', function (Blueprint $table) {
@@ -22,14 +19,12 @@ return new class extends Migration
             $table->timestamp('accepted_at')->nullable();
             $table->string('status')->default(InvitationStatus::PENDING);
             $table->foreignId('user_id')->constrained('users');
-            $table->foreignId('tenant_id')->constrained('tenants');
+            // SQL Server cascade cycle: tenant_id stored without cascade
+            $table->unsignedBigInteger('tenant_id');
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('invitations');

@@ -6,43 +6,35 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
+        // SQL Server cascade cycle: these tables already have user_id FKs with cascades.
+        // Adding tenant_id as a constrained FK would create multiple cascade paths.
+        // Store as plain unsignedBigInteger to avoid the SQL Server cycle rejection.
         Schema::table('subscriptions', function (Blueprint $table) {
-            $table->foreignId('tenant_id')->constrained();
+            $table->unsignedBigInteger('tenant_id')->nullable();
         });
 
         Schema::table('orders', function (Blueprint $table) {
-            $table->foreignId('tenant_id')->constrained();
+            $table->unsignedBigInteger('tenant_id')->nullable();
         });
 
         Schema::table('transactions', function (Blueprint $table) {
-            $table->foreignId('tenant_id')->constrained();
+            $table->unsignedBigInteger('tenant_id')->nullable();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::table('subscriptions', function (Blueprint $table) {
-            $table->dropForeign(['tenant_id']);
             $table->dropColumn('tenant_id');
         });
 
-        // orders
         Schema::table('orders', function (Blueprint $table) {
-            $table->dropForeign(['tenant_id']);
             $table->dropColumn('tenant_id');
         });
 
-        // transactions
         Schema::table('transactions', function (Blueprint $table) {
-            $table->dropForeign(['tenant_id']);
             $table->dropColumn('tenant_id');
         });
     }

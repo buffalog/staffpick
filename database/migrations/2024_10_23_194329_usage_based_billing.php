@@ -8,9 +8,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('plan_meters', function (Blueprint $table) {
@@ -32,7 +29,7 @@ return new class extends Migration
         Schema::table('plan_price_payment_provider_data', function (Blueprint $table) {
             $table->string('type')->default(PaymentProviderPlanPriceType::MAIN_PRICE->value);
 
-            if (in_array(config('database.default'), ['mysql', 'mariadb'], true)) { // apparently the order of operations is important here since mysql differs from pgsql & sqlite
+            if (in_array(config('database.default'), ['mysql', 'mariadb'], true)) {
                 $table->unique(['plan_price_id', 'payment_provider_id', 'type'], 'plan_price_payment_provider_type_data_unq');
                 $table->dropIndex('plan_price_payment_provider_data_unq');
             } else {
@@ -64,18 +61,16 @@ return new class extends Migration
             $table->timestamps();
         });
 
+        // SQL Server cascade cycle: user_stripe_data already has user_id FK.
+        // Store tenant_id as plain integer to avoid multiple cascade paths.
         Schema::table('user_stripe_data', function (Blueprint $table) {
-            $table->foreignId('tenant_id')->nullable()->constrained();
+            $table->unsignedBigInteger('tenant_id')->nullable();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::table('user_stripe_data', function (Blueprint $table) {
-            $table->dropForeign(['tenant_id']);
             $table->dropColumn('tenant_id');
         });
 

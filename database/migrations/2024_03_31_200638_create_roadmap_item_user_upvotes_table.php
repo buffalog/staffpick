@@ -6,23 +6,18 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('roadmap_item_user_upvotes', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('roadmap_item_id')->constrained()->onDelete('cascade');
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->foreignId('roadmap_item_id')->constrained()->cascadeOnDelete();
+            // SQL Server cascade cycle: user_id stored as plain integer
+            $table->unsignedBigInteger('user_id');
             $table->string('ip_address')->nullable();
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('roadmap_item_user_upvotes');
