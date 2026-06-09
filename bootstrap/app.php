@@ -19,6 +19,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Railway terminates TLS at its edge proxy and forwards to the container
+        // over http. Trust the proxy so Laravel honors X-Forwarded-Proto and
+        // generates https URLs (asset()/@vite, form actions, redirects) — otherwise
+        // @vite emits http stylesheet links that the browser blocks as mixed
+        // content. The container is only reachable through Railway's proxy, so
+        // trusting all proxies is safe here.
+        $middleware->trustProxies(at: '*');
+
         $middleware->appendToGroup('web', [
             BlockedUser::class,
             UpdateUserLastSeenAt::class,
