@@ -6,9 +6,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('plans', function (Blueprint $table) {
@@ -19,20 +16,17 @@ return new class extends Migration
             $table->foreignId('product_id')->constrained()->cascadeOnDelete()->cascadeOnUpdate();
             $table->boolean('is_active')->default(true);
             $table->boolean('has_trial')->default(false);
-            // SQL Server does not allow multiple cascade paths to the same table.
-            // trial_interval_id is nullable, so nullOnDelete is safe and correct.
-            $table->foreignId('trial_interval_id')->nullable()->constrained('intervals')->nullOnDelete()->noActionOnUpdate();
+            // SQL Server rejects any two FKs pointing to the same table, even with
+            // different actions. Store trial_interval_id as a plain unsignedBigInteger
+            // (no FK constraint) to avoid the cascade cycle error.
+            $table->unsignedBigInteger('trial_interval_id')->nullable();
             $table->unsignedInteger('interval_count');
             $table->integer('trial_interval_count')->nullable();
             $table->text('description')->nullable();
-
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('plans');

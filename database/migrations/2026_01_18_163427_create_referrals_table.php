@@ -11,10 +11,10 @@ return new class extends Migration
     {
         Schema::create('referrals', function (Blueprint $table) {
             $table->id();
-            // SQL Server does not allow multiple cascade paths to the same table.
-            // referred_user_id uses nullOnDelete as a safe alternative.
+            // SQL Server rejects multiple FKs to the same table regardless of action.
+            // referrer_user_id keeps the FK; referred_user_id stored as plain integer.
             $table->foreignId('referrer_user_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('referred_user_id')->constrained('users')->nullOnDelete();
+            $table->unsignedBigInteger('referred_user_id');
             $table->string('referral_code')->index();
             $table->string('status')->default(ReferralConstants::STATUS_PENDING);
             $table->timestamp('verified_at')->nullable();
