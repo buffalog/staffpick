@@ -2,27 +2,30 @@
 
 namespace Tests\Feature\StaffPick;
 
+use App\Models\StaffPick\IntakeRequest;
 use App\Models\StaffPick\Provider;
 use App\Models\StaffPick\Subject;
 use App\Models\Tenant;
-use Database\Seeders\StaffPickTestDataSeeder;
+use App\Services\StaffPick\MatchingEngine;
+use Database\Seeders\StaffPick\DemoDataSeeder;
 use Tests\Feature\FeatureTest;
 
-class StaffPickTestDataSeederTest extends FeatureTest
+class DemoDataSeederTest extends FeatureTest
 {
     private function fctsTenant(): Tenant
     {
         return Tenant::firstOrCreate(['uuid' => 'fcts'], ['name' => 'First Class Therapy Solutions']);
     }
 
-    public function test_it_seeds_fifteen_providers_and_five_subjects(): void
+    public function test_it_seeds_providers_subjects_and_intake_requests(): void
     {
         $tenant = $this->fctsTenant();
 
-        $this->seed(StaffPickTestDataSeeder::class);
+        $this->seed(DemoDataSeeder::class);
 
         $this->assertSame(15, Provider::where('tenant_id', $tenant->id)->count());
         $this->assertSame(5, Subject::where('tenant_id', $tenant->id)->count());
+        $this->assertSame(5, IntakeRequest::where('tenant_id', $tenant->id)->where('reference_number', 'like', 'DEMO-%')->count());
 
         // Variety the matching engine needs to exercise its branches.
         $this->assertGreaterThan(0, Provider::where('tenant_id', $tenant->id)->where('is_preferred', true)->count());
@@ -31,14 +34,28 @@ class StaffPickTestDataSeederTest extends FeatureTest
         $this->assertSame(1, Subject::where('tenant_id', $tenant->id)->where('provider_gender_preference', 'female')->count());
     }
 
+    public function test_each_demo_intake_resolves_matches(): void
+    {
+        $tenant = $this->fctsTenant();
+        $this->seed(DemoDataSeeder::class);
+
+        $engine = app(MatchingEngine::class);
+        $intakes = IntakeRequest::where('tenant_id', $tenant->id)->where('reference_number', 'like', 'DEMO-%')->get();
+
+        foreach ($intakes as $intake) {
+            $this->assertGreaterThan(0, $engine->match($intake)->count(), "Intake {$intake->reference_number} returned no matches");
+        }
+    }
+
     public function test_it_is_idempotent(): void
     {
         $tenant = $this->fctsTenant();
 
-        $this->seed(StaffPickTestDataSeeder::class);
-        $this->seed(StaffPickTestDataSeeder::class);
+        $this->seed(DemoDataSeeder::class);
+        $this->seed(DemoDataSeeder::class);
 
         $this->assertSame(15, Provider::where('tenant_id', $tenant->id)->count());
         $this->assertSame(5, Subject::where('tenant_id', $tenant->id)->count());
+        $this->assertSame(5, IntakeRequest::where('tenant_id', $tenant->id)->where('reference_number', 'like', 'DEMO-%')->count());
     }
 }
