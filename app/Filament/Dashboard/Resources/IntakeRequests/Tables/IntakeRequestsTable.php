@@ -2,6 +2,7 @@
 
 namespace App\Filament\Dashboard\Resources\IntakeRequests\Tables;
 
+use App\Filament\Dashboard\Resources\IntakeRequests\Actions\FindMatchesAction;
 use App\Filament\Dashboard\Resources\IntakeRequests\IntakeRequestResource;
 use App\Models\StaffPick\TenantConfig;
 use Filament\Actions\BulkActionGroup;
@@ -72,6 +73,7 @@ class IntakeRequestsTable
                 TrashedFilter::make(),
             ])
             ->recordActions([
+                FindMatchesAction::make(),
                 ViewAction::make(),
                 EditAction::make(),
             ])
