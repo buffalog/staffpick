@@ -8,35 +8,41 @@ use PHPUnit\Framework\TestCase;
 
 class MatchingResultTest extends TestCase
 {
-    public function test_it_exposes_the_provider_score_distance_and_factors(): void
+    public function test_it_exposes_the_provider_score_distance_language_and_factors(): void
     {
         $provider = new Provider(['first_name' => 'Avery', 'last_name' => 'Stone']);
 
         $result = new MatchingResult(
             provider: $provider,
-            score: 0.873456,
+            score: 1.873456,
             distanceMiles: 4.219,
-            factors: ['tier_priority' => 1, 'near_miss' => false],
+            languageMatched: true,
+            languageWarning: false,
+            factors: ['tier_priority' => 1, 'is_preferred' => true],
         );
 
         $this->assertSame($provider, $result->provider);
-        $this->assertSame(0.873456, $result->score);
+        $this->assertSame(1.873456, $result->score);
         $this->assertSame(4.219, $result->distanceMiles);
+        $this->assertTrue($result->languageMatched);
+        $this->assertFalse($result->languageWarning);
         $this->assertSame(1, $result->factors['tier_priority']);
-        $this->assertFalse($result->factors['near_miss']);
+        $this->assertTrue($result->factors['is_preferred']);
     }
 
-    public function test_to_array_rounds_score_and_distance_for_presentation(): void
+    public function test_to_array_rounds_and_exposes_match_score_and_flags(): void
     {
         $provider = new Provider(['first_name' => 'Avery', 'last_name' => 'Stone']);
         $provider->id = 42;
 
-        $result = new MatchingResult($provider, 0.873456, 4.219, ['tier_priority' => 2]);
+        $result = new MatchingResult($provider, 1.873456, 4.219, true, true, ['tier_priority' => 2]);
 
         $this->assertSame([
             'provider_id' => 42,
-            'score' => 0.8735,
+            'match_score' => 1.8735,
             'distance_miles' => 4.22,
+            'language_matched' => true,
+            'language_warning' => true,
             'factors' => ['tier_priority' => 2],
         ], $result->toArray());
     }

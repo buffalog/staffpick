@@ -19,6 +19,7 @@ class Subject extends Model
         'tenant_id',
         'first_name',
         'last_name',
+        'email',
         'phone',
         'phone_alt',
         'alt_contact_name',

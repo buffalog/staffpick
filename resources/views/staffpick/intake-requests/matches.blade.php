@@ -3,12 +3,26 @@
 
     $providerLabel = TenantConfig::entityLabel('provider', __('Provider'));
     $disciplineLabel = TenantConfig::entityLabel('discipline', __('Discipline'));
+    $disciplineName = $record->discipline?->name;
     $subjectHasCoordinates = $record->subject && $record->subject->latitude !== null && $record->subject->longitude !== null;
+    $languageWarning = $results->isNotEmpty() && $results->first()->languageWarning;
 @endphp
 
 <div class="space-y-4 text-sm">
+    @if ($languageWarning)
+        <div class="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-amber-800 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300">
+            <span class="font-semibold">{{ __('Language warning:') }}</span>
+            {{ __('no eligible :provider speaks the requested language (:language).', [
+                'provider' => mb_strtolower($providerLabel),
+                'language' => $record->subject?->language_preference,
+            ]) }}
+        </div>
+    @endif
+
     <p class="text-gray-500 dark:text-gray-400">
-        {{ __('Ranked by tier, then proximity. :discipline match and provider radius are required; specialty and language matches add bonus score.', ['discipline' => $disciplineLabel]) }}
+        {{ __('Preferred :providers first, then by tier, then by score (language match + proximity).', [
+            'providers' => mb_strtolower(\Illuminate\Support\Str::plural($providerLabel)),
+        ]) }}
     </p>
 
     @if ($results->isEmpty())
@@ -26,10 +40,12 @@
                     <tr class="text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
                         <th class="px-3 py-2">#</th>
                         <th class="px-3 py-2">{{ $providerLabel }}</th>
+                        <th class="px-3 py-2">{{ $disciplineLabel }}</th>
                         <th class="px-3 py-2">{{ __('Tier') }}</th>
                         <th class="px-3 py-2 text-right">{{ __('Distance') }}</th>
                         <th class="px-3 py-2 text-right">{{ __('Score') }}</th>
-                        <th class="px-3 py-2">{{ __('Factors') }}</th>
+                        <th class="px-3 py-2 text-center">{{ __('Language') }}</th>
+                        <th class="px-3 py-2"></th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -38,28 +54,36 @@
                         <tr class="text-gray-700 dark:text-gray-200">
                             <td class="px-3 py-2 text-gray-400">{{ $index + 1 }}</td>
                             <td class="px-3 py-2">
-                                <div class="font-medium text-gray-900 dark:text-white">
-                                    {{ trim("{$provider->first_name} {$provider->last_name}") }}
+                                <div class="flex items-center gap-2">
+                                    <span class="font-medium text-gray-900 dark:text-white">{{ trim("{$provider->first_name} {$provider->last_name}") }}</span>
+                                    @if (data_get($result->factors, 'is_preferred'))
+                                        <span class="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-400/10 dark:text-indigo-400">{{ __('Preferred') }}</span>
+                                    @endif
                                 </div>
                                 @if ($provider->business_name)
                                     <div class="text-xs text-gray-500 dark:text-gray-400">{{ $provider->business_name }}</div>
                                 @endif
                             </td>
+                            <td class="px-3 py-2">{{ $disciplineName ?? '—' }}</td>
                             <td class="px-3 py-2">{{ $provider->tier?->name ?? '—' }}</td>
                             <td class="px-3 py-2 text-right tabular-nums">{{ number_format($result->distanceMiles, 1) }} {{ __('mi') }}</td>
                             <td class="px-3 py-2 text-right font-semibold tabular-nums">{{ number_format($result->score, 3) }}</td>
-                            <td class="px-3 py-2">
-                                <div class="flex flex-wrap gap-1">
-                                    @if (data_get($result->factors, 'near_miss'))
-                                        <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-400/10 dark:text-amber-400">{{ __('Near miss') }}</span>
-                                    @endif
-                                    @if (data_get($result->factors, 'specialty') > 0)
-                                        <span class="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-400/10 dark:text-blue-400">{{ __('Specialty') }}</span>
-                                    @endif
-                                    @if (data_get($result->factors, 'language'))
-                                        <span class="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-400/10 dark:text-green-400">{{ __('Language') }}</span>
-                                    @endif
-                                </div>
+                            <td class="px-3 py-2 text-center">
+                                @if ($result->languageMatched)
+                                    <span class="font-semibold text-green-600 dark:text-green-400" title="{{ __('Language match') }}">&checkmark;</span>
+                                @else
+                                    <span class="text-gray-300 dark:text-gray-600">&mdash;</span>
+                                @endif
+                            </td>
+                            <td class="px-3 py-2 text-right">
+                                <button
+                                    type="button"
+                                    wire:click="assignProvider({{ $record->id }}, {{ $provider->id }})"
+                                    wire:loading.attr="disabled"
+                                    class="rounded-md bg-primary-600 px-3 py-1 text-xs font-medium text-white hover:bg-primary-500 disabled:opacity-50"
+                                >
+                                    {{ __('Assign') }}
+                                </button>
                             </td>
                         </tr>
                     @endforeach

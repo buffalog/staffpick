@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\StaffPick\AggregateProviderRatings;
 use Illuminate\Support\Facades\Schedule;
 
 /*
@@ -22,3 +23,9 @@ Schedule::command('app:local-subscription-expiring-soon-reminder')->dailyAt('00:
 Schedule::command('app:cleanup-local-subscription-statuses')->hourly();
 
 Schedule::command('app:sync-seat-based-subscription-quantities')->hourly();
+
+// StaffPick: weekly provider rating aggregation + tier-review generation (Sunday night).
+Schedule::job(new AggregateProviderRatings)
+    ->weeklyOn(0, '23:00')
+    ->name('staffpick-aggregate-provider-ratings')
+    ->withoutOverlapping();

@@ -15,13 +15,12 @@ class MatchingEngine
     private const EARTH_RADIUS_MILES = 3958.7613;
 
     /**
-     * Additive bonus weights applied on top of the (required) distance score.
-     * Tunable — these decide how much a specialty/language match lifts a provider
-     * relative to a closer-but-otherwise-equal provider.
+     * Bonus added to a provider's score for matching the subject's language
+     * preference. Deliberately heavy — greater than the max proximity score (1.0)
+     * so a language match always outranks a closer non-match within the same
+     * tier. Tunable.
      */
-    public const SPECIALTY_BONUS = 0.25;
-
-    public const LANGUAGE_BONUS = 0.15;
+    public const LANGUAGE_BONUS = 2.0;
 
     /**
      * Fallbacks used when the tenant has no config row yet (mirror the column
@@ -35,9 +34,10 @@ class MatchingEngine
      * Rank the eligible providers for an intake request, best first.
      *
      * Hard filters (exclude entirely): active provider, matching discipline, known
-     * coordinates, and within radius_max_miles + feathering of the subject. The
-     * surviving providers are ordered strictly by tier (priority ascending), then
-     * by quality score descending within each tier.
+     * coordinates, within radius_max_miles + feathering, exact gender match when
+     * the subject states a preference, and the tenant's internal/patient rating
+     * floors. Survivors are ordered: preferred providers first, then by tier
+     * (priority ascending), then by score (language match + proximity) descending.
      *
      * @return Collection<int, MatchingResult>
      */
@@ -45,7 +45,6 @@ class MatchingEngine
     {
         $subject = $intakeRequest->subject;
 
-        // Discipline and the subject's coordinates are required to match at all.
         if ($intakeRequest->discipline_id === null
             || $subject === null
             || $subject->latitude === null
@@ -62,87 +61,93 @@ class MatchingEngine
 
         $feathering = (float) ($config?->feathering_miles ?? self::DEFAULT_FEATHERING_MILES);
         $defaultRadius = (int) ($config?->default_radius_miles ?? self::DEFAULT_RADIUS_MILES);
+        $internalMin = $config?->rating_internal_min !== null ? (float) $config->rating_internal_min : null;
+        $patientMin = $config?->rating_patient_min !== null ? (float) $config->rating_patient_min : null;
 
-        $requestedSpecialtyIds = $intakeRequest->specialties->pluck('id')->all();
+        $genderPreference = $subject->provider_gender_preference;
         $languagePreference = $subject->language_preference;
 
-        return Provider::query()
+        $providers = Provider::query()
             ->where('tenant_id', $intakeRequest->tenant_id)
             ->where('discipline_id', $intakeRequest->discipline_id)
             ->where('is_active', true)
             ->where('status', 'active')
             ->whereNotNull('latitude')
             ->whereNotNull('longitude')
-            ->with(['tier', 'specialties', 'languages'])
-            ->get()
-            ->map(fn (Provider $provider): ?MatchingResult => $this->score(
-                $provider,
-                $subjectLat,
-                $subjectLng,
-                $requestedSpecialtyIds,
+            ->with(['tier', 'languages'])
+            ->get();
+
+        // First pass: apply hard filters and gather the scoring inputs.
+        $eligible = new Collection;
+
+        foreach ($providers as $provider) {
+            $distance = self::distanceMiles($subjectLat, $subjectLng, (float) $provider->latitude, (float) $provider->longitude);
+            $maxRadius = (float) ($provider->radius_max_miles ?: $defaultRadius);
+            $cutoff = $maxRadius + $feathering;
+
+            if ($distance > $cutoff) {
+                continue;
+            }
+
+            if (! self::matchesGender($genderPreference, $provider->gender)) {
+                continue;
+            }
+
+            $internalRating = $provider->internal_rating !== null ? (float) $provider->internal_rating : null;
+            $patientRating = $provider->rating_90day_avg !== null ? (float) $provider->rating_90day_avg : null;
+
+            if (! self::passesRatingFloor($internalRating, $internalMin)) {
+                continue;
+            }
+
+            if (! self::passesRatingFloor($patientRating, $patientMin)) {
+                continue;
+            }
+
+            $languageMatched = self::languageMatches(
                 $languagePreference,
-                $feathering,
-                $defaultRadius,
-            ))
-            ->filter()
-            ->sort(function (MatchingResult $a, MatchingResult $b): int {
-                // Strict tiering first (lower priority number wins), then quality.
-                return ($a->factors['tier_priority'] <=> $b->factors['tier_priority'])
-                    ?: ($b->score <=> $a->score);
-            })
-            ->values();
-    }
+                $provider->languages->flatMap(fn ($language): array => [$language->name, $language->code])->all(),
+            );
 
-    /**
-     * Score a single provider, or return null when it fails the distance filter.
-     *
-     * @param  array<int>  $requestedSpecialtyIds
-     */
-    private function score(
-        Provider $provider,
-        float $subjectLat,
-        float $subjectLng,
-        array $requestedSpecialtyIds,
-        ?string $languagePreference,
-        float $feathering,
-        int $defaultRadius,
-    ): ?MatchingResult {
-        $distance = self::distanceMiles(
-            $subjectLat,
-            $subjectLng,
-            (float) $provider->latitude,
-            (float) $provider->longitude,
-        );
+            $distanceScore = self::scoreDistance($distance, $cutoff);
 
-        $maxRadius = (float) ($provider->radius_max_miles ?: $defaultRadius);
-        $cutoff = $maxRadius + $feathering;
-
-        if ($distance > $cutoff) {
-            return null;
+            $eligible->push((object) [
+                'provider' => $provider,
+                'distance' => $distance,
+                'distanceScore' => $distanceScore,
+                'languageMatched' => $languageMatched,
+                'score' => self::composeScore($distanceScore, $languageMatched),
+                'tierPriority' => $provider->tier?->priority ?? PHP_INT_MAX,
+                'isPreferred' => (bool) $provider->is_preferred,
+            ]);
         }
 
-        $distanceScore = self::scoreDistance($distance, $cutoff);
-        $specialtyScore = self::scoreSpecialty($requestedSpecialtyIds, $provider->specialties->pluck('id')->all());
-        $languageScore = self::scoreLanguage(
-            $languagePreference,
-            $provider->languages->flatMap(fn ($language): array => [$language->name, $language->code])->all(),
-        );
+        // The whole result set warns when a language was requested but nobody speaks it.
+        $languageWarning = filled($languagePreference)
+            && $eligible->isNotEmpty()
+            && ! $eligible->contains(fn (object $row): bool => $row->languageMatched);
 
-        $factors = [
-            'tier_priority' => $provider->tier?->priority ?? PHP_INT_MAX,
-            'distance_score' => round($distanceScore, 4),
-            'specialty' => $specialtyScore,
-            'language' => $languageScore === 1.0,
-            'near_miss' => $distance > $maxRadius,
-            'acceptance' => null, // stub: historical acceptance rate (factor 7, future)
-        ];
-
-        return new MatchingResult(
-            $provider,
-            self::composeScore($distanceScore, $specialtyScore, $languageScore),
-            $distance,
-            $factors,
-        );
+        return $eligible
+            ->map(fn (object $row): MatchingResult => new MatchingResult(
+                provider: $row->provider,
+                score: $row->score,
+                distanceMiles: $row->distance,
+                languageMatched: $row->languageMatched,
+                languageWarning: $languageWarning,
+                factors: [
+                    'is_preferred' => $row->isPreferred,
+                    'tier_priority' => $row->tierPriority,
+                    'distance_score' => round($row->distanceScore, 4),
+                    'language' => $row->languageMatched,
+                ],
+            ))
+            ->sort(function (MatchingResult $a, MatchingResult $b): int {
+                // Preferred first, then tier ascending, then score descending.
+                return ($b->factors['is_preferred'] <=> $a->factors['is_preferred'])
+                    ?: (($a->factors['tier_priority'] <=> $b->factors['tier_priority'])
+                        ?: ($b->score <=> $a->score));
+            })
+            ->values();
     }
 
     /**
@@ -173,51 +178,63 @@ class MatchingEngine
     }
 
     /**
-     * Fraction of the requested specialties the provider covers, in [0, 1].
-     * Returns 0 when no specialties were requested (no bonus, no penalty).
-     *
-     * @param  array<int>  $requestedSpecialtyIds
-     * @param  array<int>  $providerSpecialtyIds
+     * Hard gender filter: passes when the subject states no preference, otherwise
+     * the provider's gender must match it exactly (case-insensitive). A provider
+     * with no recorded gender never satisfies a stated preference — no fallback.
      */
-    public static function scoreSpecialty(array $requestedSpecialtyIds, array $providerSpecialtyIds): float
+    public static function matchesGender(?string $preference, ?string $providerGender): bool
     {
-        if ($requestedSpecialtyIds === []) {
-            return 0.0;
+        $preference = trim((string) $preference);
+
+        if ($preference === '') {
+            return true;
         }
 
-        $matched = count(array_intersect($requestedSpecialtyIds, $providerSpecialtyIds));
+        if ($providerGender === null) {
+            return false;
+        }
 
-        return $matched / count($requestedSpecialtyIds);
+        return mb_strtolower($preference) === mb_strtolower(trim($providerGender));
     }
 
     /**
-     * 1.0 when the subject's language preference matches one of the provider's
-     * language names or ISO codes (case-insensitive), else 0.0. No preference → 0.
-     *
-     * @param  array<string>  $providerLanguages  provider language names and codes
+     * Rating floor: passes when the tenant sets no floor, or the provider is
+     * unrated (null), or the provider's rating meets/exceeds the floor.
      */
-    public static function scoreLanguage(?string $subjectPreference, array $providerLanguages): float
+    public static function passesRatingFloor(?float $rating, ?float $floor): bool
     {
-        $preference = trim((string) $subjectPreference);
+        if ($floor === null || $rating === null) {
+            return true;
+        }
+
+        return $rating >= $floor;
+    }
+
+    /**
+     * True when the subject's language preference matches one of the provider's
+     * language names or ISO codes (case-insensitive). No preference → false.
+     *
+     * @param  array<string>  $providerLanguages
+     */
+    public static function languageMatches(?string $preference, array $providerLanguages): bool
+    {
+        $preference = trim((string) $preference);
 
         if ($preference === '') {
-            return 0.0;
+            return false;
         }
 
         $needle = mb_strtolower($preference);
         $haystack = array_map(fn (string $language): string => mb_strtolower($language), $providerLanguages);
 
-        return in_array($needle, $haystack, true) ? 1.0 : 0.0;
+        return in_array($needle, $haystack, true);
     }
 
     /**
-     * Blend the (required) distance score with the additive specialty and language
-     * bonuses into a single quality score used to rank within a tier.
+     * Blend the proximity score with a heavy bonus for a language match.
      */
-    public static function composeScore(float $distanceScore, float $specialtyScore, float $languageScore): float
+    public static function composeScore(float $distanceScore, bool $languageMatched): float
     {
-        return $distanceScore
-            + (self::SPECIALTY_BONUS * $specialtyScore)
-            + (self::LANGUAGE_BONUS * $languageScore);
+        return $distanceScore + ($languageMatched ? self::LANGUAGE_BONUS : 0.0);
     }
 }

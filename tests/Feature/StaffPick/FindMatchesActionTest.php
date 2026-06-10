@@ -89,4 +89,26 @@ class FindMatchesActionTest extends FeatureTest
         $this->assertSame([$inRange->id], $results->map(fn ($r) => $r->provider->id)->all());
         $this->assertNotContains($outOfRange->id, $results->map(fn ($r) => $r->provider->id)->all());
     }
+
+    public function test_assigning_a_matched_provider_creates_an_offer_and_advances_the_case(): void
+    {
+        [$tenant, $intake, $inRange] = $this->seedCase();
+        $this->actAsTenant($tenant);
+
+        Livewire::test(ViewIntakeRequest::class, ['record' => $intake->id])
+            ->call('assignProvider', $intake->id, $inRange->id)
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('sp_assignments', [
+            'intake_request_id' => $intake->id,
+            'provider_id' => $inRange->id,
+            'status' => 'offered',
+            'is_current' => true,
+            'is_manual' => true,
+        ]);
+        $this->assertDatabaseHas('sp_intake_requests', [
+            'id' => $intake->id,
+            'status' => 'assigned_pending',
+        ]);
+    }
 }

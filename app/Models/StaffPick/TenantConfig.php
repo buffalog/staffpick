@@ -33,6 +33,12 @@ class TenantConfig extends Model
         'entity_label_subject',
         'entity_label_intake_request',
         'entity_label_discipline',
+        'rating_internal_min',
+        'rating_patient_min',
+        'rating_promotion_threshold',
+        'rating_demotion_threshold',
+        'rating_min_survey_count',
+        'rating_review_period',
     ];
 
     protected function casts(): array
@@ -50,6 +56,11 @@ class TenantConfig extends Model
             'notify_sms' => 'boolean',
             'referral_portal_enabled' => 'boolean',
             'show_booked_option_in_app' => 'boolean',
+            'rating_internal_min' => 'decimal:2',
+            'rating_patient_min' => 'decimal:2',
+            'rating_promotion_threshold' => 'decimal:2',
+            'rating_demotion_threshold' => 'decimal:2',
+            'rating_min_survey_count' => 'integer',
         ];
     }
 

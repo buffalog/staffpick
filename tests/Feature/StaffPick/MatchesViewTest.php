@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\StaffPick;
 
+use App\Models\StaffPick\Discipline;
 use App\Models\StaffPick\IntakeRequest;
 use App\Models\StaffPick\Provider;
 use App\Models\StaffPick\ProviderTier;
@@ -12,24 +13,28 @@ use Tests\TestCase;
 
 class MatchesViewTest extends TestCase
 {
-    private function makeResult(string $lastName, array $factors, float $score = 0.85, float $distance = 3.4): MatchingResult
+    private function makeResult(string $lastName, array $factors, bool $languageMatched = false, bool $languageWarning = false): MatchingResult
     {
         $provider = new Provider;
+        $provider->id = 7;
         $provider->first_name = 'Ana';
         $provider->last_name = $lastName;
         $provider->setRelation('tier', new ProviderTier(['name' => 'Gold']));
 
-        return new MatchingResult($provider, $score, $distance, $factors);
+        return new MatchingResult($provider, 1.85, 3.4, $languageMatched, $languageWarning, $factors);
     }
 
-    private function intakeWithSubjectCoordinates(?float $lat, ?float $lng): IntakeRequest
+    private function record(?float $lat, ?float $lng, ?string $languagePreference = null): IntakeRequest
     {
         $subject = new Subject;
         $subject->latitude = $lat;
         $subject->longitude = $lng;
+        $subject->language_preference = $languagePreference;
 
         $record = new IntakeRequest;
+        $record->id = 99;
         $record->setRelation('subject', $subject);
+        $record->setRelation('discipline', new Discipline(['name' => 'Physical Therapy']));
 
         return $record;
     }
@@ -42,47 +47,56 @@ class MatchesViewTest extends TestCase
         ])->render();
     }
 
-    public function test_it_renders_a_row_with_provider_distance_score_and_factor_badges(): void
+    public function test_it_renders_a_row_with_columns_and_an_assign_button(): void
     {
-        $record = $this->intakeWithSubjectCoordinates(40.0, -75.0);
+        $record = $this->record(40.0, -75.0);
         $results = new Collection([
-            $this->makeResult('Closematch', ['near_miss' => false, 'specialty' => 1.0, 'language' => true, 'tier_priority' => 1], 0.85, 3.4),
+            $this->makeResult('Closematch', ['is_preferred' => false, 'tier_priority' => 1]),
         ]);
 
         $html = $this->render($record, $results);
 
         $this->assertStringContainsString('Closematch', $html);
-        $this->assertStringContainsString('Gold', $html);
-        $this->assertStringContainsString('3.4', $html);   // distance, 1dp
-        $this->assertStringContainsString('0.850', $html); // score, 3dp
-        $this->assertStringContainsString('Specialty', $html);
-        $this->assertStringContainsString('Language', $html);
+        $this->assertStringContainsString('Physical Therapy', $html); // discipline column
+        $this->assertStringContainsString('Gold', $html);             // tier column
+        $this->assertStringContainsString('3.4', $html);              // distance
+        $this->assertStringContainsString('1.850', $html);            // score
+        $this->assertStringContainsString('wire:click="assignProvider(99, 7)"', $html);
     }
 
-    public function test_it_flags_near_miss_providers(): void
+    public function test_it_flags_preferred_providers(): void
     {
-        $record = $this->intakeWithSubjectCoordinates(40.0, -75.0);
+        $record = $this->record(40.0, -75.0);
         $results = new Collection([
-            $this->makeResult('Edgecase', ['near_miss' => true, 'specialty' => 0.0, 'language' => false, 'tier_priority' => 1]),
+            $this->makeResult('Star', ['is_preferred' => true, 'tier_priority' => 1]),
         ]);
 
-        $this->assertStringContainsString('Near miss', $this->render($record, $results));
+        $this->assertStringContainsString('Preferred', $this->render($record, $results));
+    }
+
+    public function test_it_shows_a_language_warning_banner(): void
+    {
+        $record = $this->record(40.0, -75.0, 'Spanish');
+        $results = new Collection([
+            $this->makeResult('NoSpanish', ['is_preferred' => false, 'tier_priority' => 1], languageMatched: false, languageWarning: true),
+        ]);
+
+        $html = $this->render($record, $results);
+
+        $this->assertStringContainsString('Language warning', $html);
+        $this->assertStringContainsString('Spanish', $html);
     }
 
     public function test_it_shows_an_empty_state_when_no_providers_match(): void
     {
-        $record = $this->intakeWithSubjectCoordinates(40.0, -75.0);
-
-        $html = $this->render($record, new Collection);
+        $html = $this->render($this->record(40.0, -75.0), new Collection);
 
         $this->assertStringContainsString('No eligible', $html);
     }
 
     public function test_it_explains_when_the_subject_has_no_coordinates(): void
     {
-        $record = $this->intakeWithSubjectCoordinates(null, null);
-
-        $html = $this->render($record, new Collection);
+        $html = $this->render($this->record(null, null), new Collection);
 
         $this->assertStringContainsString('geocoded address', $html);
     }

@@ -40,44 +40,57 @@ class MatchingScoringTest extends TestCase
         $this->assertSame(0.0, MatchingEngine::scoreDistance(40.0, 27.0));
     }
 
-    public function test_specialty_score_is_fraction_of_requested_specialties_matched(): void
+    public function test_gender_filter_passes_when_subject_has_no_preference(): void
     {
-        $this->assertSame(0.5, MatchingEngine::scoreSpecialty([1, 2], [2, 3]));
-        $this->assertSame(1.0, MatchingEngine::scoreSpecialty([1, 2], [1, 2, 3]));
-        $this->assertSame(0.0, MatchingEngine::scoreSpecialty([1], [2, 3]));
+        $this->assertTrue(MatchingEngine::matchesGender(null, 'male'));
+        $this->assertTrue(MatchingEngine::matchesGender('', null));
     }
 
-    public function test_specialty_score_is_zero_when_none_requested(): void
+    public function test_gender_filter_requires_exact_match_when_preference_is_set(): void
     {
-        $this->assertSame(0.0, MatchingEngine::scoreSpecialty([], [1, 2]));
+        $this->assertTrue(MatchingEngine::matchesGender('female', 'female'));
+        $this->assertTrue(MatchingEngine::matchesGender('Female', 'female')); // case-insensitive
+        $this->assertFalse(MatchingEngine::matchesGender('female', 'male'));
+        $this->assertFalse(MatchingEngine::matchesGender('female', null)); // no fallback for unset gender
     }
 
-    public function test_language_match_is_case_insensitive_on_name_or_code(): void
+    public function test_rating_floor_passes_when_no_floor_or_no_rating(): void
+    {
+        $this->assertTrue(MatchingEngine::passesRatingFloor(2.0, null)); // tenant sets no floor
+        $this->assertTrue(MatchingEngine::passesRatingFloor(null, 4.0)); // unrated provider passes
+    }
+
+    public function test_rating_floor_excludes_providers_below_the_floor(): void
+    {
+        $this->assertTrue(MatchingEngine::passesRatingFloor(4.0, 4.0));  // meets exactly
+        $this->assertTrue(MatchingEngine::passesRatingFloor(4.5, 4.0));  // exceeds
+        $this->assertFalse(MatchingEngine::passesRatingFloor(3.99, 4.0)); // below
+    }
+
+    public function test_language_matches_case_insensitively_on_name_or_code(): void
     {
         $providerLanguages = ['English', 'en', 'Spanish', 'es'];
 
-        $this->assertSame(1.0, MatchingEngine::scoreLanguage('Spanish', $providerLanguages));
-        $this->assertSame(1.0, MatchingEngine::scoreLanguage('spanish', $providerLanguages));
-        $this->assertSame(1.0, MatchingEngine::scoreLanguage('es', $providerLanguages));
-        $this->assertSame(0.0, MatchingEngine::scoreLanguage('French', $providerLanguages));
+        $this->assertTrue(MatchingEngine::languageMatches('Spanish', $providerLanguages));
+        $this->assertTrue(MatchingEngine::languageMatches('spanish', $providerLanguages));
+        $this->assertTrue(MatchingEngine::languageMatches('es', $providerLanguages));
+        $this->assertFalse(MatchingEngine::languageMatches('French', $providerLanguages));
     }
 
-    public function test_language_match_is_zero_without_a_preference(): void
+    public function test_language_matches_is_false_without_a_preference(): void
     {
-        $this->assertSame(0.0, MatchingEngine::scoreLanguage(null, ['English', 'en']));
-        $this->assertSame(0.0, MatchingEngine::scoreLanguage('', ['English', 'en']));
+        $this->assertFalse(MatchingEngine::languageMatches(null, ['English', 'en']));
+        $this->assertFalse(MatchingEngine::languageMatches('', ['English', 'en']));
     }
 
-    public function test_compose_score_adds_weighted_specialty_and_language_bonuses_to_distance(): void
+    public function test_compose_score_adds_a_heavy_bonus_for_a_language_match(): void
     {
-        // distance 0.8 + 0.25 * specialty(0.5) + 0.15 * language(1.0) = 1.075
-        $score = MatchingEngine::composeScore(0.8, 0.5, 1.0);
+        $withMatch = MatchingEngine::composeScore(0.5, true);
+        $withoutMatch = MatchingEngine::composeScore(0.5, false);
 
-        $this->assertEqualsWithDelta(1.075, $score, 0.0001);
-    }
-
-    public function test_compose_score_is_distance_only_with_no_bonuses(): void
-    {
-        $this->assertSame(0.8, MatchingEngine::composeScore(0.8, 0.0, 0.0));
+        $this->assertSame(0.5, $withoutMatch);
+        $this->assertSame(0.5 + MatchingEngine::LANGUAGE_BONUS, $withMatch);
+        // Heavy enough that any language match outranks any proximity gap within a tier.
+        $this->assertGreaterThan(MatchingEngine::composeScore(1.0, false), MatchingEngine::composeScore(0.0, true));
     }
 }

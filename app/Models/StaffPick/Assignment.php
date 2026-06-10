@@ -3,14 +3,27 @@
 namespace App\Models\StaffPick;
 
 use App\Models\StaffPick\Concerns\BelongsToTenant;
+use App\Observers\StaffPick\AssignmentObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+#[ObservedBy(AssignmentObserver::class)]
 class Assignment extends Model
 {
     use BelongsToTenant, HasFactory;
+
+    public const STATUS_OFFERED = 'offered';
+
+    public const STATUS_ACCEPTED = 'accepted';
+
+    public const STATUS_ACTIVE = 'active';
+
+    public const STATUS_COMPLETED = 'completed';
+
+    public const STATUS_CANCELLED = 'cancelled';
 
     protected $table = 'sp_assignments';
 
@@ -67,5 +80,10 @@ class Assignment extends Model
     public function visits(): HasMany
     {
         return $this->hasMany(Visit::class);
+    }
+
+    public function surveys(): HasMany
+    {
+        return $this->hasMany(ProviderSurvey::class);
     }
 }

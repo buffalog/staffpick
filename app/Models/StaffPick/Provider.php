@@ -44,6 +44,12 @@ class Provider extends Model
         'payroll_id',
         'tax_id',
         'notes',
+        'internal_rating',
+        'is_preferred',
+        'rating_90day_avg',
+        'rating_180day_avg',
+        'rating_survey_count_90day',
+        'rating_survey_count_180day',
     ];
 
     protected function casts(): array
@@ -56,6 +62,12 @@ class Provider extends Model
             'radius_max_miles' => 'integer',
             'is_active' => 'boolean',
             'deactivated_at' => 'datetime',
+            'internal_rating' => 'decimal:2',
+            'is_preferred' => 'boolean',
+            'rating_90day_avg' => 'decimal:2',
+            'rating_180day_avg' => 'decimal:2',
+            'rating_survey_count_90day' => 'integer',
+            'rating_survey_count_180day' => 'integer',
         ];
     }
 
@@ -115,5 +127,15 @@ class Provider extends Model
     public function assignmentOffers(): HasMany
     {
         return $this->hasMany(AssignmentOffer::class);
+    }
+
+    public function surveys(): HasMany
+    {
+        return $this->hasMany(ProviderSurvey::class);
+    }
+
+    public function ratingReviews(): HasMany
+    {
+        return $this->hasMany(ProviderRatingReview::class);
     }
 }
