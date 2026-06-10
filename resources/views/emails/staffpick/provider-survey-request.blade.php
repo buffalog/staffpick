@@ -3,7 +3,9 @@
 
 {{ __('We would love your feedback on your recent visit. Please rate your provider on a scale of 1 (poor) to 5 (excellent).') }}
 
-{{ __('Simply reply to this email with a number from 1 to 5, and an optional comment.') }}
+<x-mail::button :url="$survey->responseUrl()">
+{{ __('Rate your visit') }}
+</x-mail::button>
 
 {{ __('Thank you,') }}<br>
 {{ config('app.name') }}

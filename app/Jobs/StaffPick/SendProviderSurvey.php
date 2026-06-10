@@ -9,6 +9,7 @@ use App\Services\VerificationProviders\TwilioProvider;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 /**
  * Creates a patient satisfaction survey for a completed assignment and sends it
@@ -52,10 +53,11 @@ class SendProviderSurvey implements ShouldQueue
             'subject_id' => $subject->id,
             'delivery_channel' => $channel,
             'status' => ProviderSurvey::STATUS_PENDING,
+            'token' => Str::random(48),
         ]);
 
         if ($channel === ProviderSurvey::CHANNEL_SMS) {
-            $sent = $twilio->sendSms($subject->phone, $this->message());
+            $sent = $twilio->sendSms($subject->phone, $this->message($survey));
             $survey->update([
                 'status' => $sent ? ProviderSurvey::STATUS_SENT : ProviderSurvey::STATUS_BOUNCED,
                 'sent_at' => now(),
@@ -75,8 +77,10 @@ class SendProviderSurvey implements ShouldQueue
         $survey->update(['status' => ProviderSurvey::STATUS_BOUNCED]);
     }
 
-    private function message(): string
+    private function message(ProviderSurvey $survey): string
     {
-        return __('How was your recent therapy visit? Please reply with a rating from 1 (poor) to 5 (excellent). Thank you!');
+        return __('How was your recent therapy visit? Please rate your provider here: :url', [
+            'url' => $survey->responseUrl(),
+        ]);
     }
 }

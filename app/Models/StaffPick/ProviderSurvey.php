@@ -38,6 +38,7 @@ class ProviderSurvey extends Model
         'responded_at',
         'delivery_channel',
         'status',
+        'token',
     ];
 
     protected function casts(): array
@@ -62,5 +63,18 @@ class ProviderSurvey extends Model
     public function subject(): BelongsTo
     {
         return $this->belongsTo(Subject::class);
+    }
+
+    public function isResponded(): bool
+    {
+        return $this->status === self::STATUS_RESPONDED;
+    }
+
+    /**
+     * Public URL the patient uses to submit their rating.
+     */
+    public function responseUrl(): string
+    {
+        return route('survey.show', ['token' => $this->token]);
     }
 }

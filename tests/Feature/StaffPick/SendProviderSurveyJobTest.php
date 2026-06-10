@@ -61,6 +61,8 @@ class SendProviderSurveyJobTest extends FeatureTest
             'delivery_channel' => ProviderSurvey::CHANNEL_SMS,
             'status' => ProviderSurvey::STATUS_SENT,
         ]);
+        // A response token is generated so the SMS can carry a survey link.
+        $this->assertNotEmpty(ProviderSurvey::where('assignment_id', $assignment->id)->value('token'));
     }
 
     public function test_falls_back_to_email_when_there_is_no_phone(): void

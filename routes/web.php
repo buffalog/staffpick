@@ -9,6 +9,7 @@ use App\Http\Controllers\ProductCheckoutController;
 use App\Http\Controllers\RoadmapController;
 use App\Http\Controllers\SubscriptionCheckoutController;
 use App\Http\Controllers\SubscriptionController;
+use App\Http\Controllers\SurveyController;
 use App\Services\PlanService;
 use App\Services\SessionService;
 use App\Services\TenantCreationService;
@@ -202,4 +203,13 @@ Route::controller(InvoiceController::class)
     ->group(function () {
         Route::get('/generate/{transactionUuid}', 'generate')->name('invoice.generate');
         Route::get('/preview', 'preview')->name('invoice.preview');
+    });
+
+// StaffPick — public patient survey response (token-authenticated, no login)
+
+Route::controller(SurveyController::class)
+    ->prefix('/survey')
+    ->group(function () {
+        Route::get('/{token}', 'show')->name('survey.show');
+        Route::post('/{token}', 'submit')->name('survey.submit');
     });
