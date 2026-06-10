@@ -3,6 +3,7 @@
 namespace App\Filament\Dashboard\Resources\IntakeRequests\Tables;
 
 use App\Filament\Dashboard\Resources\IntakeRequests\IntakeRequestResource;
+use App\Models\StaffPick\TenantConfig;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -32,7 +33,7 @@ class IntakeRequestsTable
                     ->label(__('Referral Source'))
                     ->toggleable(),
                 TextColumn::make('discipline.name')
-                    ->label(__('Discipline'))
+                    ->label(TenantConfig::entityLabel('discipline', __('Discipline')))
                     ->toggleable(),
                 TextColumn::make('status')
                     ->label(__('Status'))
@@ -59,7 +60,7 @@ class IntakeRequestsTable
                     ->label(__('Status'))
                     ->options(IntakeRequestResource::statusOptions()),
                 SelectFilter::make('discipline')
-                    ->label(__('Discipline'))
+                    ->label(TenantConfig::entityLabel('discipline', __('Discipline')))
                     ->relationship('discipline', 'name')
                     ->searchable()
                     ->preload(),

@@ -10,6 +10,7 @@ use App\Filament\Dashboard\Resources\Providers\Schemas\ProviderForm;
 use App\Filament\Dashboard\Resources\Providers\Schemas\ProviderInfolist;
 use App\Filament\Dashboard\Resources\Providers\Tables\ProvidersTable;
 use App\Models\StaffPick\Provider;
+use App\Models\StaffPick\TenantConfig;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -17,6 +18,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Str;
 
 class ProviderResource extends Resource
 {
@@ -72,16 +74,16 @@ class ProviderResource extends Resource
 
     public static function getModelLabel(): string
     {
-        return __('Provider');
+        return TenantConfig::entityLabel('provider', __('Provider'));
     }
 
     public static function getPluralModelLabel(): string
     {
-        return __('Providers');
+        return Str::plural(static::getModelLabel());
     }
 
     public static function getNavigationLabel(): string
     {
-        return __('Providers');
+        return static::getPluralModelLabel();
     }
 }

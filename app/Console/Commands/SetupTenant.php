@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Constants\TenancyPermissionConstants;
 use App\Models\Role;
+use App\Models\StaffPick\TenantConfig;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\TenantPermissionService;
@@ -113,11 +114,15 @@ class SetupTenant extends Command
             TenancyPermissionConstants::TENANT_CREATOR_ROLE,
         );
 
-        // 4. Seed the default StaffPick taxonomy for the tenant (idempotent).
+        // 4. Ensure the tenant has a config row (default entity labels + matching
+        //    engine defaults come from the column defaults).
+        TenantConfig::firstOrCreate(['tenant_id' => $tenant->id]);
+
+        // 5. Seed the default StaffPick taxonomy for the tenant (idempotent).
         app(TenantTaxonomySeeder::class)->seedForTenant($tenant);
         $this->info('Seeded default taxonomy (disciplines, tiers, credential document types, reason lists).');
 
-        // 5. Report URLs (and the password, only when one was just generated).
+        // 6. Report URLs (and the password, only when one was just generated).
         $dashboardUrl = rtrim(config('app.url'), '/').'/dashboard/'.$tenant->uuid;
 
         $this->newLine();

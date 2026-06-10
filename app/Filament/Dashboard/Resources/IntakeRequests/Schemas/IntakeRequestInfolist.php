@@ -4,6 +4,7 @@ namespace App\Filament\Dashboard\Resources\IntakeRequests\Schemas;
 
 use App\Filament\Dashboard\Resources\IntakeRequests\IntakeRequestResource;
 use App\Models\StaffPick\IntakeRequest;
+use App\Models\StaffPick\TenantConfig;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
@@ -30,7 +31,7 @@ class IntakeRequestInfolist
                                 : null)
                             ->placeholder('—'),
                         TextEntry::make('referralSource.name')->label(__('Referral Source'))->placeholder('—'),
-                        TextEntry::make('discipline.name')->label(__('Discipline'))->placeholder('—'),
+                        TextEntry::make('discipline.name')->label(TenantConfig::entityLabel('discipline', __('Discipline')))->placeholder('—'),
                         TextEntry::make('office.name')->label(__('Office'))->placeholder('—'),
                         TextEntry::make('assigner.name')->label(__('Assigner'))->placeholder('—'),
                     ]),

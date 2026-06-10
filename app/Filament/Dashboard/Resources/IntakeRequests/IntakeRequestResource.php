@@ -10,6 +10,7 @@ use App\Filament\Dashboard\Resources\IntakeRequests\Schemas\IntakeRequestForm;
 use App\Filament\Dashboard\Resources\IntakeRequests\Schemas\IntakeRequestInfolist;
 use App\Filament\Dashboard\Resources\IntakeRequests\Tables\IntakeRequestsTable;
 use App\Models\StaffPick\IntakeRequest;
+use App\Models\StaffPick\TenantConfig;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -17,6 +18,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Str;
 
 class IntakeRequestResource extends Resource
 {
@@ -100,16 +102,16 @@ class IntakeRequestResource extends Resource
 
     public static function getModelLabel(): string
     {
-        return __('Intake Request');
+        return TenantConfig::entityLabel('intake_request', __('Intake Request'));
     }
 
     public static function getPluralModelLabel(): string
     {
-        return __('Intake Requests');
+        return Str::plural(static::getModelLabel());
     }
 
     public static function getNavigationLabel(): string
     {
-        return __('Intake Requests');
+        return static::getPluralModelLabel();
     }
 }

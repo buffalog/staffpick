@@ -2,6 +2,7 @@
 
 namespace App\Filament\Dashboard\Resources\Providers\Schemas;
 
+use App\Models\StaffPick\TenantConfig;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -80,7 +81,7 @@ class ProviderForm
                     ->columns(2)
                     ->schema([
                         Select::make('discipline_id')
-                            ->label(__('Discipline'))
+                            ->label(TenantConfig::entityLabel('discipline', __('Discipline')))
                             ->relationship('discipline', 'name')
                             ->searchable()
                             ->preload(),

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\StaffPick\TenantConfig;
 use App\Services\SubscriptionService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -67,5 +68,10 @@ class Tenant extends Model
     public function teams(): HasMany
     {
         return $this->hasMany(Team::class);
+    }
+
+    public function config(): HasOne
+    {
+        return $this->hasOne(TenantConfig::class);
     }
 }

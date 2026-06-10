@@ -10,6 +10,7 @@ use App\Filament\Dashboard\Resources\Subjects\Schemas\SubjectForm;
 use App\Filament\Dashboard\Resources\Subjects\Schemas\SubjectInfolist;
 use App\Filament\Dashboard\Resources\Subjects\Tables\SubjectsTable;
 use App\Models\StaffPick\Subject;
+use App\Models\StaffPick\TenantConfig;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -17,6 +18,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Str;
 
 class SubjectResource extends Resource
 {
@@ -72,16 +74,16 @@ class SubjectResource extends Resource
 
     public static function getModelLabel(): string
     {
-        return __('Subject');
+        return TenantConfig::entityLabel('subject', __('Subject'));
     }
 
     public static function getPluralModelLabel(): string
     {
-        return __('Subjects');
+        return Str::plural(static::getModelLabel());
     }
 
     public static function getNavigationLabel(): string
     {
-        return __('Subjects');
+        return static::getPluralModelLabel();
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Filament\Dashboard\Resources\Providers\Tables;
 
 use App\Models\StaffPick\Provider;
+use App\Models\StaffPick\TenantConfig;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -28,7 +29,7 @@ class ProvidersTable
                     ->searchable(['first_name', 'last_name', 'business_name'])
                     ->sortable(['last_name']),
                 TextColumn::make('discipline.name')
-                    ->label(__('Discipline'))
+                    ->label(TenantConfig::entityLabel('discipline', __('Discipline')))
                     ->sortable()
                     ->toggleable(),
                 TextColumn::make('tier.name')
@@ -63,7 +64,7 @@ class ProvidersTable
             ])
             ->filters([
                 SelectFilter::make('discipline')
-                    ->label(__('Discipline'))
+                    ->label(TenantConfig::entityLabel('discipline', __('Discipline')))
                     ->relationship('discipline', 'name')
                     ->searchable()
                     ->preload(),

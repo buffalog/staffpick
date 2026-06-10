@@ -4,6 +4,7 @@ namespace App\Filament\Dashboard\Resources\IntakeRequests\Schemas;
 
 use App\Filament\Dashboard\Resources\IntakeRequests\IntakeRequestResource;
 use App\Models\StaffPick\Subject;
+use App\Models\StaffPick\TenantConfig;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -42,7 +43,7 @@ class IntakeRequestForm
                             ->searchable()
                             ->preload(),
                         Select::make('discipline_id')
-                            ->label(__('Discipline'))
+                            ->label(TenantConfig::entityLabel('discipline', __('Discipline')))
                             ->relationship('discipline', 'name')
                             ->searchable()
                             ->preload(),

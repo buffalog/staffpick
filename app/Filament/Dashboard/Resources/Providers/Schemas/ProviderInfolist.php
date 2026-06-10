@@ -3,6 +3,7 @@
 namespace App\Filament\Dashboard\Resources\Providers\Schemas;
 
 use App\Models\StaffPick\Provider;
+use App\Models\StaffPick\TenantConfig;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
@@ -52,7 +53,7 @@ class ProviderInfolist
                 Section::make(__('Classification'))
                     ->columns(2)
                     ->schema([
-                        TextEntry::make('discipline.name')->label(__('Discipline'))->placeholder('—'),
+                        TextEntry::make('discipline.name')->label(TenantConfig::entityLabel('discipline', __('Discipline')))->placeholder('—'),
                         TextEntry::make('tier.name')->label(__('Tier'))->badge()->placeholder('—'),
                         TextEntry::make('office.name')->label(__('Office'))->placeholder('—'),
                         TextEntry::make('gender')->label(__('Gender'))->placeholder('—'),
