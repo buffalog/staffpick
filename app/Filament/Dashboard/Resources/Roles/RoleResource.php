@@ -35,7 +35,7 @@ class RoleResource extends Resource
 
     public static function getNavigationGroup(): ?string
     {
-        return __('Team Management');
+        return __('Administration');
     }
 
     public static function form(Schema $schema): Schema

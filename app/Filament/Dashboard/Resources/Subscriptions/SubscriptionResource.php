@@ -43,6 +43,8 @@ class SubscriptionResource extends Resource
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-fire';
 
+    protected static bool $shouldRegisterNavigation = false;
+
     public static function form(Schema $schema): Schema
     {
         return $schema

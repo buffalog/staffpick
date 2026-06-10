@@ -7,6 +7,7 @@ use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\TenantPermissionService;
+use Database\Seeders\TenantTaxonomySeeder;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 
@@ -112,7 +113,11 @@ class SetupTenant extends Command
             TenancyPermissionConstants::TENANT_CREATOR_ROLE,
         );
 
-        // 4. Report URLs (and the password, only when one was just generated).
+        // 4. Seed the default StaffPick taxonomy for the tenant (idempotent).
+        app(TenantTaxonomySeeder::class)->seedForTenant($tenant);
+        $this->info('Seeded default taxonomy (disciplines, tiers, credential document types, reason lists).');
+
+        // 5. Report URLs (and the password, only when one was just generated).
         $dashboardUrl = rtrim(config('app.url'), '/').'/dashboard/'.$tenant->uuid;
 
         $this->newLine();
