@@ -13,6 +13,8 @@ use BackedEnum;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -23,6 +25,7 @@ use Filament\Pages\Page;
 use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Components\Wizard;
 use Filament\Schemas\Components\Wizard\Step;
@@ -117,26 +120,38 @@ class ProviderProfile extends Page
                     TextInput::make('business_name')->label(__('Business name'))->columnSpanFull(),
                 ]),
                 Section::make(__('Address'))
-                    ->description(__('Your address is geocoded to position you for matching when you continue.'))
+                    ->description(__('Your address is geocoded so we can position you for matching.'))
                     ->schema([
-                        TextInput::make('address')->label(__('Street address'))->columnSpanFull(),
+                        TextInput::make('address')->label(__('Street address'))->columnSpanFull()
+                            ->live(onBlur: true)->afterStateUpdated(fn (Get $get, Set $set) => $this->geocodeAddressState($get, $set)),
                         Grid::make(3)->schema([
-                            TextInput::make('city')->label(__('City')),
-                            TextInput::make('state')->label(__('State'))->maxLength(10),
-                            TextInput::make('zip')->label(__('ZIP'))->maxLength(20),
+                            TextInput::make('city')->label(__('City'))
+                                ->live(onBlur: true)->afterStateUpdated(fn (Get $get, Set $set) => $this->geocodeAddressState($get, $set)),
+                            TextInput::make('state')->label(__('State'))->maxLength(10)
+                                ->live(onBlur: true)->afterStateUpdated(fn (Get $get, Set $set) => $this->geocodeAddressState($get, $set)),
+                            TextInput::make('zip')->label(__('ZIP'))->maxLength(20)
+                                ->live(onBlur: true)->afterStateUpdated(fn (Get $get, Set $set) => $this->geocodeAddressState($get, $set)),
                         ]),
+                        Placeholder::make('geocode_warning')
+                            ->hiddenLabel()
+                            ->visible(fn (Get $get): bool => $get('geocode_failed') === true)
+                            ->content(new HtmlString(
+                                '<div class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-400">'
+                                .e(__("We couldn't confirm this address on the map. Please double-check it — you can still continue, but matching won't be able to place you until your location is resolved."))
+                                .'</div>'
+                            )),
+                        Hidden::make('latitude'),
+                        Hidden::make('longitude'),
+                        Hidden::make('geocode_failed'),
                     ]),
             ])
-            ->afterValidation(function (Set $set, $state): void {
-                // Geocode the address when leaving step 1 so coordinates are ready.
-                $result = app(GeocodingService::class)->geocode(
-                    collect([$state['address'] ?? null, $state['city'] ?? null, $state['state'] ?? null, $state['zip'] ?? null])->filter()->implode(', ')
-                );
-
-                if ($result !== null) {
-                    $set('latitude', $result['lat']);
-                    $set('longitude', $result['lng']);
+            ->afterValidation(function (Get $get, Set $set): void {
+                // Final geocode safety net when advancing, unless a blur already resolved it.
+                if (filled($get('latitude'))) {
+                    return;
                 }
+
+                $this->geocodeAddressState($get, $set);
             });
     }
 
@@ -307,6 +322,26 @@ class ProviderProfile extends Page
             })
             ->values()
             ->all();
+    }
+
+    /**
+     * Geocode the entered address and flag failures so the wizard can warn the
+     * clinician inline without blocking them. Only runs once the core address
+     * parts are present, to avoid premature lookups.
+     */
+    private function geocodeAddressState(Get $get, Set $set): void
+    {
+        if (blank($get('address')) || blank($get('city')) || blank($get('state'))) {
+            return;
+        }
+
+        $result = app(GeocodingService::class)->geocode(
+            collect([$get('address'), $get('city'), $get('state'), $get('zip')])->filter()->implode(', ')
+        );
+
+        $set('latitude', $result['lat'] ?? null);
+        $set('longitude', $result['lng'] ?? null);
+        $set('geocode_failed', $result === null);
     }
 
     private function currentProvider(): ?Provider
