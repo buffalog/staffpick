@@ -4,12 +4,17 @@ namespace App\Filament\Dashboard\Resources\Providers\Tables;
 
 use App\Models\StaffPick\Provider;
 use App\Models\StaffPick\TenantConfig;
+use App\Services\StaffPick\ProviderProfileService;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Textarea;
+use Filament\Notifications\Notification;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -83,6 +88,28 @@ class ProvidersTable
                 TrashedFilter::make(),
             ])
             ->recordActions([
+                Action::make('approve')
+                    ->label(__('Approve'))
+                    ->icon(Heroicon::OutlinedCheckCircle)
+                    ->color('success')
+                    ->visible(fn (Provider $record): bool => $record->status === Provider::STATUS_PENDING)
+                    ->requiresConfirmation()
+                    ->action(function (Provider $record): void {
+                        app(ProviderProfileService::class)->approve($record);
+                        Notification::make()->title(__('Application approved'))->success()->send();
+                    }),
+                Action::make('reject')
+                    ->label(__('Reject'))
+                    ->icon(Heroicon::OutlinedXCircle)
+                    ->color('danger')
+                    ->visible(fn (Provider $record): bool => $record->status === Provider::STATUS_PENDING)
+                    ->schema([
+                        Textarea::make('reason')->label(__('Reason for rejection'))->required(),
+                    ])
+                    ->action(function (array $data, Provider $record): void {
+                        app(ProviderProfileService::class)->reject($record, $data['reason']);
+                        Notification::make()->title(__('Application rejected'))->danger()->send();
+                    }),
                 ViewAction::make(),
                 EditAction::make(),
             ])

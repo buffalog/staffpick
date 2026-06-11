@@ -3,6 +3,7 @@
 namespace App\Models\StaffPick;
 
 use App\Models\StaffPick\Concerns\BelongsToTenant;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,6 +14,14 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Provider extends Model
 {
     use BelongsToTenant, HasFactory, SoftDeletes;
+
+    public const STATUS_PENDING = 'pending';
+
+    public const STATUS_ACTIVE = 'active';
+
+    public const STATUS_INACTIVE = 'inactive';
+
+    public const STATUS_REJECTED = 'rejected';
 
     protected $table = 'sp_providers';
 
@@ -50,6 +59,10 @@ class Provider extends Model
         'rating_180day_avg',
         'rating_survey_count_90day',
         'rating_survey_count_180day',
+        'user_id',
+        'years_experience',
+        'rejection_reason',
+        'submitted_at',
     ];
 
     protected function casts(): array
@@ -68,7 +81,14 @@ class Provider extends Model
             'rating_180day_avg' => 'decimal:2',
             'rating_survey_count_90day' => 'integer',
             'rating_survey_count_180day' => 'integer',
+            'years_experience' => 'integer',
+            'submitted_at' => 'datetime',
         ];
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function discipline(): BelongsTo

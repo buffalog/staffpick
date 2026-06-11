@@ -1,0 +1,350 @@
+<?php
+
+namespace App\Filament\Dashboard\Pages;
+
+use App\Models\StaffPick\CredentialDocumentType;
+use App\Models\StaffPick\Discipline;
+use App\Models\StaffPick\Language;
+use App\Models\StaffPick\Provider;
+use App\Models\StaffPick\Specialty;
+use App\Services\StaffPick\GeocodingService;
+use App\Services\StaffPick\ProviderProfileService;
+use BackedEnum;
+use Filament\Facades\Filament;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\TimePicker;
+use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
+use Filament\Pages\Page;
+use Filament\Schemas\Components\Component;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Schemas\Components\Wizard;
+use Filament\Schemas\Components\Wizard\Step;
+use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
+use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\HtmlString;
+
+/**
+ * Self-service clinician onboarding wizard. A clinician builds their own Provider
+ * profile across six steps and submits it for admin review. Thin UI over
+ * {@see ProviderProfileService}; lives at /dashboard/{tenant}/providers/profile.
+ */
+class ProviderProfile extends Page
+{
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserCircle;
+
+    protected static ?string $slug = 'providers/profile';
+
+    protected string $view = 'filament.dashboard.pages.provider-profile';
+
+    /**
+     * @var array<string, mixed>
+     */
+    public ?array $data = [];
+
+    public function getTitle(): string|Htmlable
+    {
+        return __('My Provider Profile');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('My Provider Profile');
+    }
+
+    public function mount(): void
+    {
+        $provider = $this->currentProvider();
+
+        $this->form->fill($provider ? $this->stateFromProvider($provider) : []);
+    }
+
+    public function form(Schema $schema): Schema
+    {
+        return $schema
+            ->statePath('data')
+            ->components([
+                Wizard::make([
+                    $this->personalStep(),
+                    $this->professionalStep(),
+                    $this->serviceAreaStep(),
+                    $this->availabilityStep(),
+                    $this->credentialsStep(),
+                    $this->reviewStep(),
+                ])
+                    ->persistStepInQueryString('step')
+                    ->submitAction(new HtmlString(Blade::render(
+                        '<x-filament::button type="submit" wire:loading.attr="disabled">{{ __("Submit for review") }}</x-filament::button>'
+                    ))),
+            ]);
+    }
+
+    public function submit(): void
+    {
+        $state = $this->form->getState();
+        $state['credentials'] = $this->normalizeCredentialState($state['credentials'] ?? []);
+
+        app(ProviderProfileService::class)->submit(Filament::getTenant(), auth()->user(), $state);
+
+        Notification::make()
+            ->title(__('Profile submitted for review'))
+            ->body(__('An administrator will review your application shortly.'))
+            ->success()
+            ->send();
+
+        $this->redirect(static::getUrl());
+    }
+
+    private function personalStep(): Step
+    {
+        return Step::make(__('Personal Information'))
+            ->icon(Heroicon::OutlinedIdentification)
+            ->schema([
+                Grid::make(2)->schema([
+                    TextInput::make('first_name')->label(__('First name'))->required(),
+                    TextInput::make('last_name')->label(__('Last name'))->required(),
+                    TextInput::make('email')->label(__('Email'))->email(),
+                    TextInput::make('phone')->label(__('Phone'))->tel(),
+                    TextInput::make('business_name')->label(__('Business name'))->columnSpanFull(),
+                ]),
+                Section::make(__('Address'))
+                    ->description(__('Your address is geocoded to position you for matching when you continue.'))
+                    ->schema([
+                        TextInput::make('address')->label(__('Street address'))->columnSpanFull(),
+                        Grid::make(3)->schema([
+                            TextInput::make('city')->label(__('City')),
+                            TextInput::make('state')->label(__('State'))->maxLength(10),
+                            TextInput::make('zip')->label(__('ZIP'))->maxLength(20),
+                        ]),
+                    ]),
+            ])
+            ->afterValidation(function (Set $set, $state): void {
+                // Geocode the address when leaving step 1 so coordinates are ready.
+                $result = app(GeocodingService::class)->geocode(
+                    collect([$state['address'] ?? null, $state['city'] ?? null, $state['state'] ?? null, $state['zip'] ?? null])->filter()->implode(', ')
+                );
+
+                if ($result !== null) {
+                    $set('latitude', $result['lat']);
+                    $set('longitude', $result['lng']);
+                }
+            });
+    }
+
+    private function professionalStep(): Step
+    {
+        return Step::make(__('Professional'))
+            ->icon(Heroicon::OutlinedAcademicCap)
+            ->schema([
+                Grid::make(2)->schema([
+                    Select::make('discipline_id')
+                        ->label(__('Discipline'))
+                        ->options(fn (): array => Discipline::query()->where('is_active', true)->orderBy('sort_order')->pluck('name', 'id')->all())
+                        ->searchable()
+                        ->required(),
+                    Select::make('gender')
+                        ->label(__('Gender'))
+                        ->options([
+                            'female' => __('Female'),
+                            'male' => __('Male'),
+                            'non_binary' => __('Non-binary'),
+                            'other' => __('Other'),
+                        ]),
+                    TextInput::make('years_experience')->label(__('Years of experience'))->numeric()->minValue(0)->maxValue(80),
+                ]),
+                Select::make('specialties')
+                    ->label(__('Specialties'))
+                    ->multiple()
+                    ->options(fn (): array => Specialty::query()->where('is_active', true)->pluck('name', 'id')->all())
+                    ->searchable()
+                    ->preload(),
+                Select::make('languages')
+                    ->label(__('Languages spoken'))
+                    ->multiple()
+                    ->options(fn (): array => Language::query()->orderBy('name')->pluck('name', 'id')->all())
+                    ->searchable()
+                    ->preload(),
+            ]);
+    }
+
+    private function serviceAreaStep(): Step
+    {
+        return Step::make(__('Service Area'))
+            ->icon(Heroicon::OutlinedMapPin)
+            ->schema([
+                Grid::make(2)->schema([
+                    TextInput::make('radius_preferred_miles')->label(__('Preferred radius (miles)'))->numeric()->required()->default(15),
+                    TextInput::make('radius_max_miles')->label(__('Maximum radius (miles)'))->numeric()->required()->default(25),
+                ]),
+                Section::make(__('Service zone (optional)'))
+                    ->description(__('Optionally outline a service area by entering its boundary points. A map drawing tool is coming soon.'))
+                    ->schema([
+                        TextInput::make('service_zone_name')->label(__('Zone name')),
+                        Repeater::make('service_zone_points')
+                            ->label(__('Boundary points'))
+                            ->schema([
+                                TextInput::make('latitude')->numeric()->required(),
+                                TextInput::make('longitude')->numeric()->required(),
+                            ])
+                            ->columns(2)
+                            ->addActionLabel(__('Add point'))
+                            ->helperText(__('Enter at least 3 points to define a zone.')),
+                    ]),
+            ]);
+    }
+
+    private function availabilityStep(): Step
+    {
+        return Step::make(__('Availability'))
+            ->icon(Heroicon::OutlinedClock)
+            ->schema([
+                Repeater::make('availability')
+                    ->label(__('Weekly availability'))
+                    ->schema([
+                        Select::make('day_of_week')
+                            ->label(__('Day'))
+                            ->options([
+                                0 => __('Sunday'),
+                                1 => __('Monday'),
+                                2 => __('Tuesday'),
+                                3 => __('Wednesday'),
+                                4 => __('Thursday'),
+                                5 => __('Friday'),
+                                6 => __('Saturday'),
+                            ])
+                            ->required(),
+                        TimePicker::make('start_time')->label(__('Start'))->seconds(false)->required(),
+                        TimePicker::make('end_time')->label(__('End'))->seconds(false)->required(),
+                    ])
+                    ->columns(3)
+                    ->addActionLabel(__('Add availability window')),
+            ]);
+    }
+
+    private function credentialsStep(): Step
+    {
+        return Step::make(__('Credentials'))
+            ->icon(Heroicon::OutlinedDocumentCheck)
+            ->schema(fn (): array => $this->credentialFields());
+    }
+
+    /**
+     * One upload section per active credential document type for this tenant.
+     *
+     * @return array<int, Component>
+     */
+    private function credentialFields(): array
+    {
+        return CredentialDocumentType::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get()
+            ->map(function (CredentialDocumentType $type): Section {
+                $fields = [
+                    FileUpload::make("credentials.{$type->id}.file_path")
+                        ->label(__('Document'))
+                        ->directory('staffpick/credentials')
+                        ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])
+                        ->required((bool) $type->is_required),
+                    TextInput::make("credentials.{$type->id}.document_number")->label(__('Document number')),
+                ];
+
+                if ($type->has_expiry) {
+                    $fields[] = DatePicker::make("credentials.{$type->id}.expires_at")->label(__('Expiry date'));
+                }
+
+                return Section::make($type->name)
+                    ->description($type->is_required ? __('Required') : __('Optional'))
+                    ->schema($fields)
+                    ->columns(2);
+            })
+            ->all();
+    }
+
+    private function reviewStep(): Step
+    {
+        return Step::make(__('Review & Submit'))
+            ->icon(Heroicon::OutlinedCheckCircle)
+            ->schema([
+                Section::make(__('Ready to submit'))
+                    ->description(__('Review your information using the previous steps. When you submit, your profile is sent to an administrator for review and your status is set to pending.'))
+                    ->schema([
+                        Toggle::make('confirm')
+                            ->label(__('I confirm the information provided is accurate.'))
+                            ->accepted()
+                            ->required(),
+                    ]),
+            ]);
+    }
+
+    /**
+     * Flatten the nested credentials form state into the list the service expects.
+     *
+     * @param  array<int|string, array<string, mixed>>  $credentials
+     * @return array<int, array<string, mixed>>
+     */
+    private function normalizeCredentialState(array $credentials): array
+    {
+        return collect($credentials)
+            ->map(function (array $credential, $documentTypeId): array {
+                $file = $credential['file_path'] ?? null;
+
+                return [
+                    'document_type_id' => (int) $documentTypeId,
+                    'file_path' => is_array($file) ? Arr::first($file) : $file,
+                    'document_number' => $credential['document_number'] ?? null,
+                    'expires_at' => $credential['expires_at'] ?? null,
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    private function currentProvider(): ?Provider
+    {
+        return Provider::query()
+            ->where('tenant_id', Filament::getTenant()?->id)
+            ->where('user_id', auth()->id())
+            ->first();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function stateFromProvider(Provider $provider): array
+    {
+        return [
+            'first_name' => $provider->first_name,
+            'last_name' => $provider->last_name,
+            'email' => $provider->email,
+            'phone' => $provider->phone,
+            'business_name' => $provider->business_name,
+            'gender' => $provider->gender,
+            'address' => $provider->address,
+            'city' => $provider->city,
+            'state' => $provider->state,
+            'zip' => $provider->zip,
+            'latitude' => $provider->latitude,
+            'longitude' => $provider->longitude,
+            'discipline_id' => $provider->discipline_id,
+            'years_experience' => $provider->years_experience,
+            'radius_preferred_miles' => $provider->radius_preferred_miles,
+            'radius_max_miles' => $provider->radius_max_miles,
+            'specialties' => $provider->specialties()->pluck('sp_specialties.id')->all(),
+            'languages' => $provider->languages()->pluck('sp_languages.id')->all(),
+            'availability' => $provider->availability()
+                ->get(['day_of_week', 'start_time', 'end_time'])
+                ->map(fn ($a) => ['day_of_week' => $a->day_of_week, 'start_time' => $a->start_time, 'end_time' => $a->end_time])
+                ->all(),
+        ];
+    }
+}
