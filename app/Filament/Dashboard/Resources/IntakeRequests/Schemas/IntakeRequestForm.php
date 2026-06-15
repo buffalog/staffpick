@@ -161,6 +161,8 @@ class IntakeRequestForm
                                 FileUpload::make('file_path')
                                     ->label(__('File'))
                                     ->storeFileNamesIn('file_name')
+                                    ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])
+                                    ->maxSize(10240)
                                     ->required()
                                     ->columnSpanFull(),
                                 TextInput::make('label')

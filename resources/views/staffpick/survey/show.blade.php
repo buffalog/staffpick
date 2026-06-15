@@ -3,7 +3,7 @@
         <h1 class="text-xl font-semibold">{{ __('How was your visit?') }}</h1>
         @if ($survey->provider)
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                {{ __('Your feedback about :provider helps us improve care.', ['provider' => trim("{$survey->provider->first_name} {$survey->provider->last_name}")]) }}
+                {{ __('Your feedback about :provider helps us improve care.', ['provider' => $survey->provider->first_name]) }}
             </p>
         @endif
 
