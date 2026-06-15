@@ -124,6 +124,14 @@
                     </div>
                 </div>
 
+                <div class="flex items-center gap-3">
+                    <button type="button" wire:click="geocode" wire:loading.attr="disabled"
+                            class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800">
+                        {{ __('Find address on map') }}
+                    </button>
+                    <span wire:loading wire:target="geocode" class="text-sm text-gray-500">{{ __('Locating…') }}</span>
+                </div>
+
                 @if (($data['geocode_failed'] ?? false) === true)
                     <div class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-400">
                         {{ __("We couldn't confirm this address on the map. Drag the pin to the correct location.") }}
