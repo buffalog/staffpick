@@ -10,6 +10,7 @@ use App\Http\Controllers\RoadmapController;
 use App\Http\Controllers\SubscriptionCheckoutController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\SurveyController;
+use App\Livewire\StaffPick\PublicIntakeForm;
 use App\Services\PlanService;
 use App\Services\SessionService;
 use App\Services\TenantCreationService;
@@ -213,3 +214,7 @@ Route::controller(SurveyController::class)
         Route::get('/{token}', 'show')->name('survey.show');
         Route::post('/{token}', 'submit')->name('survey.submit');
     });
+
+// StaffPick — public referral-source intake submission (token-authenticated, no login)
+Route::get('/intake/{token}', PublicIntakeForm::class)
+    ->name('staffpick.intake.show');

@@ -2,10 +2,14 @@
 
 namespace App\Filament\Dashboard\Resources\ReferralSources\Tables;
 
+use App\Models\StaffPick\ReferralSource;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\TextInput;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -66,6 +70,19 @@ class ReferralSourcesTable
                     ]),
             ])
             ->recordActions([
+                Action::make('intakeLink')
+                    ->label(__('Intake link'))
+                    ->icon(Heroicon::OutlinedLink)
+                    ->color('gray')
+                    ->fillForm(fn (ReferralSource $record): array => ['intake_url' => $record->getIntakeUrl()])
+                    ->schema([
+                        TextInput::make('intake_url')
+                            ->label(__('Public intake link'))
+                            ->readOnly()
+                            ->helperText(__('Share this link with the referral source so they can submit referrals directly.')),
+                    ])
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel(__('Close')),
                 ViewAction::make(),
                 EditAction::make(),
             ])
