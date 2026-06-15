@@ -2,9 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Constants\TenancyPermissionConstants;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\TenantPermissionService;
 use Database\Seeders\Testing\TestingDatabaseSeeder;
+use Filament\Facades\Filament;
 use Tests\TestCase;
 
 class FeatureTest extends TestCase
@@ -45,6 +48,29 @@ class FeatureTest extends TestCase
     protected function createTenant()
     {
         return Tenant::factory()->create();
+    }
+
+    /**
+     * Create a user who is an ADMIN of the given tenant. StaffPick PHI resources
+     * (intake requests, subjects, providers, referral sources) are restricted to
+     * tenant admins via StaffPickAdminPolicy, so tests exercising those resources
+     * must act as an admin.
+     */
+    protected function createTenantAdmin(?Tenant $tenant = null, array $attributes = []): User
+    {
+        $tenant = $tenant ?? $this->createTenant();
+        $user = $this->createUser($tenant, [], $attributes);
+
+        Filament::setCurrentPanel(Filament::getPanel('dashboard'));
+        Filament::setTenant($tenant, isQuiet: true);
+
+        app(TenantPermissionService::class)->assignTenantUserRole(
+            $tenant,
+            $user,
+            TenancyPermissionConstants::ROLE_ADMIN,
+        );
+
+        return $user;
     }
 
     protected function createAdminUser()

@@ -17,7 +17,7 @@ class IntakeRequestResourceTest extends FeatureTest
 {
     private function actAsTenant($tenant): void
     {
-        $user = $this->createUser($tenant);
+        $user = $this->createTenantAdmin($tenant);
         $this->actingAs($user);
 
         Filament::setCurrentPanel(Filament::getPanel('dashboard'));
@@ -27,7 +27,7 @@ class IntakeRequestResourceTest extends FeatureTest
     public function test_list_page_renders(): void
     {
         $tenant = $this->createTenant();
-        $user = $this->createUser($tenant);
+        $user = $this->createTenantAdmin($tenant);
         $this->actingAs($user);
 
         IntakeRequest::factory()->create(['tenant_id' => $tenant->id]);

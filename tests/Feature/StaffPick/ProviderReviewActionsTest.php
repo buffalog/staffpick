@@ -19,7 +19,7 @@ class ProviderReviewActionsTest extends FeatureTest
         parent::setUp();
 
         $this->tenant = $this->createTenant();
-        $this->actingAs($this->createUser($this->tenant));
+        $this->actingAs($this->createTenantAdmin($this->tenant));
         Filament::setCurrentPanel(Filament::getPanel('dashboard'));
         Filament::setTenant($this->tenant);
     }

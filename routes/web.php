@@ -210,11 +210,15 @@ Route::controller(InvoiceController::class)
 
 Route::controller(SurveyController::class)
     ->prefix('/survey')
+    ->middleware('throttle:30,1')
     ->group(function () {
         Route::get('/{token}', 'show')->name('survey.show');
-        Route::post('/{token}', 'submit')->name('survey.submit');
+        Route::post('/{token}', 'submit')->middleware('throttle:6,1')->name('survey.submit');
     });
 
 // StaffPick — public referral-source intake submission (token-authenticated, no login)
+// Page-load throttle; the actual submission (a Livewire action over /livewire/update)
+// is additionally rate-limited inside PublicIntakeForm::submit().
 Route::get('/intake/{token}', PublicIntakeForm::class)
+    ->middleware('throttle:30,1')
     ->name('staffpick.intake.show');

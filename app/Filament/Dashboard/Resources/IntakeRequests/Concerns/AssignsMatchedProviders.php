@@ -6,6 +6,7 @@ use App\Models\StaffPick\IntakeRequest;
 use App\Models\StaffPick\Provider;
 use App\Services\StaffPick\AssignmentService;
 use Filament\Notifications\Notification;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * Shared Livewire action for the "Find Matches" modal: assigns a matched provider
@@ -24,6 +25,10 @@ trait AssignsMatchedProviders
         if ($intakeRequest === null || $provider === null) {
             return;
         }
+
+        // Defense in depth: the hosting resource is already admin-gated, but this
+        // is a directly-invokable Livewire RPC, so authorize the mutation here too.
+        abort_unless(Gate::allows('update', $intakeRequest), 403);
 
         app(AssignmentService::class)->assign($intakeRequest, $provider);
 

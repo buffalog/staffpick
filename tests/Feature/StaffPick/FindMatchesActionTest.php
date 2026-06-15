@@ -18,7 +18,7 @@ class FindMatchesActionTest extends FeatureTest
 {
     private function actAsTenant(Tenant $tenant): void
     {
-        $this->actingAs($this->createUser($tenant));
+        $this->actingAs($this->createTenantAdmin($tenant));
 
         Filament::setCurrentPanel(Filament::getPanel('dashboard'));
         Filament::setTenant($tenant);

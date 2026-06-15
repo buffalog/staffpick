@@ -8,6 +8,7 @@ use App\Models\StaffPick\ReferralSource;
 use App\Services\StaffPick\GeocodingService;
 use App\Services\StaffPick\IntakeSubmissionService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Validator;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Locked;
@@ -124,6 +125,20 @@ class PublicIntakeForm extends Component
 
     public function submit(): void
     {
+        // The form posts via Livewire's /livewire/update endpoint, which route
+        // throttling doesn't cover — rate-limit the write here. Each submission
+        // creates DB rows, an external geocode call, and fans out emails, so cap
+        // it per IP to prevent spam/DoS abuse of the public, no-login endpoint.
+        $key = 'intake-submit:'.request()->ip();
+
+        if (RateLimiter::tooManyAttempts($key, maxAttempts: 5)) {
+            $this->addError('data.first_name', __('Too many submissions. Please try again in a minute.'));
+
+            return;
+        }
+
+        RateLimiter::hit($key, decaySeconds: 60);
+
         $this->validate();
 
         if (config('app.recaptcha_enabled')) {
