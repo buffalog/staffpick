@@ -59,6 +59,14 @@ class PublicIntakeForm extends Component
         $this->tenantId = $source->tenant_id;
         $this->sourceName = $source->name;
         $this->inactive = ! $source->isActive();
+
+        // Seed the keys the pin-drop map entangles against — $wire.$entangle()
+        // errors if the (nested) property path doesn't already exist on $data.
+        $this->data = array_merge([
+            'latitude' => null,
+            'longitude' => null,
+            'geocode_failed' => false,
+        ], $this->data);
     }
 
     /**
