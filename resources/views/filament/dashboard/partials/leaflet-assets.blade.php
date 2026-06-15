@@ -25,24 +25,22 @@
     // wizard's $data without changing the backend contract.
     window.spLeafletMap = function (config) {
         return {
+            mode: config.mode,
             map: null,
             marker: null,
             drawnItems: null,
             suppressWatch: false,
-            lat: null,
-            lng: null,
-            failed: null,
-            points: null,
+            // Entangled form state, passed in from the x-data expression where
+            // $wire is in scope so Alpine unwraps the interceptors into live
+            // values. Calling $wire.$entangle() inside init() would store a raw
+            // interceptor object ({_x_interceptor:true}) instead — the value
+            // would never resolve and Leaflet would project a null center.
+            lat: config.lat ?? null,
+            lng: config.lng ?? null,
+            failed: config.failed ?? null,
+            points: config.points ?? null,
 
             init() {
-                if (config.mode === 'marker') {
-                    this.lat = this.$wire.$entangle(config.latModel);
-                    this.lng = this.$wire.$entangle(config.lngModel);
-                    this.failed = this.$wire.$entangle(config.failedModel);
-                } else {
-                    this.points = this.$wire.$entangle(config.pointsModel);
-                }
-
                 // Defer until the container is in the DOM with layout.
                 this.$nextTick(() => this.buildMap());
             },

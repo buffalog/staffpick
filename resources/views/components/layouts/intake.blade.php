@@ -12,8 +12,6 @@
     <div id="app">
         <div class="mx-auto my-6 max-w-3xl px-4 md:my-10">
             <div class="mb-6 flex items-center gap-3">
-                <img src="{{ asset('images/logo.png') }}" alt="{{ config('app.name') }}" class="h-8 w-auto"
-                     onerror="this.style.display='none'">
                 <span class="text-lg font-semibold">{{ config('app.name') }}</span>
             </div>
 

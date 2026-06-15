@@ -1,26 +1,25 @@
 @php
-    // Built by the calling schema component via ->viewData([...]).
-    // marker mode entangles lat/lng/geocode_failed; polygon mode entangles the
-    // service-zone points array. See spLeafletMap() in the dashboard head partial.
-    $config = $mode === 'marker'
-        ? [
-            'mode' => 'marker',
-            'latModel' => $latModel,
-            'lngModel' => $lngModel,
-            'failedModel' => $failedModel,
-        ]
-        : [
-            'mode' => 'polygon',
-            'pointsModel' => $pointsModel,
-        ];
-
+    // The $entangle() calls live in the x-data expression (not @js'd config)
+    // because $wire is only in scope there, and Alpine must process the returned
+    // interceptors at init time to turn them into live values. marker mode binds
+    // lat/lng/geocode_failed; polygon mode binds the service-zone points array.
+    // See spLeafletMap() in the dashboard head partial.
     $hint = $mode === 'marker'
         ? __('Drag the pin to set your exact location, or click the map to drop it where you are.')
         : __('Use the polygon tool (top-left of the map) to outline your service area. Click to add points, click the first point to finish.');
 @endphp
 
 <div
-    x-data="spLeafletMap(@js($config))"
+    x-data="spLeafletMap({
+        mode: '{{ $mode }}',
+        @if ($mode === 'marker')
+        lat: $wire.$entangle('{{ $latModel }}'),
+        lng: $wire.$entangle('{{ $lngModel }}'),
+        failed: $wire.$entangle('{{ $failedModel }}'),
+        @else
+        points: $wire.$entangle('{{ $pointsModel }}'),
+        @endif
+    })"
     data-sp-leaflet="{{ $mode }}"
     class="space-y-2"
 >
