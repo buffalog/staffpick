@@ -40,6 +40,52 @@ class ProviderProfilePageTest extends FeatureTest
             ->assertSee('Credentials');
     }
 
+    public function test_the_wizard_renders_the_interactive_maps(): void
+    {
+        Livewire::test(ProviderProfile::class)
+            ->assertSee('data-sp-leaflet="marker"', false)
+            ->assertSee('data-sp-leaflet="polygon"', false);
+    }
+
+    public function test_an_existing_service_zone_prefills_the_polygon_points(): void
+    {
+        $provider = Provider::create([
+            'tenant_id' => $this->tenant->id,
+            'user_id' => auth()->id(),
+            'first_name' => 'Dana',
+            'last_name' => 'Rivera',
+            'status' => Provider::STATUS_PENDING,
+            'is_active' => false,
+        ]);
+
+        // Closed ring (first point repeated last), as the service stores it.
+        $provider->serviceZones()->create([
+            'name' => 'North County',
+            'polygon_geojson' => json_encode([
+                'type' => 'Polygon',
+                'coordinates' => [[
+                    [-80.10, 26.90],
+                    [-80.00, 26.90],
+                    [-80.00, 26.75],
+                    [-80.10, 26.90],
+                ]],
+            ]),
+            'bbox_north' => 26.90,
+            'bbox_south' => 26.75,
+            'bbox_east' => -80.00,
+            'bbox_west' => -80.10,
+            'is_active' => true,
+        ]);
+
+        Livewire::test(ProviderProfile::class)
+            ->assertSet('data.service_zone_name', 'North County')
+            ->assertSet('data.service_zone_points', [
+                ['latitude' => 26.90, 'longitude' => -80.10],
+                ['latitude' => 26.90, 'longitude' => -80.00],
+                ['latitude' => 26.75, 'longitude' => -80.00],
+            ]);
+    }
+
     public function test_a_failed_geocode_flags_the_address_warning_without_setting_coordinates(): void
     {
         Http::fake(['nominatim.openstreetmap.org/*' => Http::response([])]); // no match

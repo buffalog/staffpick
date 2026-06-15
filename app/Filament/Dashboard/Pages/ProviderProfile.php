@@ -20,6 +20,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\ViewField;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Component;
@@ -27,6 +28,7 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
+use Filament\Schemas\Components\View;
 use Filament\Schemas\Components\Wizard;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Schemas\Schema;
@@ -137,9 +139,16 @@ class ProviderProfile extends Page
                             ->visible(fn (Get $get): bool => $get('geocode_failed') === true)
                             ->content(new HtmlString(
                                 '<div class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-400">'
-                                .e(__("We couldn't confirm this address on the map. Please double-check it — you can still continue, but matching won't be able to place you until your location is resolved."))
+                                .e(__("We couldn't confirm this address on the map. Drag the pin below to your exact location — you can still continue, but matching won't be able to place you until your location is set."))
                                 .'</div>'
                             )),
+                        View::make('filament.forms.leaflet-map')
+                            ->viewData([
+                                'mode' => 'marker',
+                                'latModel' => 'data.latitude',
+                                'lngModel' => 'data.longitude',
+                                'failedModel' => 'data.geocode_failed',
+                            ]),
                         Hidden::make('latitude'),
                         Hidden::make('longitude'),
                         Hidden::make('geocode_failed'),
@@ -201,18 +210,16 @@ class ProviderProfile extends Page
                     TextInput::make('radius_max_miles')->label(__('Maximum radius (miles)'))->numeric()->required()->default(25),
                 ]),
                 Section::make(__('Service zone (optional)'))
-                    ->description(__('Optionally outline a service area by entering its boundary points. A map drawing tool is coming soon.'))
+                    ->description(__('Optionally outline the area you cover. Draw a polygon on the map below — we use it to refine matching beyond your radius.'))
                     ->schema([
                         TextInput::make('service_zone_name')->label(__('Zone name')),
-                        Repeater::make('service_zone_points')
-                            ->label(__('Boundary points'))
-                            ->schema([
-                                TextInput::make('latitude')->numeric()->required(),
-                                TextInput::make('longitude')->numeric()->required(),
-                            ])
-                            ->columns(2)
-                            ->addActionLabel(__('Add point'))
-                            ->helperText(__('Enter at least 3 points to define a zone.')),
+                        ViewField::make('service_zone_points')
+                            ->hiddenLabel()
+                            ->view('filament.forms.leaflet-map')
+                            ->viewData([
+                                'mode' => 'polygon',
+                                'pointsModel' => 'data.service_zone_points',
+                            ]),
                     ]),
             ]);
     }
@@ -344,6 +351,33 @@ class ProviderProfile extends Page
         $set('geocode_failed', $result === null);
     }
 
+    /**
+     * Decode the provider's active service-zone polygon back into the flat
+     * {latitude, longitude} list the map and service expect. The stored ring is
+     * closed (first point repeated last); drop that duplicate for editing.
+     *
+     * @return array<int, array{latitude: float, longitude: float}>
+     */
+    private function serviceZonePointsFromProvider(Provider $provider): array
+    {
+        $zone = $provider->serviceZones()->where('is_active', true)->first();
+
+        if (! $zone) {
+            return [];
+        }
+
+        $geojson = json_decode((string) $zone->polygon_geojson, true);
+        $ring = $geojson['coordinates'][0] ?? [];
+
+        if (count($ring) > 1 && $ring[0] === end($ring)) {
+            array_pop($ring);
+        }
+
+        return collect($ring)
+            ->map(fn (array $point): array => ['latitude' => (float) $point[1], 'longitude' => (float) $point[0]])
+            ->all();
+    }
+
     private function currentProvider(): ?Provider
     {
         return Provider::query()
@@ -374,6 +408,8 @@ class ProviderProfile extends Page
             'years_experience' => $provider->years_experience,
             'radius_preferred_miles' => $provider->radius_preferred_miles,
             'radius_max_miles' => $provider->radius_max_miles,
+            'service_zone_name' => $provider->serviceZones()->where('is_active', true)->value('name'),
+            'service_zone_points' => $this->serviceZonePointsFromProvider($provider),
             'specialties' => $provider->specialties()->pluck('sp_specialties.id')->all(),
             'languages' => $provider->languages()->pluck('sp_languages.id')->all(),
             'availability' => $provider->availability()
