@@ -111,12 +111,6 @@ return [
         'is_sandbox' => env('POLAR_IS_SANDBOX', false),
     ],
 
-    'twilio' => [
-        'sid' => env('TWILIO_SID'),
-        'token' => env('TWILIO_TOKEN'),
-        'from' => env('TWILIO_FROM'),
-    ],
-
     'slack' => [
         // Default outbound Incoming Webhook URL; tenants may override per-tenant in
         // sp_tenant_configs.slack_webhook_url.
@@ -124,6 +118,14 @@ return [
         // Signing secret for verifying inbound Slack webhook requests; tenants may
         // override per-tenant in sp_tenant_configs.slack_signing_secret.
         'signing_secret' => env('SLACK_SIGNING_SECRET'),
+    ],
+
+    'pingram' => [
+        // Pingram (https://www.pingram.io) is StaffPick's SMS provider. The "type"
+        // is a notification type configured in the Pingram dashboard.
+        'base_url' => env('PINGRAM_BASE_URL', 'https://api.pingram.io'),
+        'api_key' => env('PINGRAM_API_KEY'),
+        'sms_type' => env('PINGRAM_SMS_TYPE', 'staffpick_sms'),
     ],
 
 ];

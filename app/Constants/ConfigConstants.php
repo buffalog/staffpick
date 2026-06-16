@@ -27,8 +27,7 @@ class ConfigConstants
         'recaptcha.api_secret_key',
         'services.polar.access_token',
         'services.polar.webhook_secret',
-        'services.twilio.sid',
-        'services.twilio.token',
+        'services.pingram.api_key',
     ];
 
     public const OVERRIDABLE_CONFIGS = [  // correspond to laravel config keys
@@ -163,10 +162,9 @@ class ConfigConstants
         'app.limit_user_trials.enabled',
         'app.limit_user_trials.max_count',
 
-        // twilio
-        'services.twilio.sid',
-        'services.twilio.token',
-        'services.twilio.from',
+        // pingram (SMS / verification)
+        'services.pingram.api_key',
+        'services.pingram.sms_type',
         'app.verification.default_provider',
         'app.anonymization_enabled',
 

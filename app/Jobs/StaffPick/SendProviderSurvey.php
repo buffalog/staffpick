@@ -5,7 +5,7 @@ namespace App\Jobs\StaffPick;
 use App\Mail\StaffPick\ProviderSurveyRequest;
 use App\Models\StaffPick\Assignment;
 use App\Models\StaffPick\ProviderSurvey;
-use App\Services\VerificationProviders\TwilioProvider;
+use App\Services\StaffPick\SmsService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Mail;
@@ -21,7 +21,7 @@ class SendProviderSurvey implements ShouldQueue
 
     public function __construct(public int $assignmentId) {}
 
-    public function handle(TwilioProvider $twilio): void
+    public function handle(SmsService $sms): void
     {
         $assignment = Assignment::with('intakeRequest.subject')->find($this->assignmentId);
 
@@ -57,7 +57,7 @@ class SendProviderSurvey implements ShouldQueue
         ]);
 
         if ($channel === ProviderSurvey::CHANNEL_SMS) {
-            $sent = $twilio->sendSms($subject->phone, $this->message($survey));
+            $sent = $sms->send($subject->phone, $this->message($survey));
             $survey->update([
                 'status' => $sent ? ProviderSurvey::STATUS_SENT : ProviderSurvey::STATUS_BOUNCED,
                 'sent_at' => now(),

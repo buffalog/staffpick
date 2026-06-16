@@ -5,7 +5,7 @@ namespace App\Filament\Admin\Resources\VerificationProviders;
 use App\Filament\Admin\Resources\VerificationProviders\Pages\CreateVerificationProvider;
 use App\Filament\Admin\Resources\VerificationProviders\Pages\EditVerificationProvider;
 use App\Filament\Admin\Resources\VerificationProviders\Pages\ListVerificationProviders;
-use App\Filament\Admin\Resources\VerificationProviders\Pages\TwilioSettings;
+use App\Filament\Admin\Resources\VerificationProviders\Pages\PingramSettings;
 use App\Models\VerificationProvider;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -97,7 +97,7 @@ class VerificationProviderResource extends Resource
             'index' => ListVerificationProviders::route('/'),
             'create' => CreateVerificationProvider::route('/create'),
             'edit' => EditVerificationProvider::route('/{record}/edit'),
-            'twilio-settings' => TwilioSettings::route('/twilio-settings'),
+            'pingram-settings' => PingramSettings::route('/pingram-settings'),
         ];
     }
 

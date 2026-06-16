@@ -11,7 +11,7 @@ use App\Models\StaffPick\Provider;
 use App\Models\StaffPick\ProviderSurvey;
 use App\Models\StaffPick\Subject;
 use App\Models\Tenant;
-use App\Services\VerificationProviders\TwilioProvider;
+use App\Services\StaffPick\SmsService;
 use Illuminate\Support\Facades\Mail;
 use Mockery;
 use Tests\Feature\FeatureTest;
@@ -38,12 +38,12 @@ class SendProviderSurveyJobTest extends FeatureTest
         ]);
     }
 
-    private function twilioReturning(bool $result): TwilioProvider
+    private function smsReturning(bool $result): SmsService
     {
-        $twilio = Mockery::mock(TwilioProvider::class);
-        $twilio->shouldReceive('sendSms')->andReturn($result);
+        $sms = Mockery::mock(SmsService::class);
+        $sms->shouldReceive('send')->andReturn($result);
 
-        return $twilio;
+        return $sms;
     }
 
     public function test_sends_via_sms_when_the_subject_has_a_phone(): void
@@ -51,10 +51,10 @@ class SendProviderSurveyJobTest extends FeatureTest
         $tenant = $this->createTenant();
         $assignment = $this->assignment($tenant, ['phone' => '5615551234', 'email' => 'a@example.com']);
 
-        $twilio = Mockery::mock(TwilioProvider::class);
-        $twilio->shouldReceive('sendSms')->once()->andReturn(true);
+        $sms = Mockery::mock(SmsService::class);
+        $sms->shouldReceive('send')->once()->andReturn(true);
 
-        (new SendProviderSurvey($assignment->id))->handle($twilio);
+        (new SendProviderSurvey($assignment->id))->handle($sms);
 
         $this->assertDatabaseHas('sp_provider_surveys', [
             'assignment_id' => $assignment->id,
@@ -71,7 +71,7 @@ class SendProviderSurveyJobTest extends FeatureTest
         $tenant = $this->createTenant();
         $assignment = $this->assignment($tenant, ['phone' => null, 'email' => 'patient@example.com']);
 
-        (new SendProviderSurvey($assignment->id))->handle($this->twilioReturning(true));
+        (new SendProviderSurvey($assignment->id))->handle($this->smsReturning(true));
 
         Mail::assertSent(ProviderSurveyRequest::class);
         $this->assertDatabaseHas('sp_provider_surveys', [
@@ -86,7 +86,7 @@ class SendProviderSurveyJobTest extends FeatureTest
         $tenant = $this->createTenant();
         $assignment = $this->assignment($tenant, ['phone' => null, 'email' => null]);
 
-        (new SendProviderSurvey($assignment->id))->handle($this->twilioReturning(true));
+        (new SendProviderSurvey($assignment->id))->handle($this->smsReturning(true));
 
         $this->assertDatabaseHas('sp_provider_surveys', [
             'assignment_id' => $assignment->id,
@@ -107,10 +107,10 @@ class SendProviderSurveyJobTest extends FeatureTest
             'status' => ProviderSurvey::STATUS_SENT,
         ]);
 
-        $twilio = Mockery::mock(TwilioProvider::class);
-        $twilio->shouldNotReceive('sendSms');
+        $sms = Mockery::mock(SmsService::class);
+        $sms->shouldNotReceive('send');
 
-        (new SendProviderSurvey($assignment->id))->handle($twilio);
+        (new SendProviderSurvey($assignment->id))->handle($sms);
 
         $this->assertSame(1, ProviderSurvey::where('assignment_id', $assignment->id)->count());
     }

@@ -218,7 +218,7 @@ return [
     ],
 
     'verification' => [
-        'default_provider' => env('VERIFICATION_DEFAULT_PROVIDER', 'twilio'),
+        'default_provider' => env('VERIFICATION_DEFAULT_PROVIDER', 'pingram'),
     ],
 
     'admin_settings' => [

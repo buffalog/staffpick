@@ -12,7 +12,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Livewire\Component;
 
-class TwilioSettings extends Component implements HasForms
+class PingramSettings extends Component implements HasForms
 {
     private ConfigService $configService;
 
@@ -27,15 +27,14 @@ class TwilioSettings extends Component implements HasForms
 
     public function render()
     {
-        return view('livewire.filament.twilio-settings');
+        return view('livewire.filament.pingram-settings');
     }
 
     public function mount(): void
     {
         $this->form->fill([
-            'sid' => $this->configService->get('services.twilio.sid'),
-            'token' => $this->configService->get('services.twilio.token'),
-            'from' => $this->configService->get('services.twilio.from'),
+            'api_key' => $this->configService->get('services.pingram.api_key'),
+            'sms_type' => $this->configService->get('services.pingram.sms_type'),
         ]);
     }
 
@@ -45,17 +44,15 @@ class TwilioSettings extends Component implements HasForms
             ->components([
                 Section::make()
                     ->schema([
-                        TextInput::make('sid')
-                            ->label(__('SID'))
-                            ->helperText(__('The Account SID from your Twilio account.'))
+                        TextInput::make('api_key')
+                            ->label(__('API Key'))
+                            ->helperText(__('Your Pingram API key (starts with pingram_sk_).'))
+                            ->password()
+                            ->revealable()
                             ->required(),
-                        TextInput::make('token')
-                            ->label(__('Token'))
-                            ->helperText(__('The Auth Token from your Twilio account.'))
-                            ->required(),
-                        TextInput::make('from')
-                            ->label(__('From'))
-                            ->helperText(__('The phone number or alphanumeric sender ID to send messages from.'))
+                        TextInput::make('sms_type')
+                            ->label(__('SMS Notification Type'))
+                            ->helperText(__('The notification type configured in your Pingram dashboard used to send SMS.'))
                             ->required(),
                     ])->columnSpan([
                         'sm' => 6,
@@ -64,8 +61,8 @@ class TwilioSettings extends Component implements HasForms
                     ]),
                 Section::make()->schema([
                     ViewField::make('how-to')
-                        ->label(__('Paddle Settings'))
-                        ->view('filament.admin.resources.verification-provider-resource.pages.partials.twilio-how-to'),
+                        ->label(__('Pingram Settings'))
+                        ->view('filament.admin.resources.verification-provider-resource.pages.partials.pingram-how-to'),
                 ])->columnSpan([
                     'sm' => 6,
                     'xl' => 4,
@@ -79,9 +76,8 @@ class TwilioSettings extends Component implements HasForms
     {
         $data = $this->form->getState();
 
-        $this->configService->set('services.twilio.sid', $data['sid']);
-        $this->configService->set('services.twilio.token', $data['token']);
-        $this->configService->set('services.twilio.from', $data['from']);
+        $this->configService->set('services.pingram.api_key', $data['api_key']);
+        $this->configService->set('services.pingram.sms_type', $data['sms_type']);
 
         Notification::make()
             ->title(__('Settings Saved'))

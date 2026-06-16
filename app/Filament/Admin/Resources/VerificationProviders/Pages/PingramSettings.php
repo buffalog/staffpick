@@ -6,11 +6,11 @@ use App\Filament\Admin\Resources\VerificationProviders\VerificationProviderResou
 use App\Services\ConfigService;
 use Filament\Resources\Pages\Page;
 
-class TwilioSettings extends Page
+class PingramSettings extends Page
 {
     protected static string $resource = VerificationProviderResource::class;
 
-    protected string $view = 'filament.admin.resources.verification-provider-resource.pages.twilio-settings';
+    protected string $view = 'filament.admin.resources.verification-provider-resource.pages.pingram-settings';
 
     public function mount(): void
     {

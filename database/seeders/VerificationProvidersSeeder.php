@@ -15,12 +15,14 @@ class VerificationProvidersSeeder extends Seeder
     {
         DB::table('verification_providers')->upsert([
             [
-                'name' => 'Twilio',
-                'slug' => VerificationProviderConstants::TWILIO_SLUG,
+                'name' => 'Pingram',
+                'slug' => VerificationProviderConstants::PINGRAM_SLUG,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
         ], ['slug']);
 
+        // Retire the legacy Twilio provider row.
+        DB::table('verification_providers')->where('slug', 'twilio')->delete();
     }
 }

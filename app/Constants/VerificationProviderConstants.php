@@ -4,5 +4,5 @@ namespace App\Constants;
 
 class VerificationProviderConstants
 {
-    public const TWILIO_SLUG = 'twilio';
+    public const PINGRAM_SLUG = 'pingram';
 }

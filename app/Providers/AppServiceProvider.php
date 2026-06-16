@@ -10,7 +10,7 @@ use App\Services\PaymentProviders\PaymentService;
 use App\Services\PaymentProviders\Polar\PolarProvider;
 use App\Services\PaymentProviders\Stripe\StripeProvider;
 use App\Services\UserVerificationService;
-use App\Services\VerificationProviders\TwilioProvider;
+use App\Services\VerificationProviders\PingramProvider;
 use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
 use Illuminate\Support\ServiceProvider;
@@ -43,7 +43,7 @@ class AppServiceProvider extends ServiceProvider
 
         // verification providers
         $this->app->tag([
-            TwilioProvider::class,
+            PingramProvider::class,
         ], 'verification-providers');
 
         $this->app->afterResolving(UserVerificationService::class, function (UserVerificationService $service) {
