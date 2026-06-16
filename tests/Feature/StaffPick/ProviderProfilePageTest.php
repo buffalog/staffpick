@@ -47,6 +47,14 @@ class ProviderProfilePageTest extends FeatureTest
             ->assertSee('data-sp-leaflet="polygon"', false);
     }
 
+    public function test_step_one_offers_an_explicit_geocode_button(): void
+    {
+        // Livewire 4 wire:model.blur doesn't round-trip, so an explicit button is
+        // the reliable mid-step geocode trigger.
+        Livewire::test(ProviderProfile::class)
+            ->assertSee('Find address on map');
+    }
+
     public function test_an_existing_service_zone_prefills_the_polygon_points(): void
     {
         $provider = Provider::create([

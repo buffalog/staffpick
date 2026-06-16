@@ -10,6 +10,7 @@ use App\Models\StaffPick\Specialty;
 use App\Services\StaffPick\GeocodingService;
 use App\Services\StaffPick\ProviderProfileService;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -23,6 +24,7 @@ use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\ViewField;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Schemas\Components\Actions;
 use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
@@ -133,6 +135,16 @@ class ProviderProfile extends Page
                                 ->live(onBlur: true)->afterStateUpdated(fn (Get $get, Set $set) => $this->geocodeAddressState($get, $set)),
                             TextInput::make('zip')->label(__('ZIP'))->maxLength(20)
                                 ->live(onBlur: true)->afterStateUpdated(fn (Get $get, Set $set) => $this->geocodeAddressState($get, $set)),
+                        ]),
+                        // Explicit trigger: Livewire 4 wire:model.blur (Filament's ->live(onBlur:true))
+                        // does not round-trip on blur, so the afterStateUpdated geocode never fires
+                        // mid-step. This button geocodes on demand so the pin populates before submit.
+                        Actions::make([
+                            Action::make('geocode')
+                                ->label(__('Find address on map'))
+                                ->icon(Heroicon::OutlinedMapPin)
+                                ->color('gray')
+                                ->action(fn (Get $get, Set $set) => $this->geocodeAddressState($get, $set)),
                         ]),
                         Placeholder::make('geocode_warning')
                             ->hiddenLabel()
