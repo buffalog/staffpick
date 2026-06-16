@@ -207,13 +207,29 @@
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
                         <label class="{{ $label }}">{{ __('Discipline') }} *</label>
-                        <select wire:model="data.discipline_id" class="{{ $input }}">
+                        <select wire:model.live="data.discipline_id" class="{{ $input }}">
                             <option value="">{{ __('Select') }}</option>
                             @foreach ($this->disciplineOptions() as $id => $name)
                                 <option value="{{ $id }}">{{ $name }}</option>
                             @endforeach
                         </select>
                         @error('data.discipline_id') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        @php $specialtyOptions = $this->specialtyOptions(); @endphp
+                        <label class="{{ $label }}">{{ __('Requested specialties') }}</label>
+                        <select multiple wire:model="data.specialty_ids" @disabled(empty($specialtyOptions))
+                                class="{{ $input }} h-28 disabled:opacity-50">
+                            @foreach ($specialtyOptions as $id => $name)
+                                <option value="{{ $id }}">{{ $name }}</option>
+                            @endforeach
+                        </select>
+                        <p class="mt-1 text-xs text-gray-400">
+                            {{ empty($specialtyOptions)
+                                ? __('Select a discipline first to see its specialties.')
+                                : __('Hold Cmd/Ctrl to select more than one.') }}
+                        </p>
+                        @error('data.specialty_ids') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                     </div>
                     <div>
                         <label class="{{ $label }}">{{ __('Visit type') }}</label>

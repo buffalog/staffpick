@@ -49,7 +49,7 @@ class IntakeSubmissionService
         $intake = DB::transaction(function () use ($source, $data): IntakeRequest {
             $subject = $this->createSubject($source, $data);
 
-            return IntakeRequest::create([
+            $intake = IntakeRequest::create([
                 'tenant_id' => $source->tenant_id,
                 'reference_number' => $this->generateReferenceNumber((int) $source->tenant_id),
                 'subject_id' => $subject->id,
@@ -65,6 +65,10 @@ class IntakeSubmissionService
                 'radius_miles' => $data['radius_miles'] ?? null,
                 'notes' => $data['notes'] ?? null,
             ]);
+
+            $intake->specialties()->sync($data['specialty_ids'] ?? []);
+
+            return $intake;
         });
 
         $this->notify($source, $intake);

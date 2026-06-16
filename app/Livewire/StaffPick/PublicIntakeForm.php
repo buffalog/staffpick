@@ -5,9 +5,11 @@ namespace App\Livewire\StaffPick;
 use App\Models\StaffPick\Discipline;
 use App\Models\StaffPick\InsuranceType;
 use App\Models\StaffPick\ReferralSource;
+use App\Models\StaffPick\Specialty;
 use App\Services\StaffPick\GeocodingService;
 use App\Services\StaffPick\IntakeSubmissionService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Validator;
 use Livewire\Attributes\Layout;
@@ -67,6 +69,7 @@ class PublicIntakeForm extends Component
             'latitude' => null,
             'longitude' => null,
             'geocode_failed' => false,
+            'specialty_ids' => [],
         ], $this->data);
     }
 
@@ -78,6 +81,28 @@ class PublicIntakeForm extends Component
         return Discipline::withoutGlobalScopes()
             ->where('tenant_id', $this->tenantId)
             ->where('is_active', true)
+            ->orderBy('name')
+            ->pluck('name', 'id')
+            ->all();
+    }
+
+    /**
+     * Specialties scoped to the selected discipline, via the discipline↔specialty pivot.
+     *
+     * @return array<int|string, string>
+     */
+    public function specialtyOptions(): array
+    {
+        $disciplineId = $this->data['discipline_id'] ?? null;
+
+        if (blank($disciplineId)) {
+            return [];
+        }
+
+        return Specialty::withoutGlobalScopes()
+            ->where('tenant_id', $this->tenantId)
+            ->where('is_active', true)
+            ->whereHas('disciplines', fn (Builder $query) => $query->whereKey($disciplineId))
             ->orderBy('name')
             ->pluck('name', 'id')
             ->all();
@@ -97,6 +122,11 @@ class PublicIntakeForm extends Component
 
     public function updated(string $name): void
     {
+        // Specialties are scoped to the discipline; clear them when it changes.
+        if ($name === 'data.discipline_id') {
+            $this->data['specialty_ids'] = [];
+        }
+
         if (in_array($name, ['data.address', 'data.city', 'data.state', 'data.zip'], true)) {
             $this->geocode();
         }
@@ -191,6 +221,8 @@ class PublicIntakeForm extends Component
             'data.provider_gender_preference' => ['nullable', 'string', 'max:30'],
             'data.language_preference' => ['nullable', 'string', 'max:255'],
             'data.discipline_id' => ['required', 'integer'],
+            'data.specialty_ids' => ['nullable', 'array'],
+            'data.specialty_ids.*' => ['integer'],
             'data.visit_type' => ['nullable', 'string', 'max:255'],
             'data.frequency' => ['nullable', 'string', 'max:255'],
             'data.start_date' => ['nullable', 'date'],

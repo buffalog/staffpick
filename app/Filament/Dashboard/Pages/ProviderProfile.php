@@ -36,6 +36,7 @@ use Filament\Schemas\Components\Wizard\Step;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\HtmlString;
@@ -206,7 +207,11 @@ class ProviderProfile extends Page
                         ->label(__('Discipline'))
                         ->options(fn (): array => Discipline::query()->where('is_active', true)->orderBy('sort_order')->pluck('name', 'id')->all())
                         ->searchable()
-                        ->required(),
+                        ->required()
+                        // Specialties are scoped to the discipline; clear the selection
+                        // when the discipline changes so stale specialties can't persist.
+                        ->live()
+                        ->afterStateUpdated(fn (Set $set) => $set('specialties', [])),
                     Select::make('gender')
                         ->label(__('Gender'))
                         ->options([
@@ -220,9 +225,17 @@ class ProviderProfile extends Page
                 Select::make('specialties')
                     ->label(__('Specialties'))
                     ->multiple()
-                    ->options(fn (): array => Specialty::query()->where('is_active', true)->pluck('name', 'id')->all())
-                    ->searchable()
-                    ->preload(),
+                    ->options(fn (Get $get): array => blank($get('discipline_id'))
+                        ? []
+                        : Specialty::query()
+                            ->where('is_active', true)
+                            ->whereHas('disciplines', fn (Builder $query) => $query->whereKey($get('discipline_id')))
+                            ->orderBy('name')
+                            ->pluck('name', 'id')
+                            ->all())
+                    ->disabled(fn (Get $get): bool => blank($get('discipline_id')))
+                    ->helperText(__('Select a discipline first to see its specialties.'))
+                    ->searchable(),
                 Select::make('languages')
                     ->label(__('Languages spoken'))
                     ->multiple()

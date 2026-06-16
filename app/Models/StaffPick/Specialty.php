@@ -26,6 +26,12 @@ class Specialty extends Model
         ];
     }
 
+    public function disciplines(): BelongsToMany
+    {
+        return $this->belongsToMany(Discipline::class, 'sp_discipline_specialties')
+            ->withTimestamps();
+    }
+
     public function providers(): BelongsToMany
     {
         return $this->belongsToMany(Provider::class, 'sp_provider_specialties')

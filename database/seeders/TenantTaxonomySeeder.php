@@ -8,6 +8,7 @@ use App\Models\StaffPick\DeclineReason;
 use App\Models\StaffPick\Discipline;
 use App\Models\StaffPick\OnHoldReason;
 use App\Models\StaffPick\ProviderTier;
+use App\Models\StaffPick\Specialty;
 use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Seeder;
@@ -52,6 +53,19 @@ class TenantTaxonomySeeder extends Seeder
         ['name' => 'Liability Insurance', 'is_required' => true, 'has_expiry' => true, 'expiry_warning_days' => 30, 'deactivate_on_expiry' => false],
         ['name' => 'Background Check', 'is_required' => true, 'has_expiry' => false, 'expiry_warning_days' => 30, 'deactivate_on_expiry' => false],
         ['name' => 'W-9', 'is_required' => true, 'has_expiry' => false, 'expiry_warning_days' => 30, 'deactivate_on_expiry' => false],
+    ];
+
+    /**
+     * Specialties scoped to each discipline, keyed by discipline abbreviation. A
+     * specialty name shared across disciplines (e.g. Geriatrics) is created once per
+     * tenant and mapped to each via the sp_discipline_specialties pivot.
+     *
+     * @var array<string, list<string>>
+     */
+    private const SPECIALTIES_BY_DISCIPLINE = [
+        'PT' => ['Orthopedics', 'Geriatrics', 'Neurology', 'Pediatrics', 'Sports Medicine', 'Cardiopulmonary', "Women's Health"],
+        'OT' => ['Pediatrics', 'Geriatrics', 'Hand Therapy', 'Neurological Rehabilitation', 'Mental Health', 'Low Vision'],
+        'SLP' => ['Dysphagia', 'Fluency', 'Voice Disorders', 'Aphasia', 'Pediatric Language', 'Augmentative Communication'],
     ];
 
     /**
@@ -140,9 +154,41 @@ class TenantTaxonomySeeder extends Seeder
             );
         }
 
+        $this->seedSpecialties($tenantId);
+
         $this->seedReasons(OnHoldReason::class, $tenantId, self::ON_HOLD_REASONS);
         $this->seedReasons(CancellationReason::class, $tenantId, self::CANCELLATION_REASONS);
         $this->seedReasons(DeclineReason::class, $tenantId, self::DECLINE_REASONS);
+    }
+
+    /**
+     * Create the tenant's specialties and map each to its discipline(s) via the
+     * sp_discipline_specialties pivot. Idempotent: specialties are keyed on
+     * (tenant_id, name) and mappings are attached without detaching existing ones.
+     */
+    private function seedSpecialties(int $tenantId): void
+    {
+        foreach (self::SPECIALTIES_BY_DISCIPLINE as $abbreviation => $specialtyNames) {
+            $discipline = Discipline::withoutGlobalScopes()
+                ->where('tenant_id', $tenantId)
+                ->where('abbreviation', $abbreviation)
+                ->first();
+
+            if ($discipline === null) {
+                continue;
+            }
+
+            $specialtyIds = [];
+
+            foreach ($specialtyNames as $name) {
+                $specialtyIds[] = Specialty::withoutGlobalScopes()->updateOrCreate(
+                    ['tenant_id' => $tenantId, 'name' => $name],
+                    ['is_active' => true],
+                )->getKey();
+            }
+
+            $discipline->specialties()->syncWithoutDetaching($specialtyIds);
+        }
     }
 
     /**

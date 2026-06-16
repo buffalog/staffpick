@@ -10,7 +10,9 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Illuminate\Database\Eloquent\Builder;
 
 class ProviderForm
 {
@@ -84,7 +86,10 @@ class ProviderForm
                             ->label(TenantConfig::entityLabel('discipline', __('Discipline')))
                             ->relationship('discipline', 'name')
                             ->searchable()
-                            ->preload(),
+                            ->preload()
+                            // Specialties are scoped to the discipline; clear them on change.
+                            ->live()
+                            ->afterStateUpdated(fn (Set $set) => $set('specialties', [])),
                         Select::make('tier_id')
                             ->label(__('Tier'))
                             ->relationship('tier', 'name')
@@ -105,10 +110,18 @@ class ProviderForm
                             ]),
                         Select::make('specialties')
                             ->label(__('Specialties'))
-                            ->relationship('specialties', 'name')
+                            ->relationship(
+                                'specialties',
+                                'name',
+                                fn (Builder $query, Get $get): Builder => filled($get('discipline_id'))
+                                    ? $query->whereHas('disciplines', fn (Builder $disciplineQuery) => $disciplineQuery->whereKey($get('discipline_id')))
+                                    : $query->whereRaw('1 = 0'),
+                            )
                             ->multiple()
                             ->searchable()
                             ->preload()
+                            ->disabled(fn (Get $get): bool => blank($get('discipline_id')))
+                            ->helperText(__('Select a discipline first to see its specialties.'))
                             ->columnSpanFull(),
                         Toggle::make('is_contractor')
                             ->label(__('Is Contractor'))
