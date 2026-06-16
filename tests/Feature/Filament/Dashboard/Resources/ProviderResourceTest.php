@@ -7,7 +7,9 @@ use App\Filament\Dashboard\Resources\Providers\Pages\EditProvider;
 use App\Filament\Dashboard\Resources\Providers\Pages\ListProviders;
 use App\Filament\Dashboard\Resources\Providers\Pages\ViewProvider;
 use App\Filament\Dashboard\Resources\Providers\ProviderResource;
+use App\Models\StaffPick\Discipline;
 use App\Models\StaffPick\Provider;
+use App\Models\StaffPick\Specialty;
 use Filament\Facades\Filament;
 use Livewire\Livewire;
 use Tests\Feature\FeatureTest;
@@ -126,5 +128,30 @@ class ProviderResourceTest extends FeatureTest
             ->assertSuccessful()
             ->assertSee('Wren')
             ->assertSee('Calloway');
+    }
+
+    public function test_create_persists_the_other_specialty_write_in_note(): void
+    {
+        $tenant = $this->createTenant();
+        $this->actAsTenant($tenant);
+
+        $discipline = Discipline::create(['tenant_id' => $tenant->id, 'name' => 'Physical Therapy', 'abbreviation' => 'PT']);
+        $other = Specialty::create(['tenant_id' => $tenant->id, 'name' => Specialty::OTHER_NAME]);
+        $discipline->specialties()->attach($other->id);
+
+        Livewire::test(CreateProvider::class)
+            ->fillForm([
+                'first_name' => 'Avery',
+                'last_name' => 'Stone',
+                'status' => 'active',
+                'discipline_id' => $discipline->id,
+                'specialties' => [$other->id],
+                'specialty_other_note' => 'Aquatic Therapy',
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $provider = Provider::where('tenant_id', $tenant->id)->where('first_name', 'Avery')->firstOrFail();
+        $this->assertSame('Aquatic Therapy', $provider->specialties()->where('sp_specialties.id', $other->id)->first()->pivot->notes);
     }
 }

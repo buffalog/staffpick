@@ -6,6 +6,7 @@ use App\Filament\Dashboard\Pages\ProviderProfile;
 use App\Models\StaffPick\CredentialDocumentType;
 use App\Models\StaffPick\Discipline;
 use App\Models\StaffPick\Provider;
+use App\Models\StaffPick\Specialty;
 use App\Models\Tenant;
 use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Http;
@@ -252,5 +253,49 @@ class ProviderProfilePageTest extends FeatureTest
 
         $provider = Provider::where('tenant_id', $this->tenant->id)->where('user_id', auth()->id())->first();
         $this->assertSame(Provider::STATUS_PENDING, $provider->status);
+    }
+
+    public function test_selecting_other_specialty_persists_and_restores_the_write_in_note(): void
+    {
+        $this->fakeGeocodeSuccess();
+
+        $discipline = Discipline::create(['tenant_id' => $this->tenant->id, 'name' => 'Physical Therapy', 'abbreviation' => 'PT']);
+        $ortho = Specialty::create(['tenant_id' => $this->tenant->id, 'name' => 'Orthopaedics']);
+        $other = Specialty::create(['tenant_id' => $this->tenant->id, 'name' => Specialty::OTHER_NAME]);
+        $discipline->specialties()->attach([$ortho->id, $other->id]);
+
+        Livewire::test(ProviderProfile::class)
+            ->set('data', [
+                'first_name' => 'Dana',
+                'last_name' => 'Rivera',
+                'email' => 'dana@example.com',
+                'phone' => '5615559876',
+                'address' => '340 US-1',
+                'city' => 'North Palm Beach',
+                'state' => 'FL',
+                'zip' => '33408',
+                'discipline_id' => $discipline->id,
+                'specialties' => [$ortho->id, $other->id],
+                'specialty_other_note' => 'Aquatic Therapy',
+                'years_experience' => 8,
+                'radius_preferred_miles' => 15,
+                'radius_max_miles' => 25,
+                'availability' => [
+                    ['day_of_week' => 1, 'start_time' => '09:00', 'end_time' => '17:00'],
+                ],
+                'confirm' => true,
+            ])
+            ->call('submit')
+            ->assertHasNoErrors();
+
+        $provider = Provider::where('tenant_id', $this->tenant->id)->where('user_id', auth()->id())->firstOrFail();
+
+        // The write-in lands on the Other pivot only.
+        $this->assertSame('Aquatic Therapy', $provider->specialties()->where('sp_specialties.id', $other->id)->first()->pivot->notes);
+        $this->assertNull($provider->specialties()->where('sp_specialties.id', $ortho->id)->first()->pivot->notes);
+
+        // A return visit restores the write-in into form state.
+        Livewire::test(ProviderProfile::class)
+            ->assertSet('data.specialty_other_note', 'Aquatic Therapy');
     }
 }

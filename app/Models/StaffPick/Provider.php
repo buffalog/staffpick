@@ -113,6 +113,7 @@ class Provider extends Model
     public function specialties(): BelongsToMany
     {
         return $this->belongsToMany(Specialty::class, 'sp_provider_specialties')
+            ->withPivot('notes')
             ->withTimestamps();
     }
 

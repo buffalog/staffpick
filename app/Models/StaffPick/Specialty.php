@@ -11,6 +11,9 @@ class Specialty extends Model
 {
     use BelongsToTenant, HasFactory;
 
+    /** The shared "catch-all" specialty whose selection prompts a free-text write-in. */
+    public const OTHER_NAME = 'Other (write in)';
+
     protected $table = 'sp_specialties';
 
     protected $fillable = [
@@ -24,6 +27,23 @@ class Specialty extends Model
         return [
             'is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * Resolve the id of the tenant's "Other (write in)" specialty, or null if absent.
+     */
+    public static function otherId(?int $tenantId): ?int
+    {
+        if ($tenantId === null) {
+            return null;
+        }
+
+        $id = static::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)
+            ->where('name', self::OTHER_NAME)
+            ->value('id');
+
+        return $id !== null ? (int) $id : null;
     }
 
     public function disciplines(): BelongsToMany

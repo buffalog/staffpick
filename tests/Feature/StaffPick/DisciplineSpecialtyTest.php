@@ -41,33 +41,34 @@ class DisciplineSpecialtyTest extends FeatureTest
 
         $ptNames = $pt->specialties()->pluck('name')->all();
 
-        $this->assertCount(7, $ptNames);
-        $this->assertContains('Orthopedics', $ptNames);
-        $this->assertContains("Women's Health", $ptNames);
-        $this->assertNotContains('Hand Therapy', $ptNames); // OT-only
-        $this->assertNotContains('Dysphagia', $ptNames);     // SLP-only
+        $this->assertCount(14, $ptNames);
+        $this->assertContains('Orthopaedics', $ptNames);
+        $this->assertContains("Women's/Pelvic Health", $ptNames);
+        $this->assertNotContains('Gerontology (BCG)', $ptNames);              // OT-only
+        $this->assertNotContains('Swallowing Disorders (Dysphagia)', $ptNames); // SLP-only
 
-        $this->assertContains('Dysphagia', $slp->specialties()->pluck('name')->all());
+        $this->assertContains('Swallowing Disorders (Dysphagia)', $slp->specialties()->pluck('name')->all());
     }
 
-    public function test_a_shared_specialty_is_a_single_row_mapped_to_multiple_disciplines(): void
+    public function test_other_write_in_is_a_single_row_mapped_to_every_discipline(): void
     {
-        $geriatrics = Specialty::where('tenant_id', $this->tenant->id)->where('name', 'Geriatrics')->get();
+        $other = Specialty::where('tenant_id', $this->tenant->id)->where('name', Specialty::OTHER_NAME)->get();
 
-        // Geriatrics appears under both PT and OT, but is created once.
-        $this->assertCount(1, $geriatrics);
+        // "Other (write in)" appears in all three lists but is created once.
+        $this->assertCount(1, $other);
 
-        $disciplineAbbreviations = $geriatrics->first()->disciplines()->pluck('abbreviation')->all();
+        $disciplineAbbreviations = $other->first()->disciplines()->pluck('abbreviation')->all();
         $this->assertContains('PT', $disciplineAbbreviations);
         $this->assertContains('OT', $disciplineAbbreviations);
+        $this->assertContains('SLP', $disciplineAbbreviations);
     }
 
     public function test_seeding_is_idempotent(): void
     {
         (new TenantTaxonomySeeder)->seedForTenant($this->tenant);
 
-        $this->assertSame(7, $this->discipline('PT')->specialties()->count());
-        $this->assertSame(1, Specialty::where('tenant_id', $this->tenant->id)->where('name', 'Geriatrics')->count());
+        $this->assertSame(14, $this->discipline('PT')->specialties()->count());
+        $this->assertSame(1, Specialty::where('tenant_id', $this->tenant->id)->where('name', Specialty::OTHER_NAME)->count());
     }
 
     public function test_public_intake_filters_specialties_by_discipline_and_clears_on_change(): void
@@ -84,8 +85,8 @@ class DisciplineSpecialtyTest extends FeatureTest
 
         $component->set('data.discipline_id', $pt->id);
         $ptOptions = array_values($component->instance()->specialtyOptions());
-        $this->assertContains('Orthopedics', $ptOptions);
-        $this->assertNotContains('Dysphagia', $ptOptions);
+        $this->assertContains('Orthopaedics', $ptOptions);
+        $this->assertNotContains('Swallowing Disorders (Dysphagia)', $ptOptions);
 
         // Switching discipline clears the prior selection and re-filters.
         $component
@@ -94,8 +95,8 @@ class DisciplineSpecialtyTest extends FeatureTest
             ->assertSet('data.specialty_ids', []);
 
         $slpOptions = array_values($component->instance()->specialtyOptions());
-        $this->assertContains('Dysphagia', $slpOptions);
-        $this->assertNotContains('Orthopedics', $slpOptions);
+        $this->assertContains('Swallowing Disorders (Dysphagia)', $slpOptions);
+        $this->assertNotContains('Orthopaedics', $slpOptions);
     }
 
     public function test_a_submission_persists_requested_specialties(): void
@@ -108,7 +109,7 @@ class DisciplineSpecialtyTest extends FeatureTest
 
         $source = $this->activeSource();
         $pt = $this->discipline('PT');
-        $ortho = Specialty::where('tenant_id', $this->tenant->id)->where('name', 'Orthopedics')->firstOrFail();
+        $ortho = Specialty::where('tenant_id', $this->tenant->id)->where('name', 'Orthopaedics')->firstOrFail();
 
         Livewire::test(PublicIntakeForm::class, ['token' => $source->intake_token])
             ->set('data', [

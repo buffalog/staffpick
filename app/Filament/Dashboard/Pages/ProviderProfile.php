@@ -209,9 +209,12 @@ class ProviderProfile extends Page
                         ->searchable()
                         ->required()
                         // Specialties are scoped to the discipline; clear the selection
-                        // when the discipline changes so stale specialties can't persist.
+                        // (and any write-in) when the discipline changes so nothing stale persists.
                         ->live()
-                        ->afterStateUpdated(fn (Set $set) => $set('specialties', [])),
+                        ->afterStateUpdated(function (Set $set): void {
+                            $set('specialties', []);
+                            $set('specialty_other_note', null);
+                        }),
                     Select::make('gender')
                         ->label(__('Gender'))
                         ->options([
@@ -235,7 +238,12 @@ class ProviderProfile extends Page
                             ->all())
                     ->disabled(fn (Get $get): bool => blank($get('discipline_id')))
                     ->helperText(__('Select a discipline first to see its specialties.'))
+                    ->live()
                     ->searchable(),
+                TextInput::make('specialty_other_note')
+                    ->label(__('Other specialty — please specify'))
+                    ->maxLength(255)
+                    ->visible(fn (Get $get): bool => $this->isOtherSpecialtySelected($get)),
                 Select::make('languages')
                     ->label(__('Languages spoken'))
                     ->multiple()
@@ -426,6 +434,33 @@ class ProviderProfile extends Page
             ->all();
     }
 
+    /**
+     * Whether the tenant's "Other (write in)" specialty is among the current selection,
+     * which reveals the free-text write-in field.
+     */
+    private function isOtherSpecialtySelected(Get $get): bool
+    {
+        $otherId = Specialty::otherId(Filament::getTenant()?->id);
+
+        if ($otherId === null) {
+            return false;
+        }
+
+        return in_array($otherId, array_map('intval', (array) $get('specialties')), true);
+    }
+
+    /** The stored write-in detail on the provider's "Other (write in)" specialty pivot. */
+    private function otherSpecialtyNote(Provider $provider): ?string
+    {
+        $otherId = Specialty::otherId($provider->tenant_id);
+
+        if ($otherId === null) {
+            return null;
+        }
+
+        return $provider->specialties()->where('sp_specialties.id', $otherId)->first()?->pivot?->notes;
+    }
+
     private function currentProvider(): ?Provider
     {
         return Provider::query()
@@ -459,6 +494,7 @@ class ProviderProfile extends Page
             'service_zone_name' => $provider->serviceZones()->where('is_active', true)->value('name'),
             'service_zone_points' => $this->serviceZonePointsFromProvider($provider),
             'specialties' => $provider->specialties()->pluck('sp_specialties.id')->all(),
+            'specialty_other_note' => $this->otherSpecialtyNote($provider),
             'languages' => $provider->languages()->pluck('sp_languages.id')->all(),
             'availability' => $provider->availability()
                 ->get(['day_of_week', 'start_time', 'end_time'])

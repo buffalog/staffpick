@@ -2,7 +2,9 @@
 
 namespace App\Filament\Dashboard\Resources\Providers\Schemas;
 
+use App\Models\StaffPick\Specialty;
 use App\Models\StaffPick\TenantConfig;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -87,9 +89,13 @@ class ProviderForm
                             ->relationship('discipline', 'name')
                             ->searchable()
                             ->preload()
-                            // Specialties are scoped to the discipline; clear them on change.
+                            // Specialties are scoped to the discipline; clear them (and any
+                            // write-in) on change.
                             ->live()
-                            ->afterStateUpdated(fn (Set $set) => $set('specialties', [])),
+                            ->afterStateUpdated(function (Set $set): void {
+                                $set('specialties', []);
+                                $set('specialty_other_note', null);
+                            }),
                         Select::make('tier_id')
                             ->label(__('Tier'))
                             ->relationship('tier', 'name')
@@ -120,8 +126,17 @@ class ProviderForm
                             ->multiple()
                             ->searchable()
                             ->preload()
+                            ->live()
                             ->disabled(fn (Get $get): bool => blank($get('discipline_id')))
                             ->helperText(__('Select a discipline first to see its specialties.'))
+                            ->columnSpanFull(),
+                        // Persisted to the sp_provider_specialties pivot in the Create/Edit
+                        // page hooks (it isn't a Provider column), so it's not dehydrated here.
+                        TextInput::make('specialty_other_note')
+                            ->label(__('Other specialty — please specify'))
+                            ->maxLength(255)
+                            ->dehydrated(false)
+                            ->visible(fn (Get $get): bool => self::isOtherSpecialtySelected($get))
                             ->columnSpanFull(),
                         Toggle::make('is_contractor')
                             ->label(__('Is Contractor'))
@@ -189,5 +204,16 @@ class ProviderForm
                             ->columnSpanFull(),
                     ]),
             ]);
+    }
+
+    /**
+     * Whether the tenant's "Other (write in)" specialty is selected, revealing the
+     * free-text write-in field.
+     */
+    private static function isOtherSpecialtySelected(Get $get): bool
+    {
+        $otherId = Specialty::otherId(Filament::getTenant()?->id);
+
+        return $otherId !== null && in_array($otherId, array_map('intval', (array) $get('specialties')), true);
     }
 }

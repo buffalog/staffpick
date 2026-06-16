@@ -5,6 +5,7 @@ namespace App\Services\StaffPick;
 use App\Constants\TenancyPermissionConstants;
 use App\Models\StaffPick\Provider;
 use App\Models\StaffPick\ProviderCredential;
+use App\Models\StaffPick\Specialty;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\TenantPermissionService;
@@ -61,7 +62,7 @@ class ProviderProfileService
             ],
         );
 
-        $provider->specialties()->sync($data['specialties'] ?? []);
+        $this->syncSpecialties($provider, $data);
         $provider->languages()->sync($data['languages'] ?? []);
 
         $this->replaceAvailability($provider, $data['availability'] ?? []);
@@ -116,7 +117,7 @@ class ProviderProfileService
 
         $provider->save();
 
-        $provider->specialties()->sync($data['specialties'] ?? []);
+        $this->syncSpecialties($provider, $data);
         $provider->languages()->sync($data['languages'] ?? []);
 
         $this->replaceAvailability($provider, $data['availability'] ?? []);
@@ -124,6 +125,29 @@ class ProviderProfileService
         $this->upsertCredentials($provider, $data['credentials'] ?? []);
 
         return $provider;
+    }
+
+    /**
+     * Sync the provider's specialties, carrying the clinician's write-in detail on the
+     * pivot for the "Other (write in)" specialty when it is selected.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function syncSpecialties(Provider $provider, array $data): void
+    {
+        $ids = collect($data['specialties'] ?? [])
+            ->map(fn ($id): int => (int) $id)
+            ->filter()
+            ->values();
+
+        $otherId = Specialty::otherId($provider->tenant_id);
+        $note = $data['specialty_other_note'] ?? null;
+
+        $payload = $ids->mapWithKeys(fn (int $id): array => [
+            $id => ($otherId !== null && $id === $otherId) ? ['notes' => $note] : [],
+        ])->all();
+
+        $provider->specialties()->sync($payload);
     }
 
     public function approve(Provider $provider): Provider
