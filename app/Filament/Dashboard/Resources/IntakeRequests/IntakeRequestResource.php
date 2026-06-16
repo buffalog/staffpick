@@ -34,6 +34,7 @@ class IntakeRequestResource extends Resource
     public static function statusOptions(): array
     {
         return [
+            'draft' => __('Draft'),
             'pending' => __('Pending'),
             'matching' => __('Matching'),
             'assigned_pending' => __('Assigned (pending)'),

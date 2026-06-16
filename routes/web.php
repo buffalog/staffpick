@@ -7,6 +7,7 @@ use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PaymentProviders\PaddleController;
 use App\Http\Controllers\ProductCheckoutController;
 use App\Http\Controllers\RoadmapController;
+use App\Http\Controllers\SlackWebhookController;
 use App\Http\Controllers\SubscriptionCheckoutController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\SurveyController;
@@ -222,3 +223,9 @@ Route::controller(SurveyController::class)
 Route::get('/intake/{token}', PublicIntakeForm::class)
     ->middleware('throttle:30,1')
     ->name('staffpick.intake.show');
+
+// StaffPick — inbound Slack webhook (signature-verified, no login/CSRF). The token
+// namespaces the tenant; rate-limited to blunt abuse of the public endpoint.
+Route::post('/webhooks/slack/{token}', SlackWebhookController::class)
+    ->middleware('throttle:60,1')
+    ->name('staffpick.slack.inbound');

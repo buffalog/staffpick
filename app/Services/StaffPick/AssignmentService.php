@@ -8,6 +8,10 @@ use App\Models\StaffPick\Provider;
 
 class AssignmentService
 {
+    public function __construct(
+        private SlackNotificationService $slack,
+    ) {}
+
     /**
      * Offer an intake request to a provider: supersede any current assignment,
      * create a new (manual) offer, and move the case to assigned_pending.
@@ -32,6 +36,8 @@ class AssignmentService
             'status' => 'assigned_pending',
             'assigned_at' => now(),
         ]);
+
+        $this->slack->notifyProviderAssigned($assignment);
 
         return $assignment;
     }

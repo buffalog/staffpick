@@ -39,6 +39,7 @@ class IntakeSubmissionService
     public function __construct(
         private GeocodingService $geocoder,
         private TenantPermissionService $permissions,
+        private SlackNotificationService $slack,
     ) {}
 
     /**
@@ -178,6 +179,8 @@ class IntakeSubmissionService
         if (filled($source->email)) {
             Mail::to($source->email)->queue(new IntakeReceivedReferrer($intake));
         }
+
+        $this->slack->notifyIntakeReceived($intake);
     }
 
     /**

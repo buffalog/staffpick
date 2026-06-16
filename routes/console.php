@@ -29,3 +29,9 @@ Schedule::job(new AggregateProviderRatings)
     ->weeklyOn(0, '23:00')
     ->name('staffpick-aggregate-provider-ratings')
     ->withoutOverlapping();
+
+// StaffPick: daily Slack alert for credentials expiring within 30 days.
+Schedule::command('staffpick:notify-expiring-credentials')
+    ->dailyAt('07:00')
+    ->name('staffpick-notify-expiring-credentials')
+    ->withoutOverlapping();

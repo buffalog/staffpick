@@ -39,5 +39,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,
         ]);
+
+        // Inbound Slack webhook posts carry no CSRF token; they are verified instead
+        // by the Slack request signature inside the controller.
+        $middleware->validateCsrfTokens(except: [
+            'webhooks/slack/*',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {})->create();

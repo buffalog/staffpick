@@ -117,4 +117,13 @@ return [
         'from' => env('TWILIO_FROM'),
     ],
 
+    'slack' => [
+        // Default outbound Incoming Webhook URL; tenants may override per-tenant in
+        // sp_tenant_configs.slack_webhook_url.
+        'webhook_url' => env('SLACK_WEBHOOK_URL'),
+        // Signing secret for verifying inbound Slack webhook requests; tenants may
+        // override per-tenant in sp_tenant_configs.slack_signing_secret.
+        'signing_secret' => env('SLACK_SIGNING_SECRET'),
+    ],
+
 ];

@@ -39,7 +39,45 @@ class TenantConfig extends Model
         'rating_demotion_threshold',
         'rating_min_survey_count',
         'rating_review_period',
+        'slack_webhook_url',
+        'slack_signing_secret',
+        'slack_inbound_token',
+        'slack_intake_keyword',
     ];
+
+    /**
+     * Generate and persist a unique inbound-webhook token if one isn't set, then
+     * return it. The token namespaces this tenant's public Slack inbound URL.
+     */
+    public function ensureSlackInboundToken(): string
+    {
+        if (blank($this->slack_inbound_token)) {
+            $this->forceFill(['slack_inbound_token' => bin2hex(random_bytes(20))])->save();
+        }
+
+        return $this->slack_inbound_token;
+    }
+
+    /**
+     * The keyword that, when present in an inbound Slack message, triggers draft
+     * intake creation. Falls back to a sensible default.
+     */
+    public function slackIntakeKeyword(): string
+    {
+        return filled($this->slack_intake_keyword) ? $this->slack_intake_keyword : 'new referral';
+    }
+
+    /** Per-tenant signing secret, falling back to the global app-level secret. */
+    public function slackSigningSecret(): ?string
+    {
+        return $this->slack_signing_secret ?: config('services.slack.signing_secret');
+    }
+
+    /** Resolved outbound webhook URL: tenant override, else the global default. */
+    public function slackWebhookUrl(): ?string
+    {
+        return $this->slack_webhook_url ?: config('services.slack.webhook_url');
+    }
 
     protected function casts(): array
     {

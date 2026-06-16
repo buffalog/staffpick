@@ -22,6 +22,7 @@ class ProviderProfileService
     public function __construct(
         private GeocodingService $geocoder,
         private TenantPermissionService $permissions,
+        private SlackNotificationService $slack,
     ) {}
 
     /**
@@ -68,6 +69,7 @@ class ProviderProfileService
         $this->upsertCredentials($provider, $data['credentials'] ?? []);
 
         $this->notifyReviewers($tenant, $user, $provider);
+        $this->slack->notifyProviderProfileSubmitted($provider);
 
         return $provider;
     }
