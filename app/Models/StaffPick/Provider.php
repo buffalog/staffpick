@@ -15,6 +15,8 @@ class Provider extends Model
 {
     use BelongsToTenant, HasFactory, SoftDeletes;
 
+    public const STATUS_DRAFT = 'draft';
+
     public const STATUS_PENDING = 'pending';
 
     public const STATUS_ACTIVE = 'active';
@@ -63,6 +65,7 @@ class Provider extends Model
         'years_experience',
         'rejection_reason',
         'submitted_at',
+        'onboarding_step',
     ];
 
     protected function casts(): array
@@ -83,6 +86,7 @@ class Provider extends Model
             'rating_survey_count_180day' => 'integer',
             'years_experience' => 'integer',
             'submitted_at' => 'datetime',
+            'onboarding_step' => 'integer',
         ];
     }
 

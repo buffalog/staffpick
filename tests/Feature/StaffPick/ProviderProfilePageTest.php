@@ -3,6 +3,7 @@
 namespace Tests\Feature\StaffPick;
 
 use App\Filament\Dashboard\Pages\ProviderProfile;
+use App\Models\StaffPick\CredentialDocumentType;
 use App\Models\StaffPick\Discipline;
 use App\Models\StaffPick\Provider;
 use App\Models\Tenant;
@@ -150,5 +151,106 @@ class ProviderProfilePageTest extends FeatureTest
         $this->assertNotNull($provider);
         $this->assertSame(Provider::STATUS_PENDING, $provider->status);
         $this->assertSame('Dana', $provider->first_name);
+    }
+
+    public function test_auto_save_creates_a_draft_provider_on_first_change(): void
+    {
+        Livewire::test(ProviderProfile::class)
+            ->set('data.first_name', 'Dana')
+            ->set('data.last_name', 'Rivera')
+            ->call('autoSave', 1)
+            ->assertHasNoErrors();
+
+        $provider = Provider::where('tenant_id', $this->tenant->id)->where('user_id', auth()->id())->first();
+        $this->assertNotNull($provider);
+        $this->assertSame(Provider::STATUS_DRAFT, $provider->status);
+        $this->assertFalse($provider->is_active);
+        $this->assertSame('Dana', $provider->first_name);
+        $this->assertSame(1, $provider->onboarding_step);
+        $this->assertNull($provider->submitted_at);
+    }
+
+    public function test_a_credential_upload_persists_immediately_via_auto_save(): void
+    {
+        $type = CredentialDocumentType::create([
+            'tenant_id' => $this->tenant->id,
+            'name' => 'State License',
+            'is_required' => true,
+        ]);
+
+        Livewire::test(ProviderProfile::class)
+            ->set('data.first_name', 'Dana')
+            ->set("data.credentials.{$type->id}.file_path", 'staffpick/credentials/license.pdf')
+            ->call('autoSave', 5)
+            ->assertHasNoErrors();
+
+        $provider = Provider::where('tenant_id', $this->tenant->id)->where('user_id', auth()->id())->first();
+        $this->assertNotNull($provider);
+        $this->assertDatabaseHas('sp_provider_credentials', [
+            'provider_id' => $provider->id,
+            'document_type_id' => $type->id,
+            'file_path' => 'staffpick/credentials/license.pdf',
+        ]);
+    }
+
+    public function test_returning_resumes_at_the_saved_step_with_prefilled_data(): void
+    {
+        Provider::create([
+            'tenant_id' => $this->tenant->id,
+            'user_id' => auth()->id(),
+            'first_name' => 'Dana',
+            'last_name' => 'Rivera',
+            'status' => Provider::STATUS_DRAFT,
+            'is_active' => false,
+            'onboarding_step' => 4,
+        ]);
+
+        Livewire::test(ProviderProfile::class)
+            ->assertSet('resumeStep', 4)
+            ->assertSet('data.first_name', 'Dana')
+            ->assertSet('data.last_name', 'Rivera');
+    }
+
+    public function test_submitting_transitions_an_existing_draft_to_pending(): void
+    {
+        $this->fakeGeocodeSuccess();
+        $discipline = Discipline::create(['tenant_id' => $this->tenant->id, 'name' => 'Physical Therapy']);
+
+        Provider::create([
+            'tenant_id' => $this->tenant->id,
+            'user_id' => auth()->id(),
+            'first_name' => 'Dana',
+            'last_name' => 'Rivera',
+            'status' => Provider::STATUS_DRAFT,
+            'is_active' => false,
+            'onboarding_step' => 2,
+        ]);
+
+        Livewire::test(ProviderProfile::class)
+            ->set('data', [
+                'first_name' => 'Dana',
+                'last_name' => 'Rivera',
+                'email' => 'dana@example.com',
+                'phone' => '5615559876',
+                'address' => '340 US-1',
+                'city' => 'North Palm Beach',
+                'state' => 'FL',
+                'zip' => '33408',
+                'discipline_id' => $discipline->id,
+                'years_experience' => 8,
+                'radius_preferred_miles' => 15,
+                'radius_max_miles' => 25,
+                'availability' => [
+                    ['day_of_week' => 1, 'start_time' => '09:00', 'end_time' => '17:00'],
+                ],
+                'confirm' => true,
+            ])
+            ->call('submit')
+            ->assertHasNoErrors();
+
+        $this->assertSame(1, Provider::where('tenant_id', $this->tenant->id)->where('user_id', auth()->id())->count());
+
+        $provider = Provider::where('tenant_id', $this->tenant->id)->where('user_id', auth()->id())->first();
+        $this->assertSame(Provider::STATUS_PENDING, $provider->status);
     }
 }

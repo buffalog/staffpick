@@ -72,6 +72,58 @@ class ProviderProfileService
         return $provider;
     }
 
+    /**
+     * Persist the wizard's current state as a draft without validation or reviewer
+     * notification. Drives auto-save: re-runnable on every change, tolerant of
+     * partial/empty data, and records the step reached so a return visit resumes in
+     * place. Never downgrades an already-submitted (pending/active/rejected) profile.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function saveDraft(Tenant $tenant, User $user, array $data, ?int $step = null): Provider
+    {
+        $provider = Provider::firstOrNew(['tenant_id' => $tenant->id, 'user_id' => $user->id]);
+
+        if (! $provider->exists || $provider->status === Provider::STATUS_DRAFT) {
+            $provider->status = Provider::STATUS_DRAFT;
+            $provider->is_active = false;
+        }
+
+        $provider->fill([
+            'first_name' => $data['first_name'] ?? '',
+            'last_name' => $data['last_name'] ?? '',
+            'business_name' => $data['business_name'] ?? null,
+            'email' => $data['email'] ?? null,
+            'phone' => $data['phone'] ?? null,
+            'gender' => $data['gender'] ?? null,
+            'address' => $data['address'] ?? null,
+            'city' => $data['city'] ?? null,
+            'state' => $data['state'] ?? null,
+            'zip' => $data['zip'] ?? null,
+            'latitude' => filled($data['latitude'] ?? null) ? (float) $data['latitude'] : null,
+            'longitude' => filled($data['longitude'] ?? null) ? (float) $data['longitude'] : null,
+            'discipline_id' => filled($data['discipline_id'] ?? null) ? (int) $data['discipline_id'] : null,
+            'years_experience' => filled($data['years_experience'] ?? null) ? (int) $data['years_experience'] : null,
+            'radius_preferred_miles' => filled($data['radius_preferred_miles'] ?? null) ? (int) $data['radius_preferred_miles'] : 15,
+            'radius_max_miles' => filled($data['radius_max_miles'] ?? null) ? (int) $data['radius_max_miles'] : 25,
+        ]);
+
+        if ($step !== null) {
+            $provider->onboarding_step = $step;
+        }
+
+        $provider->save();
+
+        $provider->specialties()->sync($data['specialties'] ?? []);
+        $provider->languages()->sync($data['languages'] ?? []);
+
+        $this->replaceAvailability($provider, $data['availability'] ?? []);
+        $this->replaceServiceZone($provider, $data);
+        $this->upsertCredentials($provider, $data['credentials'] ?? []);
+
+        return $provider;
+    }
+
     public function approve(Provider $provider): Provider
     {
         $provider->update([

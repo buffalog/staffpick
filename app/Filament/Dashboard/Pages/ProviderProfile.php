@@ -58,6 +58,9 @@ class ProviderProfile extends Page
      */
     public ?array $data = [];
 
+    /** 1-based wizard step to resume on, restored from the saved draft. */
+    public ?int $resumeStep = null;
+
     public function getTitle(): string|Htmlable
     {
         return __('My Provider Profile');
@@ -71,6 +74,8 @@ class ProviderProfile extends Page
     public function mount(): void
     {
         $provider = $this->currentProvider();
+
+        $this->resumeStep = $provider?->onboarding_step;
 
         $this->form->fill($provider ? $this->stateFromProvider($provider) : []);
     }
@@ -88,6 +93,7 @@ class ProviderProfile extends Page
                     $this->credentialsStep(),
                     $this->reviewStep(),
                 ])
+                    ->startOnStep(fn (): int => $this->resumeStep ?? 1)
                     ->persistStepInQueryString('step')
                     ->submitAction(new HtmlString(Blade::render(
                         '<x-filament::button type="submit" wire:loading.attr="disabled">{{ __("Submit for review") }}</x-filament::button>'
@@ -109,6 +115,20 @@ class ProviderProfile extends Page
             ->send();
 
         $this->redirect(static::getUrl());
+    }
+
+    /**
+     * Persist the wizard's current (possibly incomplete) state as a draft. Called
+     * debounced from the front end on every change and immediately on credential
+     * upload, so the clinician never loses progress. No validation runs — the draft
+     * captures whatever has been entered so far.
+     */
+    public function autoSave(?int $step = null): void
+    {
+        $state = $this->data;
+        $state['credentials'] = $this->normalizeCredentialState($state['credentials'] ?? []);
+
+        app(ProviderProfileService::class)->saveDraft(Filament::getTenant(), auth()->user(), $state, $step);
     }
 
     private function personalStep(): Step
@@ -288,7 +308,10 @@ class ProviderProfile extends Page
                         ->label(__('Document'))
                         ->directory('staffpick/credentials')
                         ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])
-                        ->required((bool) $type->is_required),
+                        ->required((bool) $type->is_required)
+                        // Credential files persist on upload completion, not on debounce.
+                        ->live()
+                        ->afterStateUpdated(fn () => $this->autoSave()),
                     TextInput::make("credentials.{$type->id}.document_number")->label(__('Document number')),
                 ];
 
