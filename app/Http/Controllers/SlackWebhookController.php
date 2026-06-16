@@ -14,7 +14,8 @@ use Illuminate\Http\Response;
  * Public inbound Slack webhook: POST /webhooks/slack/{token}. The token resolves the
  * tenant; the request is authenticated by the Slack request signature (no CSRF). A
  * message containing the tenant's keyword creates a draft intake and a confirmation
- * is posted back. Every request is recorded in sp_slack_webhook_logs for audit.
+ * is posted back. Signature-verified requests are recorded in sp_slack_webhook_logs
+ * for audit; bot-authored and system messages are dropped first (see isIgnorableEvent).
  */
 class SlackWebhookController extends Controller
 {
@@ -35,18 +36,33 @@ class SlackWebhookController extends Controller
 
         $body = $request->getContent();
         $payload = json_decode($body, true) ?: [];
-        $signatureValid = $this->signatureValid($request, $config->slackSigningSecret(), $body);
+
+        if (! $this->signatureValid($request, $config->slackSigningSecret(), $body)) {
+            SlackWebhookLog::create([
+                'tenant_id' => $config->tenant_id,
+                'event_type' => $payload['type'] ?? ($payload['event']['type'] ?? null),
+                'signature_valid' => false,
+                'payload' => $body,
+            ]);
+
+            abort(403, 'Invalid Slack signature.');
+        }
+
+        // Drop our own (and any bot-authored) posts plus system messages (channel
+        // joins/leaves, edits) before logging or processing. StaffPick's own
+        // confirmation re-enters as a message event, so without this guard a
+        // keyword in a confirmation could loop, and every post-back would flood
+        // the audit log.
+        if ($this->isIgnorableEvent($payload)) {
+            return response('', 200);
+        }
 
         $log = SlackWebhookLog::create([
             'tenant_id' => $config->tenant_id,
             'event_type' => $payload['type'] ?? ($payload['event']['type'] ?? null),
-            'signature_valid' => $signatureValid,
+            'signature_valid' => true,
             'payload' => $body,
         ]);
-
-        if (! $signatureValid) {
-            abort(403, 'Invalid Slack signature.');
-        }
 
         // Slack's one-time endpoint verification handshake.
         if (($payload['type'] ?? null) === 'url_verification') {
@@ -71,6 +87,27 @@ class SlackWebhookController extends Controller
         }
 
         return response('', 200);
+    }
+
+    /**
+     * Whether an event should be dropped without logging or processing: bot/app
+     * authored messages (including StaffPick's own confirmation posts) and system
+     * subtype messages (channel join/leave, edits). Genuine human messages have no
+     * bot_id/app_id and no subtype, so they pass through.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function isIgnorableEvent(array $payload): bool
+    {
+        if (($payload['type'] ?? null) !== 'event_callback') {
+            return false;
+        }
+
+        $event = $payload['event'] ?? [];
+
+        return filled($event['bot_id'] ?? null)
+            || filled($event['app_id'] ?? null)
+            || filled($event['subtype'] ?? null);
     }
 
     /**

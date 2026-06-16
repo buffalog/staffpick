@@ -9,6 +9,7 @@ use App\Models\StaffPick\IntakeRequest;
 use App\Models\StaffPick\Provider;
 use App\Models\StaffPick\ProviderCredential;
 use App\Models\StaffPick\ReferralSource;
+use App\Models\StaffPick\SlackWebhookLog;
 use App\Models\StaffPick\Subject;
 use App\Models\StaffPick\TenantConfig;
 use App\Models\Tenant;
@@ -243,6 +244,37 @@ class SlackIntegrationTest extends FeatureTest
         Queue::assertPushed(SendSlackNotification::class, function (SendSlackNotification $job) use ($intake): bool {
             return str_contains(json_encode($job->payload), $intake->reference_number);
         });
+    }
+
+    public function test_a_bot_authored_keyword_message_is_ignored_without_logging_or_creating_an_intake(): void
+    {
+        Queue::fake();
+        $this->configureSlack();
+
+        // Contains the keyword, but is bot-authored (e.g. StaffPick's own confirmation
+        // re-entering) — must be dropped to prevent a feedback loop.
+        $this->postSigned($this->inboundToken(), [
+            'type' => 'event_callback',
+            'event' => ['type' => 'message', 'text' => 'new referral', 'channel' => 'C123', 'bot_id' => 'B0001'],
+        ], 'shhh-secret')->assertOk();
+
+        $this->assertSame(0, IntakeRequest::where('tenant_id', $this->tenant->id)->count());
+        $this->assertSame(0, SlackWebhookLog::where('tenant_id', $this->tenant->id)->count());
+        Queue::assertNothingPushed();
+    }
+
+    public function test_a_system_subtype_message_is_ignored(): void
+    {
+        $this->configureSlack();
+
+        // e.g. "has joined the channel" — has a subtype, so it's dropped (no log, no intake).
+        $this->postSigned($this->inboundToken(), [
+            'type' => 'event_callback',
+            'event' => ['type' => 'message', 'subtype' => 'channel_join', 'text' => '<@U1> has joined', 'channel' => 'C123'],
+        ], 'shhh-secret')->assertOk();
+
+        $this->assertSame(0, SlackWebhookLog::where('tenant_id', $this->tenant->id)->count());
+        $this->assertSame(0, IntakeRequest::where('tenant_id', $this->tenant->id)->count());
     }
 
     public function test_a_message_without_the_keyword_creates_no_intake(): void
