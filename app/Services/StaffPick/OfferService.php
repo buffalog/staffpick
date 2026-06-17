@@ -61,6 +61,7 @@ class OfferService
                 'offer_sequence' => $sequence++,
                 'distance_miles' => round($result->distanceMiles, 2),
                 'match_score' => round($result->score, 4),
+                'language_warning' => $result->languageWarning,
                 'status' => AssignmentOffer::STATUS_PENDING,
                 'delivery_channel' => $result->provider->preferred_contact_channel ?: Provider::CHANNEL_EMAIL,
                 'token' => Str::random(48),

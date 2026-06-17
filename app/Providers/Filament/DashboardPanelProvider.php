@@ -106,6 +106,10 @@ class DashboardPanelProvider extends PanelProvider
                 PanelsRenderHook::HEAD_END,
                 fn (): string => view('filament.dashboard.partials.leaflet-assets')->render(),
             )
+            ->renderHook(
+                PanelsRenderHook::HEAD_END,
+                fn (): string => view('filament.dashboard.partials.sortable-assets')->render(),
+            )
             ->navigationGroups([
                 NavigationGroup::make()
                     ->label(__('Team'))
