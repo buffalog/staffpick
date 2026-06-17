@@ -68,6 +68,31 @@ class SchedulerBoardTest extends FeatureTest
         $this->assertFalse($allBoardIds->contains($noClinicians->id));
     }
 
+    public function test_only_statuses_with_a_valid_transition_are_draggable(): void
+    {
+        $board = new SchedulerBoard;
+
+        foreach (['pending', 'on_hold', 'offered', 'assigned_pending', 'active'] as $status) {
+            $this->assertTrue($board->isDraggableStatus($status), "{$status} should be draggable");
+        }
+
+        // Terminal / engine-managed — no manual move out.
+        foreach (['matching', 'completed'] as $status) {
+            $this->assertFalse($board->isDraggableStatus($status), "{$status} should not be draggable");
+        }
+    }
+
+    public function test_engine_managed_cards_render_without_a_drag_handle(): void
+    {
+        $this->actingAs($this->createTenantAdmin($this->tenant));
+        $matching = $this->intake('matching');
+        $active = $this->intake('active');
+
+        Livewire::test(SchedulerBoard::class)
+            ->assertSeeHtml('data-intake-id="'.$active->id.'"')
+            ->assertDontSeeHtml('data-intake-id="'.$matching->id.'"');
+    }
+
     public function test_a_valid_transition_updates_the_status(): void
     {
         $this->actingAs($this->createTenantAdmin($this->tenant));

@@ -42,7 +42,7 @@
                         class="flex min-h-24 flex-1 flex-col gap-2 px-2 pb-3"
                     >
                         @forelse ($cards as $card)
-                            @include('filament.dashboard.partials.board-card', ['card' => $card, 'draggable' => true])
+                            @include('filament.dashboard.partials.board-card', ['card' => $card, 'draggable' => $this->isDraggableStatus($status)])
                         @empty
                             <div class="rounded-lg border border-dashed border-gray-200 px-3 py-6 text-center text-xs text-gray-400 dark:border-white/10">
                                 {{ __('No cases') }}

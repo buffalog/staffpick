@@ -20,7 +20,6 @@ use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Log;
 
 /**
  * Scheduler Kanban board — the visual pipeline that replaces tab-filtered tables.
@@ -168,6 +167,17 @@ class SchedulerBoard extends Page
     }
 
     /**
+     * Whether cards in this column can be dragged at all — true only when the status
+     * has at least one scheduler-owned transition. Terminal/engine-managed columns
+     * (matching, completed) have no manual move out, so their cards are fixed: showing
+     * them as draggable just invites a guaranteed "requires system action" rejection.
+     */
+    public function isDraggableStatus(string $status): bool
+    {
+        return array_key_exists($status, self::TRANSITIONS);
+    }
+
+    /**
      * Handle a card dropped from one column onto another. Validates the transition
      * against the current DB status (guarding a stale board) and either applies it,
      * mounts the hold-reason modal, or rejects it. The board re-renders after this
@@ -177,24 +187,11 @@ class SchedulerBoard extends Page
     {
         abort_unless(static::canAccess(), 403);
 
-        $intake = $this->findIntake($intakeId);
-
-        // TEMP DIAGNOSTIC: capture exactly what the browser sent vs. the DB truth.
-        // warning level — staging runs LOG_LEVEL=warning, which drops info logs.
-        Log::warning('SchedulerBoard.handleDrop', [
-            'intakeId' => $intakeId,
-            'fromStatus' => $fromStatus,
-            'fromLen' => strlen($fromStatus),
-            'toStatus' => $toStatus,
-            'toLen' => strlen($toStatus),
-            'dbStatus' => $intake?->status,
-            'tenant' => Filament::getTenant()?->id,
-            'transitionDefined' => array_key_exists($toStatus, self::TRANSITIONS[$fromStatus] ?? []),
-        ]);
-
         if ($fromStatus === $toStatus) {
             return;
         }
+
+        $intake = $this->findIntake($intakeId);
 
         if ($intake === null) {
             $this->rejectMove(__('That case could not be found.'));
@@ -212,8 +209,7 @@ class SchedulerBoard extends Page
         $requiresReason = self::TRANSITIONS[$fromStatus][$toStatus] ?? null;
 
         if ($requiresReason === null) {
-            // TEMP DIAGNOSTIC: surface the evaluated values directly in the toast.
-            $this->rejectMove("DEBUG from=[{$fromStatus}] to=[{$toStatus}] db=[{$intake->status}]");
+            $this->rejectMove(__('This transition requires system action.'));
 
             return;
         }
