@@ -69,6 +69,27 @@ class SlackNotificationService
     }
 
     /**
+     * The offer queue for an intake was exhausted (all offers declined/expired) with
+     * no clinician assigned.
+     */
+    public function notifyNoClinicians(IntakeRequest $intake): void
+    {
+        $intake->loadMissing('discipline');
+
+        $reference = $intake->reference_number ?? '—';
+        $discipline = $intake->discipline?->name ?? __('Unspecified');
+
+        $this->dispatch($intake->tenant_id, __('No clinicians available for :reference', ['reference' => $reference]), [
+            $this->header(__('No clinicians available')),
+            $this->fields([
+                __('Reference') => $reference,
+                __('Discipline') => $discipline,
+            ]),
+            ...$this->linkButton(__('Open in dashboard'), $this->intakeUrl($intake)),
+        ]);
+    }
+
+    /**
      * Event (c): a clinician submitted their profile for review.
      */
     public function notifyProviderProfileSubmitted(Provider $provider): void

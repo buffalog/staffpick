@@ -39,9 +39,13 @@ class MatchingEngine
      * floors. Survivors are ordered: preferred providers first, then by tier
      * (priority ascending), then by score (language match + proximity) descending.
      *
+     * When $radiusOverrideMiles is given (e.g. a scheduler re-trigger after a queue
+     * was exhausted), it replaces every provider's own max radius as the eligibility
+     * cutoff — a one-time widening of the net for this run only.
+     *
      * @return Collection<int, MatchingResult>
      */
-    public function match(IntakeRequest $intakeRequest): Collection
+    public function match(IntakeRequest $intakeRequest, ?float $radiusOverrideMiles = null): Collection
     {
         $subject = $intakeRequest->subject;
 
@@ -83,7 +87,9 @@ class MatchingEngine
         foreach ($providers as $provider) {
             $distance = self::distanceMiles($subjectLat, $subjectLng, (float) $provider->latitude, (float) $provider->longitude);
             $maxRadius = (float) ($provider->radius_max_miles ?: $defaultRadius);
-            $cutoff = $maxRadius + $feathering;
+            $cutoff = $radiusOverrideMiles !== null
+                ? $radiusOverrideMiles + $feathering
+                : $maxRadius + $feathering;
 
             if ($distance > $cutoff) {
                 continue;

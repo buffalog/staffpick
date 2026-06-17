@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\StaffPick\AggregateProviderRatings;
+use App\Jobs\StaffPick\CheckOfferExpiry;
 use Illuminate\Support\Facades\Schedule;
 
 /*
@@ -34,4 +35,10 @@ Schedule::job(new AggregateProviderRatings)
 Schedule::command('staffpick:notify-expiring-credentials')
     ->dailyAt('07:00')
     ->name('staffpick-notify-expiring-credentials')
+    ->withoutOverlapping();
+
+// StaffPick: expire timed-out assignment offers and advance the queue.
+Schedule::job(new CheckOfferExpiry)
+    ->everyMinute()
+    ->name('staffpick-check-offer-expiry')
     ->withoutOverlapping();

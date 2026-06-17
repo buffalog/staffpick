@@ -25,6 +25,12 @@ class Provider extends Model
 
     public const STATUS_REJECTED = 'rejected';
 
+    public const CHANNEL_EMAIL = 'email';
+
+    public const CHANNEL_SMS = 'sms';
+
+    public const CHANNEL_PORTAL = 'portal';
+
     protected $table = 'sp_providers';
 
     protected $fillable = [
@@ -66,6 +72,7 @@ class Provider extends Model
         'rejection_reason',
         'submitted_at',
         'onboarding_step',
+        'preferred_contact_channel',
     ];
 
     protected function casts(): array

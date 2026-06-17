@@ -11,6 +11,16 @@ class AssignmentOffer extends Model
 {
     use BelongsToTenant, HasFactory;
 
+    public const STATUS_PENDING = 'pending';
+
+    public const STATUS_ACCEPTED = 'accepted';
+
+    public const STATUS_DECLINED = 'declined';
+
+    public const STATUS_EXPIRED = 'expired';
+
+    public const STATUS_WITHDRAWN = 'withdrawn';
+
     protected $table = 'sp_assignment_offers';
 
     protected $fillable = [
@@ -25,6 +35,9 @@ class AssignmentOffer extends Model
         'response',
         'responded_at',
         'decline_reason_id',
+        'status',
+        'delivery_channel',
+        'token',
     ];
 
     protected function casts(): array
@@ -37,6 +50,18 @@ class AssignmentOffer extends Model
             'expires_at' => 'datetime',
             'responded_at' => 'datetime',
         ];
+    }
+
+    /** Sent and awaiting a response. */
+    public function isActive(): bool
+    {
+        return $this->status === self::STATUS_PENDING && $this->offered_at !== null;
+    }
+
+    /** Queued but not yet sent. */
+    public function isQueued(): bool
+    {
+        return $this->status === self::STATUS_PENDING && $this->offered_at === null;
     }
 
     public function intakeRequest(): BelongsTo

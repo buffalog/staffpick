@@ -37,9 +37,12 @@ class IntakeRequestResource extends Resource
             'draft' => __('Draft'),
             'pending' => __('Pending'),
             'matching' => __('Matching'),
+            'offered' => __('Offered'),
+            'no_clinicians_available' => __('No clinicians available'),
             'assigned_pending' => __('Assigned (pending)'),
             'active' => __('Active'),
             'on_hold' => __('On hold'),
+            'completed' => __('Completed'),
             'finished' => __('Finished'),
             'cancelled' => __('Cancelled'),
             'closed' => __('Closed'),
@@ -49,10 +52,10 @@ class IntakeRequestResource extends Resource
     public static function statusColor(string $state): string
     {
         return match ($state) {
-            'active', 'finished' => 'success',
-            'matching' => 'info',
+            'active', 'finished', 'completed' => 'success',
+            'matching', 'offered' => 'info',
             'assigned_pending', 'on_hold' => 'warning',
-            'cancelled' => 'danger',
+            'cancelled', 'no_clinicians_available' => 'danger',
             default => 'gray',
         };
     }

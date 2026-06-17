@@ -17,6 +17,8 @@ class Assignment extends Model
 
     public const STATUS_OFFERED = 'offered';
 
+    public const STATUS_PENDING = 'pending';
+
     public const STATUS_ACCEPTED = 'accepted';
 
     public const STATUS_ACTIVE = 'active';
@@ -45,6 +47,8 @@ class Assignment extends Model
         'rate',
         'rate_type',
         'notes',
+        'assigned_by_user_id',
+        'assigned_at',
     ];
 
     protected function casts(): array
@@ -59,6 +63,7 @@ class Assignment extends Model
             'is_manual' => 'boolean',
             'is_current' => 'boolean',
             'rate' => 'decimal:2',
+            'assigned_at' => 'datetime',
         ];
     }
 

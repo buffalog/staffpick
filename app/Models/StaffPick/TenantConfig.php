@@ -19,6 +19,7 @@ class TenantConfig extends Model
         'default_radius_miles',
         'feathering_miles',
         'offer_window_seconds',
+        'offer_delay_seconds',
         'auto_dispatch',
         'intake_person_is_assigner',
         'default_provider_is_contractor',
@@ -79,12 +80,19 @@ class TenantConfig extends Model
         return $this->slack_webhook_url ?: config('services.slack.webhook_url');
     }
 
+    /** Seconds an offer stays open before expiring and advancing the queue. */
+    public function offerDelaySeconds(): int
+    {
+        return (int) ($this->offer_delay_seconds ?: 300);
+    }
+
     protected function casts(): array
     {
         return [
             'default_radius_miles' => 'integer',
             'feathering_miles' => 'integer',
             'offer_window_seconds' => 'integer',
+            'offer_delay_seconds' => 'integer',
             'auto_dispatch' => 'boolean',
             'intake_person_is_assigner' => 'boolean',
             'default_provider_is_contractor' => 'boolean',

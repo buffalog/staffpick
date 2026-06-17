@@ -11,6 +11,7 @@ use App\Http\Controllers\SlackWebhookController;
 use App\Http\Controllers\SubscriptionCheckoutController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\SurveyController;
+use App\Livewire\StaffPick\ProviderOfferResponse;
 use App\Livewire\StaffPick\PublicIntakeForm;
 use App\Services\PlanService;
 use App\Services\SessionService;
@@ -229,3 +230,9 @@ Route::get('/intake/{token}', PublicIntakeForm::class)
 Route::post('/webhooks/slack/{token}', SlackWebhookController::class)
     ->middleware('throttle:60,1')
     ->name('staffpick.slack.inbound');
+
+// StaffPick — authenticated provider assignment-offer response page. The token
+// resolves the offer; the page authorizes it against the signed-in provider.
+Route::get('/offers/{token}', ProviderOfferResponse::class)
+    ->middleware('auth')
+    ->name('staffpick.offer.respond');

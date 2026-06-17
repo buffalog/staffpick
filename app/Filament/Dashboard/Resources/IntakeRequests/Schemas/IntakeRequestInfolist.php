@@ -36,6 +36,20 @@ class IntakeRequestInfolist
                         TextEntry::make('assigner.name')->label(__('Assigner'))->placeholder('—'),
                     ]),
 
+                Section::make(__('Assignment'))
+                    ->columns(2)
+                    ->visible(fn (IntakeRequest $record): bool => $record->currentAssignment !== null)
+                    ->schema([
+                        TextEntry::make('assignment_provider')
+                            ->label(__('Provider'))
+                            ->state(fn (IntakeRequest $record): ?string => $record->currentAssignment?->provider
+                                ? trim("{$record->currentAssignment->provider->first_name} {$record->currentAssignment->provider->last_name}")
+                                : null)
+                            ->placeholder('—'),
+                        TextEntry::make('currentAssignment.status')->label(__('Assignment Status'))->badge()->placeholder('—'),
+                        TextEntry::make('currentAssignment.assigned_at')->label(__('Assigned At'))->dateTime()->placeholder('—'),
+                    ]),
+
                 Section::make(__('Service'))
                     ->columns(2)
                     ->schema([
