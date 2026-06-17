@@ -3,9 +3,11 @@
 namespace Tests\Feature\StaffPick;
 
 use App\Filament\Dashboard\Pages\SlackSettings;
+use App\Jobs\StaffPick\SendSlackNotification;
 use App\Models\StaffPick\TenantConfig;
 use App\Models\Tenant;
 use Filament\Facades\Filament;
+use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
 use Tests\Feature\FeatureTest;
 
@@ -70,6 +72,46 @@ class SlackSettingsPageTest extends FeatureTest
             ->fillForm(['slack_webhook_url' => 'not-a-url'])
             ->call('save')
             ->assertHasFormErrors(['slack_webhook_url']);
+    }
+
+    public function test_send_test_posts_a_test_message_when_a_webhook_is_configured(): void
+    {
+        Queue::fake();
+        TenantConfig::updateOrCreate(
+            ['tenant_id' => $this->tenant->id],
+            ['slack_webhook_url' => 'https://hooks.slack.com/services/T0/B0/test'],
+        );
+        $this->actingAs($this->createTenantAdmin($this->tenant));
+
+        Livewire::test(SlackSettings::class)
+            ->call('sendTest')
+            ->assertHasNoErrors();
+
+        Queue::assertPushed(SendSlackNotification::class, function (SendSlackNotification $job): bool {
+            return $job->webhookUrl === 'https://hooks.slack.com/services/T0/B0/test'
+                && str_contains(json_encode($job->payload), 'test message');
+        });
+    }
+
+    public function test_send_test_is_a_no_op_without_a_webhook(): void
+    {
+        Queue::fake();
+        $this->actingAs($this->createTenantAdmin($this->tenant));
+
+        Livewire::test(SlackSettings::class)
+            ->call('sendTest')
+            ->assertHasNoErrors();
+
+        Queue::assertNothingPushed();
+    }
+
+    public function test_the_inbound_url_shows_a_copy_button_once_a_token_exists(): void
+    {
+        $this->actingAs($this->createTenantAdmin($this->tenant));
+
+        Livewire::test(SlackSettings::class)
+            ->call('regenerateToken')
+            ->assertSee('Copy');
     }
 
     public function test_regenerating_the_token_persists_and_enables_the_inbound_url(): void

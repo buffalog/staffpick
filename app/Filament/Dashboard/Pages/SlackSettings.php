@@ -4,6 +4,7 @@ namespace App\Filament\Dashboard\Pages;
 
 use App\Constants\TenancyPermissionConstants;
 use App\Models\StaffPick\TenantConfig;
+use App\Services\StaffPick\SlackNotificationService;
 use App\Services\TenantPermissionService;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -20,7 +21,8 @@ use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
-use Illuminate\Support\HtmlString;
+use Illuminate\Contracts\View\View;
+use Throwable;
 
 /**
  * Per-tenant Slack integration settings: the outbound webhook URL + inbound trigger
@@ -90,6 +92,14 @@ class SlackSettings extends Page
                             ->maxLength(500)
                             ->placeholder('https://hooks.slack.com/services/...')
                             ->columnSpanFull(),
+                        Actions::make([
+                            Action::make('testWebhook')
+                                ->label(__('Send test message'))
+                                ->icon(Heroicon::OutlinedPaperAirplane)
+                                ->color('gray')
+                                ->disabled(fn (Get $get): bool => blank($get('slack_webhook_url')))
+                                ->action(fn () => $this->sendTest()),
+                        ]),
                     ]),
 
                 Section::make(__('Inbound referrals'))
@@ -111,11 +121,9 @@ class SlackSettings extends Page
                         Hidden::make('slack_inbound_token'),
                         Placeholder::make('inbound_url')
                             ->label(__('Inbound webhook URL'))
-                            ->content(fn (Get $get): HtmlString => new HtmlString(
-                                filled($get('slack_inbound_token'))
-                                    ? '<code class="text-sm">'.e(route('staffpick.slack.inbound', ['token' => $get('slack_inbound_token')])).'</code>'
-                                    : '<span class="text-sm text-gray-500">'.e(__('Not generated yet — generate a token to enable inbound.')).'</span>'
-                            )),
+                            ->content(fn (Get $get): View => view('filament.dashboard.partials.slack-inbound-url', [
+                                'token' => $get('slack_inbound_token'),
+                            ])),
                         Actions::make([
                             Action::make('regenerateToken')
                                 ->label(fn (Get $get): string => filled($get('slack_inbound_token'))
@@ -145,6 +153,48 @@ class SlackSettings extends Page
             ->title(__('Slack settings saved'))
             ->success()
             ->send();
+    }
+
+    /**
+     * Fire a test message to the tenant's configured outbound webhook so an admin can
+     * confirm the integration end-to-end. Uses the saved configuration — save first.
+     */
+    public function sendTest(): void
+    {
+        $tenant = Filament::getTenant();
+
+        if ($tenant === null) {
+            return;
+        }
+
+        if (blank($this->config()->slackWebhookUrl())) {
+            Notification::make()
+                ->title(__('No webhook configured'))
+                ->body(__('Save an Incoming webhook URL first, then send a test.'))
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        try {
+            app(SlackNotificationService::class)->notifyText(
+                $tenant->id,
+                __('🧪 StaffPick test message from :tenant. Your Slack integration is working!', ['tenant' => $tenant->name]),
+            );
+
+            Notification::make()
+                ->title(__('Test message sent'))
+                ->body(__('Check your Slack channel for the test message.'))
+                ->success()
+                ->send();
+        } catch (Throwable $e) {
+            Notification::make()
+                ->title(__('Could not send test message'))
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+        }
     }
 
     public function regenerateToken(): void
