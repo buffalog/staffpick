@@ -180,7 +180,8 @@ class SchedulerBoard extends Page
         $intake = $this->findIntake($intakeId);
 
         // TEMP DIAGNOSTIC: capture exactly what the browser sent vs. the DB truth.
-        Log::info('SchedulerBoard.handleDrop', [
+        // warning level — staging runs LOG_LEVEL=warning, which drops info logs.
+        Log::warning('SchedulerBoard.handleDrop', [
             'intakeId' => $intakeId,
             'fromStatus' => $fromStatus,
             'fromLen' => strlen($fromStatus),
@@ -211,7 +212,8 @@ class SchedulerBoard extends Page
         $requiresReason = self::TRANSITIONS[$fromStatus][$toStatus] ?? null;
 
         if ($requiresReason === null) {
-            $this->rejectMove(__('This transition requires system action.'));
+            // TEMP DIAGNOSTIC: surface the evaluated values directly in the toast.
+            $this->rejectMove("DEBUG from=[{$fromStatus}] to=[{$toStatus}] db=[{$intake->status}]");
 
             return;
         }
