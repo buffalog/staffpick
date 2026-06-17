@@ -8,6 +8,7 @@ use App\Models\StaffPick\Provider;
 use App\Models\Tenant;
 use App\Services\StaffPick\OfferService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
@@ -99,7 +100,16 @@ class ProviderOfferResponse extends Component
 
     public function decline(): void
     {
-        $this->validate(['declineReasonId' => ['required', 'integer']]);
+        // The reason must be one of this tenant's active decline reasons — not just
+        // any integer a crafted request could supply.
+        $this->validate([
+            'declineReasonId' => [
+                'required', 'integer',
+                Rule::exists('sp_decline_reasons', 'id')
+                    ->where('tenant_id', $this->offer->tenant_id)
+                    ->where('is_active', true),
+            ],
+        ]);
 
         $offer = $this->actionableOffer();
 

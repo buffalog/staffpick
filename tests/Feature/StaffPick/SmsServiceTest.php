@@ -4,6 +4,7 @@ namespace Tests\Feature\StaffPick;
 
 use App\Services\StaffPick\SmsService;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 class SmsServiceTest extends TestCase
@@ -42,6 +43,19 @@ class SmsServiceTest extends TestCase
         $this->assertFalse(app(SmsService::class)->send('+15615551234', 'Hi'));
 
         Http::assertSentCount(1);
+    }
+
+    public function test_it_masks_the_recipient_phone_in_failure_logs(): void
+    {
+        Log::spy();
+        Http::fake(['api.pingram.io/*' => Http::response(['error' => 'bad'], 500)]);
+
+        app(SmsService::class)->send('+15615551234', 'Hi');
+
+        Log::shouldHaveReceived('warning')->once()->withArgs(function (string $message, array $context): bool {
+            return ($context['to'] ?? '') === '********1234'
+                && ! str_contains(json_encode($context), '5615551234');
+        });
     }
 
     public function test_it_is_a_no_op_when_no_api_key_is_configured(): void

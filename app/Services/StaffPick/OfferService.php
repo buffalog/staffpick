@@ -15,6 +15,7 @@ use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use RuntimeException;
 
 /**
  * The sequential assignment-offer pipeline. Builds a ranked offer queue for an intake
@@ -97,9 +98,24 @@ class OfferService
     public function acceptOffer(AssignmentOffer $offer, User $actor): Assignment
     {
         $intake = $offer->intakeRequest;
+        $created = false;
 
-        $assignment = DB::transaction(function () use ($offer, $intake, $actor): Assignment {
-            $offer->update([
+        $assignment = DB::transaction(function () use ($offer, $intake, $actor, &$created): Assignment {
+            // Lock the offer row and re-check it's still open, so a double-submit or
+            // race can't create two assignments for the same offer.
+            $locked = AssignmentOffer::query()->whereKey($offer->id)->lockForUpdate()->first();
+
+            if ($locked === null || $locked->status !== AssignmentOffer::STATUS_PENDING) {
+                $existing = $intake->assignments()->where('is_current', true)->first();
+
+                if ($existing !== null) {
+                    return $existing;
+                }
+
+                throw new RuntimeException('This offer is no longer available.');
+            }
+
+            $locked->update([
                 'status' => AssignmentOffer::STATUS_ACCEPTED,
                 'response' => AssignmentOffer::STATUS_ACCEPTED,
                 'responded_at' => now(),
@@ -108,33 +124,38 @@ class OfferService
             $intake->assignments()->where('is_current', true)->update(['is_current' => false]);
 
             $assignment = Assignment::create([
-                'tenant_id' => $offer->tenant_id,
-                'intake_request_id' => $offer->intake_request_id,
-                'provider_id' => $offer->provider_id,
+                'tenant_id' => $locked->tenant_id,
+                'intake_request_id' => $locked->intake_request_id,
+                'provider_id' => $locked->provider_id,
                 'status' => Assignment::STATUS_PENDING,
                 'is_current' => true,
                 'is_manual' => false,
                 'assigned_by_user_id' => $actor->id,
                 'assigned_at' => now(),
-                'offered_at' => $offer->offered_at,
+                'offered_at' => $locked->offered_at,
                 'responded_at' => now(),
             ]);
 
             // Withdraw every other still-open offer for this intake.
             $intake->assignmentOffers()
-                ->whereKeyNot($offer->id)
+                ->whereKeyNot($locked->id)
                 ->where('status', AssignmentOffer::STATUS_PENDING)
                 ->update(['status' => AssignmentOffer::STATUS_EXPIRED, 'responded_at' => now()]);
 
             $intake->update(['status' => 'assigned_pending', 'assigned_at' => now()]);
 
+            $created = true;
+
             return $assignment;
         });
 
-        $this->scheduler->notifyAssignmentAccepted($assignment);
+        // Only notify when this call actually created the assignment (not on a lost race).
+        if ($created) {
+            $this->scheduler->notifyAssignmentAccepted($assignment);
 
-        if (filled($intake->referralSource?->email)) {
-            Mail::to($intake->referralSource->email)->queue(new AssignmentConfirmedReferrer($intake));
+            if (filled($intake->referralSource?->email)) {
+                Mail::to($intake->referralSource->email)->queue(new AssignmentConfirmedReferrer($intake));
+            }
         }
 
         return $assignment;

@@ -149,6 +149,25 @@ class MyOffersPageTest extends FeatureTest
         $this->assertSame($reason->id, (int) $offer->fresh()->decline_reason_id);
     }
 
+    public function test_declining_rejects_a_reason_from_another_tenant(): void
+    {
+        $user = $this->createUser($this->tenant);
+        $provider = $this->providerFor($user);
+        $offer = $this->offer($provider);
+        $foreignReason = DeclineReason::create([
+            'tenant_id' => $this->createTenant()->id,
+            'name' => 'Foreign reason',
+            'is_active' => true,
+        ]);
+        $this->actingAs($user);
+
+        Livewire::test(MyOffers::class)
+            ->callAction('decline', data: ['decline_reason_id' => $foreignReason->id], arguments: ['offer' => $offer->id])
+            ->assertHasActionErrors(['decline_reason_id']);
+
+        $this->assertSame(AssignmentOffer::STATUS_PENDING, $offer->fresh()->status);
+    }
+
     public function test_expired_offers_are_listed_but_not_actionable(): void
     {
         $user = $this->createUser($this->tenant);

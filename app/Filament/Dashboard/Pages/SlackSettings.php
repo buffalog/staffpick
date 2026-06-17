@@ -168,6 +168,11 @@ class SlackSettings extends Page
      */
     public function sendTest(): void
     {
+        // Defense in depth: this is a directly-invokable Livewire action that makes an
+        // outbound request, so re-check authorization rather than relying only on the
+        // page's mount-time canAccess().
+        abort_unless(static::canAccess(), 403);
+
         $tenant = Filament::getTenant();
 
         if ($tenant === null) {

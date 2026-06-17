@@ -5,6 +5,7 @@ namespace Tests\Feature\StaffPick;
 use App\Livewire\StaffPick\ProviderOfferResponse;
 use App\Models\StaffPick\Assignment;
 use App\Models\StaffPick\AssignmentOffer;
+use App\Models\StaffPick\DeclineReason;
 use App\Models\StaffPick\Discipline;
 use App\Models\StaffPick\IntakeRequest;
 use App\Models\StaffPick\Provider;
@@ -121,6 +122,25 @@ class ProviderOfferResponseTest extends FeatureTest
             'status' => Assignment::STATUS_PENDING,
             'assigned_by_user_id' => $user->id,
         ]);
+    }
+
+    public function test_declining_rejects_a_reason_from_another_tenant(): void
+    {
+        $user = $this->createUser($this->tenant);
+        $offer = $this->sentOfferFor($user);
+        $foreignReason = DeclineReason::create([
+            'tenant_id' => $this->createTenant()->id, // a different tenant's reason
+            'name' => 'Foreign reason',
+            'is_active' => true,
+        ]);
+        $this->actingAs($user);
+
+        Livewire::test(ProviderOfferResponse::class, ['token' => $offer->token])
+            ->set('declineReasonId', $foreignReason->id)
+            ->call('decline')
+            ->assertHasErrors(['declineReasonId']);
+
+        $this->assertSame(AssignmentOffer::STATUS_PENDING, $offer->fresh()->status);
     }
 
     public function test_an_expired_offer_shows_the_expired_message(): void

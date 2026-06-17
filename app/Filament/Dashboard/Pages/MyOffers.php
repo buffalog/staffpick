@@ -16,6 +16,7 @@ use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\Rule;
 
 /**
  * Provider-facing list of their assignment offers. Visible only to a user who owns an
@@ -158,7 +159,12 @@ class MyOffers extends Page
                 Select::make('decline_reason_id')
                     ->label(__('Reason'))
                     ->options(fn (): array => $this->declineReasonOptions())
-                    ->required(),
+                    ->required()
+                    ->rules([
+                        Rule::exists('sp_decline_reasons', 'id')
+                            ->where('tenant_id', Filament::getTenant()?->id)
+                            ->where('is_active', true),
+                    ]),
             ])
             ->action(fn (array $arguments, array $data) => $this->decline((int) $arguments['offer'], (int) $data['decline_reason_id']));
     }

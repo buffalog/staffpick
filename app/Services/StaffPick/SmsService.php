@@ -20,7 +20,7 @@ class SmsService
         $apiKey = config('services.pingram.api_key');
 
         if (blank($apiKey)) {
-            Log::warning('Pingram SMS skipped: no API key configured.', ['to' => $to]);
+            Log::warning('Pingram SMS skipped: no API key configured.', ['to' => $this->maskPhone($to)]);
 
             return false;
         }
@@ -38,7 +38,7 @@ class SmsService
 
             if ($response->failed()) {
                 Log::warning('Pingram SMS send failed.', [
-                    'to' => $to,
+                    'to' => $this->maskPhone($to),
                     'status' => $response->status(),
                     'body' => $response->body(),
                 ]);
@@ -48,9 +48,15 @@ class SmsService
 
             return true;
         } catch (Throwable $e) {
-            Log::warning('Pingram SMS send threw.', ['to' => $to, 'error' => $e->getMessage()]);
+            Log::warning('Pingram SMS send threw.', ['to' => $this->maskPhone($to), 'error' => $e->getMessage()]);
 
             return false;
         }
+    }
+
+    /** Mask all but the last 4 digits so logs never carry a full phone number (PHI). */
+    private function maskPhone(string $phone): string
+    {
+        return str_repeat('*', max(0, strlen($phone) - 4)).substr($phone, -4);
     }
 }

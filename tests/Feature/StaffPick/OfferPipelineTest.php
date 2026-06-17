@@ -145,6 +145,22 @@ class OfferPipelineTest extends FeatureTest
         Mail::assertQueued(AssignmentConfirmedReferrer::class);
     }
 
+    public function test_accepting_an_offer_twice_does_not_create_a_duplicate_assignment(): void
+    {
+        Mail::fake();
+        $actor = $this->createUser($this->tenant);
+        $this->providerAt(0.05, ['user_id' => $actor->id]);
+        $intake = $this->intake();
+        $this->service()->dispatchOffers($intake);
+        $offer = $this->offerBySequence($intake, 1);
+
+        $first = $this->service()->acceptOffer($offer, $actor);
+        $second = $this->service()->acceptOffer($offer->fresh(), $actor);
+
+        $this->assertSame($first->id, $second->id);
+        $this->assertSame(1, Assignment::where('intake_request_id', $intake->id)->count());
+    }
+
     public function test_decline_records_the_reason_and_sends_the_next_offer(): void
     {
         Mail::fake();
