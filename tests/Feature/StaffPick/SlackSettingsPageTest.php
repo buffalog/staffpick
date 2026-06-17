@@ -9,6 +9,7 @@ use App\Models\Tenant;
 use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Feature\FeatureTest;
 
 class SlackSettingsPageTest extends FeatureTest
@@ -72,6 +73,37 @@ class SlackSettingsPageTest extends FeatureTest
             ->fillForm(['slack_webhook_url' => 'not-a-url'])
             ->call('save')
             ->assertHasFormErrors(['slack_webhook_url']);
+    }
+
+    /**
+     * @return array<string, array{0: string}>
+     */
+    public static function ssrfWebhookUrls(): array
+    {
+        return [
+            'cloud metadata' => ['http://169.254.169.254/latest/meta-data/'],
+            'internal db host' => ['http://db.railway.internal:5432'],
+            'localhost' => ['https://localhost/x'],
+            'lookalike subdomain' => ['https://hooks.slack.com.evil.com/services/x'],
+            'userinfo trick' => ['https://hooks.slack.com@evil.com/x'],
+            'plain http slack' => ['http://hooks.slack.com/services/x'],
+        ];
+    }
+
+    #[DataProvider('ssrfWebhookUrls')]
+    public function test_it_rejects_non_slack_webhook_urls(string $url): void
+    {
+        $this->actingAs($this->createTenantAdmin($this->tenant));
+
+        Livewire::test(SlackSettings::class)
+            ->fillForm(['slack_webhook_url' => $url])
+            ->call('save')
+            ->assertHasFormErrors(['slack_webhook_url']);
+
+        $this->assertDatabaseMissing('sp_tenant_configs', [
+            'tenant_id' => $this->tenant->id,
+            'slack_webhook_url' => $url,
+        ]);
     }
 
     public function test_send_test_posts_a_test_message_when_a_webhook_is_configured(): void

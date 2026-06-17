@@ -91,6 +91,13 @@ class SlackSettings extends Page
                             ->url()
                             ->maxLength(500)
                             ->placeholder('https://hooks.slack.com/services/...')
+                            // Restrict to genuine Slack Incoming Webhooks. Without this an admin
+                            // could point the URL at internal infrastructure (db.railway.internal,
+                            // cloud metadata, other services) and have the server make blind
+                            // requests to it — SSRF — which the Test button triggers on demand.
+                            // The trailing slash blocks hooks.slack.com.evil.com / userinfo tricks.
+                            ->rules(['regex:~^https://hooks\.slack\.com/~'])
+                            ->validationMessages(['regex' => __('Enter a Slack Incoming Webhook URL (https://hooks.slack.com/...).')])
                             ->columnSpanFull(),
                         Actions::make([
                             Action::make('testWebhook')
