@@ -30,7 +30,7 @@ class OfferAvailable extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'emails.staffpick.offer-available',
+            markdown: 'emails.staffpick.offer-available',
         );
     }
 }

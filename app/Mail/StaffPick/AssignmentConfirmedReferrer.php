@@ -28,7 +28,7 @@ class AssignmentConfirmedReferrer extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'emails.staffpick.assignment-confirmed-referrer',
+            markdown: 'emails.staffpick.assignment-confirmed-referrer',
         );
     }
 }

@@ -25,7 +25,7 @@ class ProviderSurveyRequest extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'emails.staffpick.provider-survey-request',
+            markdown: 'emails.staffpick.provider-survey-request',
         );
     }
 

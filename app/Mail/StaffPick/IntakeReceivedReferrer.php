@@ -29,7 +29,7 @@ class IntakeReceivedReferrer extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'emails.staffpick.intake-received-referrer',
+            markdown: 'emails.staffpick.intake-received-referrer',
         );
     }
 

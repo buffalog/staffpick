@@ -29,6 +29,6 @@ class SchedulerAlert extends Mailable
 
     public function content(): Content
     {
-        return new Content(view: 'emails.staffpick.scheduler-alert');
+        return new Content(markdown: 'emails.staffpick.scheduler-alert');
     }
 }

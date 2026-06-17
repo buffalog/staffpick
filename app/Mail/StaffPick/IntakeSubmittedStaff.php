@@ -28,7 +28,7 @@ class IntakeSubmittedStaff extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'emails.staffpick.intake-submitted-staff',
+            markdown: 'emails.staffpick.intake-submitted-staff',
         );
     }
 
