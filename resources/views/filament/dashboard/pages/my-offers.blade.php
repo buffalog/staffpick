@@ -18,7 +18,7 @@
             @foreach ($pending as $offer)
                 @php
                     $intake = $offer->intakeRequest;
-                    $secondsLeft = ($offer->expires_at && $offer->expires_at->isFuture()) ? now()->diffInSeconds($offer->expires_at) : 0;
+                    $secondsLeft = ($offer->expires_at && $offer->expires_at->isFuture()) ? (int) now()->diffInSeconds($offer->expires_at) : 0;
                 @endphp
                 <div class="{{ $card }}" wire:key="offer-{{ $offer->id }}">
                     <div class="flex flex-wrap items-start justify-between gap-4">
