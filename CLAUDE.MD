@@ -390,6 +390,7 @@ The database is **Azure SQL Edge** via the `sqlsrv` Laravel driver at `db.railwa
   ```
   Then set `.env.testing` to use `DB_CONNECTION=sqlsrv` pointing at `127.0.0.1:1433`.
 - SQLite in-memory is NOT a valid substitute for StaffPick feature tests — SQL Server has different DDL constraints that SQLite does not enforce.
+- **`pdo_sqlsrv` (Railway) returns integer/bigint columns as PHP strings; the local FreeTDS `dblib` driver returns ints.** So a raw, un-cast column read (`$offer->provider_id`) is `"28"` in production but `28` locally. A **strict comparison passes locally and fails on Railway** — e.g. `$provider->id !== $offer->provider_id` 403'd the legitimate owner of `/offers/{token}` because `28 !== "28"`. Tests on the dblib container can't catch this. Rules: cast both sides (`(int) $a !== (int) $b`), or compare loosely (`==`), or push the check into a query `where()` instead of comparing in PHP. Eloquent `$casts`/`$fillable` fix declared model attributes, but **un-cast FK columns and any `DB::`-facade results are returned as strings** — never strict-compare those against an int.
 
 === herd rules ===
 
