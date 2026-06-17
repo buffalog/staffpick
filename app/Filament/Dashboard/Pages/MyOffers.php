@@ -1,0 +1,189 @@
+<?php
+
+namespace App\Filament\Dashboard\Pages;
+
+use App\Models\StaffPick\AssignmentOffer;
+use App\Models\StaffPick\DeclineReason;
+use App\Models\StaffPick\Provider;
+use App\Models\Tenant;
+use App\Services\StaffPick\OfferService;
+use BackedEnum;
+use Filament\Actions\Action;
+use Filament\Facades\Filament;
+use Filament\Forms\Components\Select;
+use Filament\Notifications\Notification;
+use Filament\Pages\Page;
+use Filament\Support\Icons\Heroicon;
+use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Support\Collection;
+
+/**
+ * Provider-facing list of their assignment offers. Visible only to a user who owns an
+ * active/pending provider record. Pending (still-open) offers can be accepted or
+ * declined inline; expired offers are listed read-only. Thin UI over
+ * {@see OfferService}; full case detail lives behind /offers/{token}.
+ */
+class MyOffers extends Page
+{
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedInbox;
+
+    protected static ?string $slug = 'my-offers';
+
+    protected string $view = 'filament.dashboard.pages.my-offers';
+
+    public function getTitle(): string|Htmlable
+    {
+        return __('My Offers');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('My Offers');
+    }
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('StaffPick');
+    }
+
+    public static function canAccess(): bool
+    {
+        return static::resolveProvider() !== null;
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return static::resolveProvider() !== null;
+    }
+
+    /** The active/pending provider record owned by the current user, if any. */
+    protected static function resolveProvider(): ?Provider
+    {
+        $tenant = Filament::getTenant();
+
+        if (! $tenant instanceof Tenant || ! auth()->check()) {
+            return null;
+        }
+
+        return Provider::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('user_id', auth()->id())
+            ->whereIn('status', [Provider::STATUS_ACTIVE, Provider::STATUS_PENDING])
+            ->first();
+    }
+
+    /** @return Collection<int, AssignmentOffer> */
+    public function pendingOffers(): Collection
+    {
+        $provider = static::resolveProvider();
+
+        if ($provider === null) {
+            return collect();
+        }
+
+        return AssignmentOffer::query()
+            ->where('provider_id', $provider->id)
+            ->where('status', AssignmentOffer::STATUS_PENDING)
+            ->whereNotNull('offered_at')
+            ->where(fn ($query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+            ->with(['intakeRequest.discipline', 'intakeRequest.subject'])
+            ->orderBy('offered_at')
+            ->get();
+    }
+
+    /** @return Collection<int, AssignmentOffer> */
+    public function expiredOffers(): Collection
+    {
+        $provider = static::resolveProvider();
+
+        if ($provider === null) {
+            return collect();
+        }
+
+        return AssignmentOffer::query()
+            ->where('provider_id', $provider->id)
+            ->where(function ($query) {
+                $query->whereIn('status', [AssignmentOffer::STATUS_EXPIRED, AssignmentOffer::STATUS_WITHDRAWN])
+                    ->orWhere(fn ($q) => $q
+                        ->where('status', AssignmentOffer::STATUS_PENDING)
+                        ->whereNotNull('offered_at')
+                        ->whereNotNull('expires_at')
+                        ->where('expires_at', '<=', now()));
+            })
+            ->with(['intakeRequest.discipline', 'intakeRequest.subject'])
+            ->orderByDesc('offered_at')
+            ->limit(25)
+            ->get();
+    }
+
+    public function accept(int $offerId): void
+    {
+        $offer = $this->ownedPendingOffer($offerId);
+
+        if ($offer === null || ($offer->expires_at !== null && $offer->expires_at->isPast())) {
+            Notification::make()->title(__('This offer is no longer available'))->danger()->send();
+
+            return;
+        }
+
+        app(OfferService::class)->acceptOffer($offer, auth()->user());
+
+        $this->redirect(route('staffpick.offer.respond', ['token' => $offer->token]));
+    }
+
+    public function decline(int $offerId, int $declineReasonId): void
+    {
+        $offer = $this->ownedPendingOffer($offerId);
+
+        if ($offer === null) {
+            Notification::make()->title(__('This offer is no longer available'))->danger()->send();
+
+            return;
+        }
+
+        app(OfferService::class)->declineOffer($offer, $declineReasonId);
+
+        Notification::make()->title(__('Offer declined'))->success()->send();
+    }
+
+    /** The decline modal: pick a reason, then hand off to decline(). */
+    public function declineAction(): Action
+    {
+        return Action::make('decline')
+            ->label(__('Decline'))
+            ->icon(Heroicon::OutlinedXMark)
+            ->color('gray')
+            ->modalHeading(__('Decline offer'))
+            ->schema([
+                Select::make('decline_reason_id')
+                    ->label(__('Reason'))
+                    ->options(fn (): array => $this->declineReasonOptions())
+                    ->required(),
+            ])
+            ->action(fn (array $arguments, array $data) => $this->decline((int) $arguments['offer'], (int) $data['decline_reason_id']));
+    }
+
+    /** @return array<int|string, string> */
+    public function declineReasonOptions(): array
+    {
+        return DeclineReason::query()
+            ->where('tenant_id', Filament::getTenant()?->id)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->pluck('name', 'id')
+            ->all();
+    }
+
+    private function ownedPendingOffer(int $offerId): ?AssignmentOffer
+    {
+        $provider = static::resolveProvider();
+
+        abort_if($provider === null, 403);
+
+        return AssignmentOffer::query()
+            ->where('id', $offerId)
+            ->where('provider_id', $provider->id)
+            ->where('status', AssignmentOffer::STATUS_PENDING)
+            ->first();
+    }
+}

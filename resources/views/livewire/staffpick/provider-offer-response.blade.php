@@ -8,12 +8,16 @@
 @endphp
 
 <div class="mx-auto max-w-2xl space-y-6">
+    @php $myOffersUrl = $this->myOffersUrl(); @endphp
     @if ($expired)
         <div class="{{ $card }} text-center">
             <h1 class="text-xl font-semibold">{{ __('This offer has expired') }}</h1>
             <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
                 {{ __('This assignment offer is no longer available. Thank you.') }}
             </p>
+            @if ($myOffersUrl)
+                <a href="{{ $myOffersUrl }}" class="mt-4 inline-block text-sm font-medium text-primary-600 hover:underline dark:text-primary-400">{{ __('Back to My Offers') }}</a>
+            @endif
         </div>
     @elseif ($responded && $outcome === 'accepted')
         <div class="{{ $card }} text-center">
@@ -21,6 +25,9 @@
             <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
                 {{ __('Thank you. Our team will follow up with scheduling details shortly.') }}
             </p>
+            @if ($myOffersUrl)
+                <a href="{{ $myOffersUrl }}" class="mt-4 inline-block text-sm font-medium text-primary-600 hover:underline dark:text-primary-400">{{ __('Back to My Offers') }}</a>
+            @endif
         </div>
     @elseif ($responded && $outcome === 'declined')
         <div class="{{ $card }} text-center">
@@ -28,6 +35,9 @@
             <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
                 {{ __('Thanks for letting us know. We will offer this case to another clinician.') }}
             </p>
+            @if ($myOffersUrl)
+                <a href="{{ $myOffersUrl }}" class="mt-4 inline-block text-sm font-medium text-primary-600 hover:underline dark:text-primary-400">{{ __('Back to My Offers') }}</a>
+            @endif
         </div>
     @else
         <div>

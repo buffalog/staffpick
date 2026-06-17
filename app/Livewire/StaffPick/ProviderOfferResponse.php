@@ -5,6 +5,7 @@ namespace App\Livewire\StaffPick;
 use App\Models\StaffPick\AssignmentOffer;
 use App\Models\StaffPick\DeclineReason;
 use App\Models\StaffPick\Provider;
+use App\Models\Tenant;
 use App\Services\StaffPick\OfferService;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Layout;
@@ -156,6 +157,14 @@ class ProviderOfferResponse extends Component
             && $offer->expires_at !== null
             && $offer->expires_at->isPast()
         );
+    }
+
+    /** Link back to the provider's My Offers dashboard page (tenant-scoped URL). */
+    public function myOffersUrl(): ?string
+    {
+        $tenant = Tenant::find($this->offer->tenant_id);
+
+        return $tenant ? url("/dashboard/{$tenant->uuid}/my-offers") : null;
     }
 
     public function render(): View
