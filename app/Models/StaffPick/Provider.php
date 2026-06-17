@@ -4,6 +4,7 @@ namespace App\Models\StaffPick;
 
 use App\Models\StaffPick\Concerns\BelongsToTenant;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -95,6 +96,18 @@ class Provider extends Model
             'submitted_at' => 'datetime',
             'onboarding_step' => 'integer',
         ];
+    }
+
+    /**
+     * Normalize the address state to a trimmed, uppercase code on write. The license
+     * verification RapidAPI call sends this value verbatim, so keep it clean regardless
+     * of the input path (wizard Select, admin form, factory, import).
+     */
+    protected function state(): Attribute
+    {
+        return Attribute::make(
+            set: fn (?string $value): ?string => filled($value) ? strtoupper(trim($value)) : null,
+        );
     }
 
     public function user(): BelongsTo

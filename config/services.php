@@ -120,6 +120,11 @@ return [
         'signing_secret' => env('SLACK_SIGNING_SECRET'),
     ],
 
+    'rapidapi' => [
+        // Used for automated PT/PTA license verification via licenseapi.dev on RapidAPI.
+        'key' => env('RAPIDAPI_KEY'),
+    ],
+
     'pingram' => [
         // Pingram (https://www.pingram.io) is StaffPick's SMS provider. The "type"
         // is a notification type configured in the Pingram dashboard.

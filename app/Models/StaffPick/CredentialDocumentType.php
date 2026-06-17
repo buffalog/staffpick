@@ -11,6 +11,12 @@ class CredentialDocumentType extends Model
 {
     use BelongsToTenant, HasFactory;
 
+    public const METHOD_API = 'api';
+
+    public const METHOD_DEEP_LINK = 'deep_link';
+
+    public const METHOD_MANUAL = 'manual';
+
     protected $table = 'sp_credential_document_types';
 
     protected $fillable = [
@@ -21,6 +27,10 @@ class CredentialDocumentType extends Model
         'expiry_warning_days',
         'deactivate_on_expiry',
         'is_active',
+        'verification_method',
+        'api_discipline',
+        'deep_link_url_template',
+        'rapidapi_host',
     ];
 
     protected function casts(): array

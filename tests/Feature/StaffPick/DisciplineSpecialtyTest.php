@@ -3,8 +3,11 @@
 namespace Tests\Feature\StaffPick;
 
 use App\Livewire\StaffPick\PublicIntakeForm;
+use App\Models\StaffPick\CredentialDocumentType;
 use App\Models\StaffPick\Discipline;
 use App\Models\StaffPick\IntakeRequest;
+use App\Models\StaffPick\Provider;
+use App\Models\StaffPick\ProviderCredential;
 use App\Models\StaffPick\ReferralSource;
 use App\Models\StaffPick\Specialty;
 use App\Models\Tenant;
@@ -61,6 +64,89 @@ class DisciplineSpecialtyTest extends FeatureTest
         $this->assertContains('PT', $disciplineAbbreviations);
         $this->assertContains('OT', $disciplineAbbreviations);
         $this->assertContains('SLP', $disciplineAbbreviations);
+    }
+
+    public function test_the_seeder_splits_state_license_into_three_with_verification_methods(): void
+    {
+        $byName = fn (string $name): ?CredentialDocumentType => CredentialDocumentType::where('tenant_id', $this->tenant->id)->where('name', $name)->first();
+
+        $pt = $byName('State License (PT)');
+        $this->assertNotNull($pt);
+        $this->assertSame('api', $pt->verification_method);
+        $this->assertSame('physical-therapy-license-verification.p.rapidapi.com', $pt->rapidapi_host);
+
+        $ot = $byName('State License (OT)');
+        $this->assertSame('deep_link', $ot->verification_method);
+        $this->assertStringContainsString('BoardCode=OT', $ot->deep_link_url_template);
+        $this->assertStringContainsString('{license_number}', $ot->deep_link_url_template);
+
+        $this->assertSame('deep_link', $byName('State License (SLP)')->verification_method);
+        $this->assertSame('manual', $byName('CPR Certification')->verification_method);
+
+        // The pre-split single type is retired.
+        $legacy = $byName('State License');
+        $this->assertTrue($legacy === null || $legacy->is_active === false);
+    }
+
+    public function test_legacy_state_license_credentials_are_repointed_by_discipline(): void
+    {
+        // Shared DB, no rollback — isolate the credentials this test inspects.
+        ProviderCredential::query()->delete();
+
+        $legacy = CredentialDocumentType::create([
+            'tenant_id' => $this->tenant->id,
+            'name' => 'State License',
+            'verification_method' => 'manual',
+        ]);
+
+        $unknownDiscipline = Discipline::create([
+            'tenant_id' => $this->tenant->id,
+            'name' => 'Audiology',
+            'abbreviation' => 'AUD',
+            'sort_order' => 9,
+            'is_active' => true,
+        ]);
+
+        $ptCred = $this->legacyCredential($this->providerWith($this->discipline('PT')->id), $legacy);
+        $otCred = $this->legacyCredential($this->providerWith($this->discipline('OT')->id), $legacy);
+        $noDisciplineCred = $this->legacyCredential($this->providerWith(null), $legacy);
+        $unknownCred = $this->legacyCredential($this->providerWith($unknownDiscipline->id), $legacy);
+
+        (new TenantTaxonomySeeder)->seedForTenant($this->tenant);
+
+        $byName = fn (string $name): int => CredentialDocumentType::where('tenant_id', $this->tenant->id)->where('name', $name)->value('id');
+
+        // PT/OT credentials moved to their per-discipline type.
+        $this->assertSame($byName('State License (PT)'), (int) $ptCred->fresh()->document_type_id);
+        $this->assertSame($byName('State License (OT)'), (int) $otCred->fresh()->document_type_id);
+
+        // No discipline / unknown discipline: left on the legacy type, not guessed.
+        $this->assertSame($legacy->id, (int) $noDisciplineCred->fresh()->document_type_id);
+        $this->assertSame($legacy->id, (int) $unknownCred->fresh()->document_type_id);
+
+        // Idempotent: re-running moves nothing further and doesn't error.
+        (new TenantTaxonomySeeder)->seedForTenant($this->tenant);
+        $this->assertSame($byName('State License (PT)'), (int) $ptCred->fresh()->document_type_id);
+        $this->assertSame($legacy->id, (int) $noDisciplineCred->fresh()->document_type_id);
+    }
+
+    private function providerWith(?int $disciplineId): Provider
+    {
+        return Provider::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'discipline_id' => $disciplineId,
+        ]);
+    }
+
+    private function legacyCredential(Provider $provider, CredentialDocumentType $legacy): ProviderCredential
+    {
+        // Null expires_at — local FreeTDS can't read populated SQL Server date columns.
+        return ProviderCredential::create([
+            'provider_id' => $provider->id,
+            'document_type_id' => $legacy->id,
+            'status' => 'valid',
+            'verification_status' => ProviderCredential::VERIFICATION_UNVERIFIED,
+        ]);
     }
 
     public function test_seeding_is_idempotent(): void

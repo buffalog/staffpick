@@ -268,6 +268,7 @@ class ProviderProfileService
                 [
                     'file_path' => $credential['file_path'],
                     'document_number' => $credential['document_number'] ?? null,
+                    'license_number' => $credential['license_number'] ?? null,
                     'expires_at' => $credential['expires_at'] ?? null,
                     'status' => 'valid',
                 ],

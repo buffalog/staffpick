@@ -2,6 +2,7 @@
 
 namespace App\Filament\Dashboard\Resources\Providers\Schemas;
 
+use App\Constants\UsStates;
 use App\Models\StaffPick\Specialty;
 use App\Models\StaffPick\TenantConfig;
 use Filament\Facades\Filament;
@@ -61,9 +62,10 @@ class ProviderForm
                         TextInput::make('city')
                             ->label(__('City'))
                             ->maxLength(255),
-                        TextInput::make('state')
+                        Select::make('state')
                             ->label(__('State'))
-                            ->maxLength(10),
+                            ->options(UsStates::options())
+                            ->searchable(),
                         TextInput::make('zip')
                             ->label(__('ZIP'))
                             ->maxLength(20),

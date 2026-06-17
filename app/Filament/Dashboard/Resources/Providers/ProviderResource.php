@@ -6,6 +6,7 @@ use App\Filament\Dashboard\Resources\Providers\Pages\CreateProvider;
 use App\Filament\Dashboard\Resources\Providers\Pages\EditProvider;
 use App\Filament\Dashboard\Resources\Providers\Pages\ListProviders;
 use App\Filament\Dashboard\Resources\Providers\Pages\ViewProvider;
+use App\Filament\Dashboard\Resources\Providers\RelationManagers\CredentialsRelationManager;
 use App\Filament\Dashboard\Resources\Providers\Schemas\ProviderForm;
 use App\Filament\Dashboard\Resources\Providers\Schemas\ProviderInfolist;
 use App\Filament\Dashboard\Resources\Providers\Tables\ProvidersTable;
@@ -54,6 +55,7 @@ class ProviderResource extends Resource
     public static function getRelations(): array
     {
         return [
+            CredentialsRelationManager::class,
         ];
     }
 

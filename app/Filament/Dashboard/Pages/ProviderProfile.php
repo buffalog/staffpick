@@ -2,6 +2,7 @@
 
 namespace App\Filament\Dashboard\Pages;
 
+use App\Constants\UsStates;
 use App\Models\StaffPick\CredentialDocumentType;
 use App\Models\StaffPick\Discipline;
 use App\Models\StaffPick\Language;
@@ -152,8 +153,10 @@ class ProviderProfile extends Page
                         Grid::make(3)->schema([
                             TextInput::make('city')->label(__('City'))
                                 ->live(onBlur: true)->afterStateUpdated(fn (Get $get, Set $set) => $this->geocodeAddressState($get, $set)),
-                            TextInput::make('state')->label(__('State'))->maxLength(10)
-                                ->live(onBlur: true)->afterStateUpdated(fn (Get $get, Set $set) => $this->geocodeAddressState($get, $set)),
+                            Select::make('state')->label(__('State'))
+                                ->options(UsStates::options())
+                                ->searchable()
+                                ->live()->afterStateUpdated(fn (Get $get, Set $set) => $this->geocodeAddressState($get, $set)),
                             TextInput::make('zip')->label(__('ZIP'))->maxLength(20)
                                 ->live(onBlur: true)->afterStateUpdated(fn (Get $get, Set $set) => $this->geocodeAddressState($get, $set)),
                         ]),
@@ -336,6 +339,12 @@ class ProviderProfile extends Page
                     TextInput::make("credentials.{$type->id}.document_number")->label(__('Document number')),
                 ];
 
+                if (in_array($type->verification_method, [CredentialDocumentType::METHOD_API, CredentialDocumentType::METHOD_DEEP_LINK], true)) {
+                    $fields[] = TextInput::make("credentials.{$type->id}.license_number")
+                        ->label(__('License number'))
+                        ->helperText(__('Required for verification'));
+                }
+
                 if ($type->has_expiry) {
                     $fields[] = DatePicker::make("credentials.{$type->id}.expires_at")->label(__('Expiry date'));
                 }
@@ -380,6 +389,7 @@ class ProviderProfile extends Page
                     'document_type_id' => (int) $documentTypeId,
                     'file_path' => is_array($file) ? Arr::first($file) : $file,
                     'document_number' => $credential['document_number'] ?? null,
+                    'license_number' => $credential['license_number'] ?? null,
                     'expires_at' => $credential['expires_at'] ?? null,
                 ];
             })

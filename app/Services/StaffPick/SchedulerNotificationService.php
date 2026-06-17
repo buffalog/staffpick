@@ -7,6 +7,7 @@ use App\Filament\Dashboard\Resources\IntakeRequests\IntakeRequestResource;
 use App\Mail\StaffPick\SchedulerAlert;
 use App\Models\StaffPick\Assignment;
 use App\Models\StaffPick\IntakeRequest;
+use App\Models\StaffPick\ProviderCredential;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\TenantPermissionService;
@@ -43,6 +44,31 @@ class SchedulerNotificationService
         $this->toAdmins($tenant, $heading, $body, $url);
 
         $this->slack->notifyProviderAssigned($assignment);
+    }
+
+    /**
+     * Alert tenant admins (Filament bell + Slack) that a provider credential is
+     * expiring soon. Reads expires_at, so call only where pdo_sqlsrv is available.
+     */
+    public function credentialExpiring(ProviderCredential $credential): void
+    {
+        $credential->loadMissing(['provider', 'documentType']);
+        $tenant = Tenant::find($credential->provider?->tenant_id);
+        $admins = $this->admins($tenant);
+
+        if ($admins->isNotEmpty()) {
+            $provider = trim("{$credential->provider?->first_name} {$credential->provider?->last_name}") ?: __('A provider');
+            $type = $credential->documentType?->name ?? __('Credential');
+            $expiry = $credential->expires_at?->format('M j, Y') ?? __('soon');
+
+            Notification::make()
+                ->title(__('Credential expiring soon'))
+                ->body(__(':type for :provider expires :expiry.', ['type' => $type, 'provider' => $provider, 'expiry' => $expiry]))
+                ->warning()
+                ->sendToDatabase($admins);
+        }
+
+        $this->slack->notifyCredentialExpiring($credential);
     }
 
     public function notifyNoClinicians(IntakeRequest $intake): void

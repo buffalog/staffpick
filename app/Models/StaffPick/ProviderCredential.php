@@ -14,6 +14,22 @@ class ProviderCredential extends Model
 {
     use HasFactory;
 
+    public const VERIFICATION_UNVERIFIED = 'unverified';
+
+    public const VERIFICATION_VERIFIED = 'verified';
+
+    public const VERIFICATION_FAILED = 'failed';
+
+    public const VERIFICATION_PENDING = 'pending';
+
+    public const VERIFICATION_PENDING_MANUAL = 'pending_manual_confirmation';
+
+    public const SOURCE_API = 'api';
+
+    public const SOURCE_MANUAL = 'manual';
+
+    public const SOURCE_DEEP_LINK = 'deep_link';
+
     protected $table = 'sp_provider_credentials';
 
     protected $fillable = [
@@ -27,6 +43,11 @@ class ProviderCredential extends Model
         'notes',
         'verified_at',
         'verified_by_user_id',
+        'license_number',
+        'verification_status',
+        'verification_source',
+        'last_verified_at',
+        'verification_response',
     ];
 
     protected function casts(): array
@@ -35,6 +56,8 @@ class ProviderCredential extends Model
             'issued_at' => 'date',
             'expires_at' => 'date',
             'verified_at' => 'datetime',
+            'last_verified_at' => 'datetime',
+            'verification_response' => 'array',
         ];
     }
 
