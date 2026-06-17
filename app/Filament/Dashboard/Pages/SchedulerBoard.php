@@ -20,6 +20,7 @@ use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Scheduler Kanban board — the visual pipeline that replaces tab-filtered tables.
@@ -176,11 +177,23 @@ class SchedulerBoard extends Page
     {
         abort_unless(static::canAccess(), 403);
 
+        $intake = $this->findIntake($intakeId);
+
+        // TEMP DIAGNOSTIC: capture exactly what the browser sent vs. the DB truth.
+        Log::info('SchedulerBoard.handleDrop', [
+            'intakeId' => $intakeId,
+            'fromStatus' => $fromStatus,
+            'fromLen' => strlen($fromStatus),
+            'toStatus' => $toStatus,
+            'toLen' => strlen($toStatus),
+            'dbStatus' => $intake?->status,
+            'tenant' => Filament::getTenant()?->id,
+            'transitionDefined' => array_key_exists($toStatus, self::TRANSITIONS[$fromStatus] ?? []),
+        ]);
+
         if ($fromStatus === $toStatus) {
             return;
         }
-
-        $intake = $this->findIntake($intakeId);
 
         if ($intake === null) {
             $this->rejectMove(__('That case could not be found.'));

@@ -49,6 +49,9 @@
                 const reference = evt.from.children[evt.oldIndex] ?? null;
                 evt.from.insertBefore(evt.item, reference);
 
+                // TEMP DIAGNOSTIC: what the DOM produced for this drag.
+                console.log('[board] drop', { id, from, to, fromEl: evt.from, toEl: evt.to });
+
                 if (from === to || Number.isNaN(id)) {
                     return;
                 }
