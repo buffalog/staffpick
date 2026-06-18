@@ -3,6 +3,7 @@
 namespace App\Services\StaffPick;
 
 use App\Constants\TenancyPermissionConstants;
+use App\Models\StaffPick\Language;
 use App\Models\StaffPick\Provider;
 use App\Models\StaffPick\ProviderCredential;
 use App\Models\StaffPick\Specialty;
@@ -63,7 +64,7 @@ class ProviderProfileService
         );
 
         $this->syncSpecialties($provider, $data);
-        $provider->languages()->sync($data['languages'] ?? []);
+        $this->syncLanguages($provider, $data);
 
         $this->replaceAvailability($provider, $data['availability'] ?? []);
         $this->replaceServiceZone($provider, $data);
@@ -118,7 +119,7 @@ class ProviderProfileService
         $provider->save();
 
         $this->syncSpecialties($provider, $data);
-        $provider->languages()->sync($data['languages'] ?? []);
+        $this->syncLanguages($provider, $data);
 
         $this->replaceAvailability($provider, $data['availability'] ?? []);
         $this->replaceServiceZone($provider, $data);
@@ -135,10 +136,17 @@ class ProviderProfileService
      */
     private function syncSpecialties(Provider $provider, array $data): void
     {
-        $ids = collect($data['specialties'] ?? [])
+        $requested = collect($data['specialties'] ?? [])
             ->map(fn ($id): int => (int) $id)
             ->filter()
             ->values();
+
+        // Never trust client-submitted IDs: keep only specialties that actually belong
+        // to this tenant (the form is a Livewire payload an attacker can forge).
+        $ids = Specialty::query()
+            ->where('tenant_id', $provider->tenant_id)
+            ->whereIn('id', $requested)
+            ->pluck('id');
 
         $otherId = Specialty::otherId($provider->tenant_id);
         $note = $data['specialty_other_note'] ?? null;
@@ -148,6 +156,25 @@ class ProviderProfileService
         ])->all();
 
         $provider->specialties()->sync($payload);
+    }
+
+    /**
+     * Sync the provider's spoken languages, validating the submitted IDs against the
+     * shared sp_languages lookup. The pivot has no FK (SQL Server cascade-path limits),
+     * so a forged Livewire payload could otherwise write arbitrary language IDs.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function syncLanguages(Provider $provider, array $data): void
+    {
+        $requested = collect($data['languages'] ?? [])
+            ->map(fn ($id): int => (int) $id)
+            ->filter()
+            ->values();
+
+        $valid = Language::query()->whereIn('id', $requested)->pluck('id')->all();
+
+        $provider->languages()->sync($valid);
     }
 
     public function approve(Provider $provider): Provider

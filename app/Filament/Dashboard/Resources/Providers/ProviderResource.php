@@ -47,6 +47,9 @@ class ProviderResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
+            // Eager-load the relationships the list table renders (discipline / tier)
+            // to avoid an N+1 across the rows.
+            ->with(['discipline', 'tier'])
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
             ]);

@@ -126,6 +126,22 @@ class ProviderProfileServiceTest extends FeatureTest
         $this->assertEqualsCanonicalizing($this->languageIds, $provider->languages()->pluck('sp_languages.id')->all());
     }
 
+    public function test_submit_ignores_forged_language_and_cross_tenant_specialty_ids(): void
+    {
+        // The wizard is a Livewire payload an attacker can forge — unknown language IDs
+        // and another tenant's specialty IDs must never be synced onto the provider.
+        $otherTenant = $this->createTenant();
+        $foreignSpecialty = Specialty::create(['tenant_id' => $otherTenant->id, 'name' => 'Foreign-only', 'is_active' => true]);
+
+        $provider = $this->service()->submit($this->tenant, $this->clinician, $this->profileData([
+            'languages' => array_merge($this->languageIds, [999999]),
+            'specialties' => array_merge($this->specialtyIds, [$foreignSpecialty->id]),
+        ]));
+
+        $this->assertEqualsCanonicalizing($this->languageIds, $provider->languages()->pluck('sp_languages.id')->all());
+        $this->assertEqualsCanonicalizing($this->specialtyIds, $provider->specialties()->pluck('sp_specialties.id')->all());
+    }
+
     public function test_submit_records_availability_windows(): void
     {
         $provider = $this->service()->submit($this->tenant, $this->clinician, $this->profileData());
