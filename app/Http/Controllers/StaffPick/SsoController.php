@@ -62,8 +62,10 @@ class SsoController extends Controller
                 'provider' => $tenantModel->config?->sso_provider,
             ]);
 
+            // Keep the provider/internal detail in the audit log only; show the
+            // unauthenticated user a generic message (no internal error leakage).
             return redirect()->route('login')->withErrors([
-                'email' => __('Single sign-on failed. :error', ['error' => $e->getMessage()]),
+                'email' => __('Single sign-on failed. Please try again or contact your administrator.'),
             ]);
         }
 

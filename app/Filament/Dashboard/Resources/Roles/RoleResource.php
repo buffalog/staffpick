@@ -51,7 +51,7 @@ class RoleResource extends Resource
                     Select::make('permissions')
                         ->relationship('permissions', 'name', modifyQueryUsing: fn (Builder $query) => $query->where('name', 'like', TenancyPermissionConstants::TENANCY_PERMISSION_PREFIX.'%'))
                         ->getOptionLabelFromRecordUsing(function (Model $record) {
-                            return Str($record->name)->replace(TenancyPermissionConstants::TENANCY_PERMISSION_PREFIX, '')->title();
+                            return str($record->name)->replace(TenancyPermissionConstants::TENANCY_PERMISSION_PREFIX, '')->title();
                         })
                         ->rules([
                             fn (Get $get): Closure => function (string $attribute, $value, Closure $fail) {
