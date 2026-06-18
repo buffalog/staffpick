@@ -4,6 +4,7 @@ namespace App\Providers\Filament;
 
 use App\Constants\AnnouncementPlacement;
 use App\Constants\TenancyPermissionConstants;
+use App\Filament\Dashboard\Auth\TenantLogin;
 use App\Filament\Dashboard\Pages\CreateWorkspace;
 use App\Filament\Dashboard\Pages\TenantSettings;
 use App\Filament\Dashboard\Pages\TwoFactorAuth\TwoFactorAuth;
@@ -40,6 +41,10 @@ class DashboardPanelProvider extends PanelProvider
         return $panel
             ->id('dashboard')
             ->path('dashboard')
+            // Tenant-aware login: standard email/password (always available — the
+            // super-admin escape hatch) with SSO/social buttons injected via the
+            // AUTH_LOGIN_FORM_BEFORE hook below.
+            ->login(TenantLogin::class)
             ->colors([
                 'primary' => Color::Teal,
             ])
@@ -123,6 +128,12 @@ class DashboardPanelProvider extends PanelProvider
             ->renderHook(
                 PanelsRenderHook::BODY_END,
                 fn (): string => Blade::render('@livewire(\App\Livewire\StaffPick\HelpSlideOver::class)')
+            )
+            // Inject the tenant SSO button + Google social button above the login form.
+            ->renderHook(
+                PanelsRenderHook::AUTH_LOGIN_FORM_BEFORE,
+                fn (): string => view('filament.dashboard.partials.login-sso')->render(),
+                scopes: TenantLogin::class,
             )
             ->authMiddleware([
                 Authenticate::class,

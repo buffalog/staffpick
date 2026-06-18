@@ -6,6 +6,7 @@ use App\Providers\BladeProvider;
 use App\Providers\ConfigProvider;
 use App\Providers\Filament\AdminPanelProvider;
 use App\Providers\Filament\DashboardPanelProvider;
+use App\Providers\Filament\SuperAdminPanelProvider;
 use App\Providers\HorizonServiceProvider;
 use App\Providers\RouteServiceProvider;
 use Spatie\Permission\PermissionServiceProvider;
@@ -17,6 +18,7 @@ return [
     AuthServiceProvider::class,
     AdminPanelProvider::class,
     DashboardPanelProvider::class,
+    SuperAdminPanelProvider::class,
     HorizonServiceProvider::class,
     RouteServiceProvider::class,
     PermissionServiceProvider::class,
