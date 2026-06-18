@@ -3,12 +3,13 @@
     $draggable = $draggable ?? false;
     $retrigger = $retrigger ?? false;
 
+    // Discipline colour-blocking: a top strip + matching pill. PT=blue, OT=teal, SLP=violet.
     $abbr = $card->discipline?->abbreviation;
-    $disciplineBadge = [
-        'PT' => 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300',
-        'OT' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300',
-        'SLP' => 'bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300',
-    ][$abbr] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-300';
+    $disc = [
+        'PT' => ['strip' => 'border-t-blue-500', 'pill' => 'bg-blue-100 text-blue-700'],
+        'OT' => ['strip' => 'border-t-teal-500', 'pill' => 'bg-teal-100 text-teal-700'],
+        'SLP' => ['strip' => 'border-t-violet-500', 'pill' => 'bg-violet-100 text-violet-700'],
+    ][$abbr] ?? ['strip' => 'border-t-gray-300', 'pill' => 'bg-gray-100 text-gray-600'];
 
     $onHold = $card->status === 'on_hold';
 
@@ -19,6 +20,9 @@
     $patient = $patient !== '' ? $patient : __('Unknown patient');
 
     $days = $card->updated_at ? (int) round($card->updated_at->diffInDays(now())) : null;
+    $daysColor = $days === null
+        ? 'text-gray-400'
+        : ($days < 3 ? 'text-green-600' : ($days <= 7 ? 'text-amber-600' : 'text-red-600'));
 
     // Only board cards carry the count alias; needs-attention cards default to 0.
     $hasLanguageWarning = (int) ($card->language_warning_count ?? 0) > 0;
@@ -29,37 +33,49 @@
 <div
     wire:key="board-card-{{ $card->getKey() }}"
     @if ($draggable) data-intake-id="{{ $card->getKey() }}" @endif
-    class="relative rounded-lg border bg-white p-3 shadow-sm dark:bg-gray-900 {{ $onHold ? 'border-danger-400 ring-1 ring-danger-300 dark:border-danger-500/50' : 'border-gray-200 dark:border-white/10' }} {{ $draggable ? 'cursor-grab active:cursor-grabbing' : '' }}"
+    class="relative rounded-lg border-t-4 {{ $disc['strip'] }} p-3 shadow-sm transition hover:shadow-md
+        {{ $onHold ? 'border-l-4 border-l-red-500 bg-red-50' : 'bg-white' }}
+        {{ $draggable ? 'cursor-grab active:cursor-grabbing' : '' }}"
 >
-    {{-- Stretched link: clicking anywhere on the card opens the case (except interactive bits below). --}}
+    {{-- Stretched link: clicking the card opens the case (interactive bits opt back in below). --}}
     <a href="{{ $viewUrl }}" class="absolute inset-0 z-0" aria-label="{{ __('Open case :ref', ['ref' => $card->reference_number]) }}"></a>
 
     <div class="pointer-events-none relative z-10 flex flex-col gap-2">
-        <div class="flex items-center justify-between gap-2">
-            <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ $patient }}</span>
+        {{-- Patient name + discipline pill --}}
+        <div class="flex items-start justify-between gap-2">
+            <span class="text-base font-bold leading-tight text-gray-900">{{ $patient }}</span>
             @if ($abbr)
-                <span class="rounded-full px-2 py-0.5 text-xs font-medium {{ $disciplineBadge }}">{{ $abbr }}</span>
+                <span class="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold {{ $disc['pill'] }}">{{ $abbr }}</span>
             @endif
         </div>
 
-        <div class="truncate text-xs text-gray-500 dark:text-gray-400">
-            {{ $card->referralSource?->name ?? __('No referral source') }}
+        {{-- Referral source --}}
+        <div class="flex items-center gap-1.5 text-xs text-gray-500">
+            <x-filament::icon icon="heroicon-o-building-office-2" class="h-3.5 w-3.5 shrink-0 text-gray-400" />
+            <span class="truncate">{{ $card->referralSource?->name ?? __('No referral source') }}</span>
         </div>
 
-        <div class="flex items-center justify-between gap-2 text-xs">
-            <span class="font-mono text-gray-600 dark:text-gray-300">{{ $card->reference_number }}</span>
+        {{-- Reference chip + days in status --}}
+        <div class="flex items-center justify-between gap-2">
+            <span class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[11px] text-gray-600">{{ $card->reference_number }}</span>
             @if ($days !== null)
-                <span class="text-gray-400" title="{{ __('Days in current status') }}">{{ $days }}{{ __('d') }}</span>
+                <span class="flex items-center gap-1 text-xs font-medium {{ $daysColor }}" title="{{ __('Days in current status') }}">
+                    <x-filament::icon icon="heroicon-o-clock" class="h-3.5 w-3.5" />
+                    {{ $days }}{{ __('d') }}
+                </span>
             @endif
         </div>
 
+        {{-- Status badges --}}
         @if ($onHold || $hasLanguageWarning)
-            <div class="flex flex-wrap items-center gap-1">
+            <div class="flex flex-wrap items-center gap-2">
                 @if ($onHold)
-                    <span class="rounded bg-danger-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-danger-700 dark:bg-danger-500/20 dark:text-danger-300">{{ __('On hold') }}</span>
+                    <span class="rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-700">{{ __('On hold') }}</span>
                 @endif
                 @if ($hasLanguageWarning)
-                    <span class="inline-flex items-center rounded bg-warning-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning-700 dark:bg-warning-500/20 dark:text-warning-300" title="{{ __('A matched provider has a language mismatch with the patient') }}">{{ __('Language') }}</span>
+                    <span class="pointer-events-auto inline-flex items-center text-amber-500" title="{{ __('No language match') }}">
+                        <x-filament::icon icon="heroicon-o-flag" class="h-4 w-4" />
+                    </span>
                 @endif
             </div>
         @endif

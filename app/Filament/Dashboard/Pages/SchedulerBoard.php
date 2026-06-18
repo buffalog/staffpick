@@ -178,6 +178,36 @@ class SchedulerBoard extends Page
     }
 
     /**
+     * Aggregate counts for the board header chips and the right-hand stats panel,
+     * derived from the already-loaded board/needs collections (no extra queries).
+     *
+     * @param  array<string, Collection<int, IntakeRequest>>  $board
+     * @param  array{no_clinicians_available: Collection<int, IntakeRequest>, cancelled: Collection<int, IntakeRequest>}  $needs
+     * @return array{total_active: int, offered: int, needs_attention: int, by_discipline: array<string, int>}
+     */
+    public function boardStats(array $board, array $needs): array
+    {
+        $byDiscipline = ['PT' => 0, 'OT' => 0, 'SLP' => 0];
+
+        foreach ($board as $cards) {
+            foreach ($cards as $card) {
+                $abbr = $card->discipline?->abbreviation;
+
+                if ($abbr !== null && array_key_exists($abbr, $byDiscipline)) {
+                    $byDiscipline[$abbr]++;
+                }
+            }
+        }
+
+        return [
+            'total_active' => $board['active']->count(),
+            'offered' => $board['offered']->count(),
+            'needs_attention' => $needs['no_clinicians_available']->count() + $needs['cancelled']->count(),
+            'by_discipline' => $byDiscipline,
+        ];
+    }
+
+    /**
      * Handle a card dropped from one column onto another. Validates the transition
      * against the current DB status (guarding a stale board) and either applies it,
      * mounts the hold-reason modal, or rejects it. The board re-renders after this
