@@ -74,16 +74,18 @@ class SlackNotificationService
      */
     public function notifyNoClinicians(IntakeRequest $intake): void
     {
-        $intake->loadMissing('discipline');
+        $intake->loadMissing(['discipline', 'referralSource']);
 
         $reference = $intake->reference_number ?? '—';
         $discipline = $intake->discipline?->name ?? __('Unspecified');
+        $referralSource = $intake->referralSource?->name ?? __('Unspecified');
 
         $this->dispatch($intake->tenant_id, __('No clinicians available for :reference', ['reference' => $reference]), [
             $this->header(__('No clinicians available')),
             $this->fields([
                 __('Reference') => $reference,
                 __('Discipline') => $discipline,
+                __('Referral source') => $referralSource,
             ]),
             ...$this->linkButton(__('Open in dashboard'), $this->intakeUrl($intake)),
         ]);

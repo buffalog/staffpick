@@ -108,7 +108,17 @@ class SchedulerNotificationService
 
         $admins
             ->filter(fn (User $user): bool => filled($user->email))
-            ->each(fn (User $user) => Mail::to($user->email)->queue(new SchedulerAlert($heading, $body, $url)));
+            ->each(function (User $user) use ($heading, $body, $url): void {
+                try {
+                    Mail::to($user->email)->queue(new SchedulerAlert($heading, $body, $url));
+                } catch (Throwable $e) {
+                    // Email is a best-effort side channel. With a sync queue a failing
+                    // mailer (e.g. an unauthenticated SMTP) throws inline here — which
+                    // previously aborted the method before the Slack alert on the next
+                    // line. Swallow it so the bell and Slack channels are independent.
+                    report($e);
+                }
+            });
     }
 
     /**
