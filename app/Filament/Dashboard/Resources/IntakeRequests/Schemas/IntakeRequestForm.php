@@ -44,6 +44,7 @@ class IntakeRequestForm
                             ->preload(),
                         Select::make('discipline_id')
                             ->label(TenantConfig::entityLabel('discipline', __('Discipline')))
+                            ->hint(__('Select the therapy discipline required for this patient. Only clinicians with this discipline will be matched.'))
                             ->relationship('discipline', 'name')
                             ->searchable()
                             ->preload(),

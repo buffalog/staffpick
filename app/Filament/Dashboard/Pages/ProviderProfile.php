@@ -3,6 +3,7 @@
 namespace App\Filament\Dashboard\Pages;
 
 use App\Constants\UsStates;
+use App\Filament\Dashboard\Support\HelpHeaderAction;
 use App\Models\StaffPick\CredentialDocumentType;
 use App\Models\StaffPick\Discipline;
 use App\Models\StaffPick\Language;
@@ -249,6 +250,7 @@ class ProviderProfile extends Page
                     ->visible(fn (Get $get): bool => $this->isOtherSpecialtySelected($get)),
                 Select::make('languages')
                     ->label(__('Languages spoken'))
+                    ->hint(__('Select all languages you\'re comfortable using with patients. Language match is a scoring factor in our matching engine.'))
                     ->multiple()
                     ->options(fn (): array => Language::query()->orderBy('name')->pluck('name', 'id')->all())
                     ->searchable()
@@ -271,6 +273,7 @@ class ProviderProfile extends Page
                         TextInput::make('service_zone_name')->label(__('Zone name')),
                         ViewField::make('service_zone_points')
                             ->hiddenLabel()
+                            ->helperText(__('Draw the area where you\'re willing to travel for appointments. This is used alongside your radius to find the best matches.'))
                             ->view('filament.forms.leaflet-map')
                             ->viewData([
                                 'mode' => 'polygon',
@@ -342,7 +345,7 @@ class ProviderProfile extends Page
                 if (in_array($type->verification_method, [CredentialDocumentType::METHOD_API, CredentialDocumentType::METHOD_DEEP_LINK], true)) {
                     $fields[] = TextInput::make("credentials.{$type->id}.license_number")
                         ->label(__('License number'))
-                        ->helperText(__('Required for verification'));
+                        ->hint(__('Your state-issued license number, e.g. PT34980 for Florida Physical Therapists. Required for automated verification.'));
                 }
 
                 if ($type->has_expiry) {
@@ -511,5 +514,13 @@ class ProviderProfile extends Page
                 ->map(fn ($a) => ['day_of_week' => $a->day_of_week, 'start_time' => $a->start_time, 'end_time' => $a->end_time])
                 ->all(),
         ];
+    }
+
+    /**
+     * @return array<int, Action>
+     */
+    protected function getHeaderActions(): array
+    {
+        return [HelpHeaderAction::make('clinician/completing-your-profile')];
     }
 }

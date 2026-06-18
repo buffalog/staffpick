@@ -2,6 +2,7 @@
 
 namespace App\Filament\Dashboard\Pages;
 
+use App\Filament\Dashboard\Support\HelpHeaderAction;
 use App\Models\StaffPick\AssignmentOffer;
 use App\Models\StaffPick\DeclineReason;
 use App\Models\StaffPick\Provider;
@@ -191,5 +192,13 @@ class MyOffers extends Page
             ->where('provider_id', $provider->id)
             ->where('status', AssignmentOffer::STATUS_PENDING)
             ->first();
+    }
+
+    /**
+     * @return array<int, Action>
+     */
+    protected function getHeaderActions(): array
+    {
+        return [HelpHeaderAction::make('clinician/responding-to-offers')];
     }
 }

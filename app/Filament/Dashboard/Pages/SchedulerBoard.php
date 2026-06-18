@@ -3,6 +3,7 @@
 namespace App\Filament\Dashboard\Pages;
 
 use App\Constants\TenancyPermissionConstants;
+use App\Filament\Dashboard\Support\HelpHeaderAction;
 use App\Jobs\StaffPick\DispatchOffers;
 use App\Models\StaffPick\IntakeRequest;
 use App\Models\StaffPick\OnHoldReason;
@@ -394,5 +395,13 @@ class SchedulerBoard extends Page
             ->orderBy('name')
             ->pluck('name', 'id')
             ->all();
+    }
+
+    /**
+     * @return array<int, Action>
+     */
+    protected function getHeaderActions(): array
+    {
+        return [HelpHeaderAction::make('scheduler/dispatch-board')];
     }
 }

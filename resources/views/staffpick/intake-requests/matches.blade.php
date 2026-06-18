@@ -16,6 +16,9 @@
                 'provider' => mb_strtolower($providerLabel),
                 'language' => $record->subject?->language_preference,
             ]) }}
+            <p class="mt-1 text-xs text-amber-700 dark:text-amber-300/80">
+                {{ __('No providers in the match pool speak the patient\'s preferred language. Consider expanding the radius or adjusting the language preference.') }}
+            </p>
         </div>
     @endif
 

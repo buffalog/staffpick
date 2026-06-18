@@ -1,0 +1,79 @@
+{
+    "roles": {
+        "scheduler": {
+            "label": "Scheduler Guide",
+            "audience": "Schedulers & tenant administrators",
+            "sections": [
+                {
+                    "title": "Getting Started",
+                    "topics": [
+                        { "title": "Getting Started", "slug": "getting-started", "file": "scheduler/getting-started.md" }
+                    ]
+                },
+                {
+                    "title": "Daily Workflow",
+                    "topics": [
+                        { "title": "Managing Intake Requests", "slug": "managing-intake-requests", "file": "scheduler/managing-intake-requests.md", "page": "intake-requests" },
+                        { "title": "Running the Matching Engine", "slug": "running-the-matching-engine", "file": "scheduler/running-the-matching-engine.md", "page": "find-matches" },
+                        { "title": "The Dispatch Board", "slug": "dispatch-board", "file": "scheduler/dispatch-board.md", "page": "board" },
+                        { "title": "Managing Offers", "slug": "managing-offers", "file": "scheduler/managing-offers.md" }
+                    ]
+                },
+                {
+                    "title": "Administration",
+                    "topics": [
+                        { "title": "Credentialing", "slug": "credentialing", "file": "scheduler/credentialing.md", "page": "credentialing" },
+                        { "title": "Slack Integration", "slug": "slack-integration", "file": "scheduler/slack-integration.md", "page": "slack-settings" }
+                    ]
+                }
+            ]
+        },
+        "clinician": {
+            "label": "Clinician Guide",
+            "audience": "Providers / clinicians",
+            "sections": [
+                {
+                    "title": "Getting Started",
+                    "topics": [
+                        { "title": "Getting Started", "slug": "getting-started", "file": "clinician/getting-started.md" }
+                    ]
+                },
+                {
+                    "title": "Your Profile",
+                    "topics": [
+                        { "title": "Completing Your Profile", "slug": "completing-your-profile", "file": "clinician/completing-your-profile.md", "page": "provider-profile" },
+                        { "title": "Your License Number", "slug": "your-license-number", "file": "clinician/your-license-number.md" },
+                        { "title": "Service Area & Zones", "slug": "service-area-zones", "file": "clinician/service-area-zones.md" }
+                    ]
+                },
+                {
+                    "title": "Working with StaffPick",
+                    "topics": [
+                        { "title": "Responding to Offers", "slug": "responding-to-offers", "file": "clinician/responding-to-offers.md", "page": "my-offers" },
+                        { "title": "Your Rating", "slug": "your-rating", "file": "clinician/your-rating.md" }
+                    ]
+                }
+            ]
+        },
+        "referral-source": {
+            "label": "Referral Source Guide",
+            "audience": "Referring providers & offices",
+            "sections": [
+                {
+                    "title": "Getting Started",
+                    "topics": [
+                        { "title": "Getting Started", "slug": "getting-started", "file": "referral-source/getting-started.md" },
+                        { "title": "Submitting a Referral", "slug": "submitting-a-referral", "file": "referral-source/submitting-a-referral.md" },
+                        { "title": "After You Submit", "slug": "after-you-submit", "file": "referral-source/after-you-submit.md" }
+                    ]
+                },
+                {
+                    "title": "Help",
+                    "topics": [
+                        { "title": "Common Questions", "slug": "common-questions", "file": "referral-source/common-questions.md" }
+                    ]
+                }
+            ]
+        }
+    }
+}

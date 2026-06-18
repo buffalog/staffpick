@@ -120,6 +120,10 @@ class DashboardPanelProvider extends PanelProvider
                 PanelsRenderHook::BODY_START,
                 fn (): string => Blade::render("@livewire('announcement.view', ['placement' => '".AnnouncementPlacement::USER_DASHBOARD->value."'])")
             )
+            ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn (): string => Blade::render('@livewire(\App\Livewire\StaffPick\HelpSlideOver::class)')
+            )
             ->authMiddleware([
                 Authenticate::class,
             ])->plugins([

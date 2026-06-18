@@ -5,6 +5,7 @@ namespace App\Filament\Dashboard\Pages;
 use App\Constants\TenancyPermissionConstants;
 use App\Filament\Dashboard\Credentialing\VerifyCredentialAction;
 use App\Filament\Dashboard\Resources\Providers\ProviderResource;
+use App\Filament\Dashboard\Support\HelpHeaderAction;
 use App\Models\StaffPick\ProviderCredential;
 use App\Models\Tenant;
 use App\Services\TenantPermissionService;
@@ -137,5 +138,13 @@ class CredentialingQueue extends Page implements HasTable
                     ->color('gray')
                     ->url(fn (ProviderCredential $record): string => ProviderResource::getUrl('view', ['record' => $record->provider_id])),
             ]);
+    }
+
+    /**
+     * @return array<int, Action>
+     */
+    protected function getHeaderActions(): array
+    {
+        return [HelpHeaderAction::make('scheduler/credentialing')];
     }
 }

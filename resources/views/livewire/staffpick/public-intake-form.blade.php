@@ -193,6 +193,7 @@
                             <option value="female">{{ __('Female') }}</option>
                             <option value="male">{{ __('Male') }}</option>
                         </select>
+                        <p class="mt-1 text-xs text-gray-500">{{ __('If the patient has a preference, only providers of that gender will be offered the case.') }}</p>
                     </div>
                     <div>
                         <label class="{{ $label }}">{{ __('Preferred provider language') }}</label>
@@ -214,6 +215,7 @@
                             @endforeach
                         </select>
                         @error('data.discipline_id') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                        <p class="mt-1 text-xs text-gray-500">{{ __('Select the therapy discipline required for this patient. Only clinicians with this discipline will be matched.') }}</p>
                     </div>
                     <div>
                         @php $specialtyOptions = $this->specialtyOptions(); @endphp

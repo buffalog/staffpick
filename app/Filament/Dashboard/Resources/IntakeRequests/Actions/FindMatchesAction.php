@@ -27,6 +27,14 @@ class FindMatchesAction
             ->modalWidth(Width::SevenExtraLarge)
             ->modalSubmitAction(false)
             ->modalCancelActionLabel(__('Close'))
+            ->extraModalFooterActions([
+                Action::make('matchingHelp')
+                    ->label(__('How matching works'))
+                    ->icon(Heroicon::OutlinedQuestionMarkCircle)
+                    ->color('gray')
+                    ->link()
+                    ->action(fn ($livewire) => $livewire->dispatch('open-help', path: 'scheduler/running-the-matching-engine')),
+            ])
             ->modalContent(fn (IntakeRequest $record) => view('staffpick.intake-requests.matches', [
                 'record' => $record,
                 'results' => app(MatchingEngine::class)->match($record),

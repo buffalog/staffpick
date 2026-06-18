@@ -3,6 +3,7 @@
 namespace App\Filament\Dashboard\Pages;
 
 use App\Constants\TenancyPermissionConstants;
+use App\Filament\Dashboard\Support\HelpHeaderAction;
 use App\Models\StaffPick\TenantConfig;
 use App\Services\StaffPick\SlackNotificationService;
 use App\Services\TenantPermissionService;
@@ -226,5 +227,13 @@ class SlackSettings extends Page
     private function config(): TenantConfig
     {
         return TenantConfig::firstOrCreate(['tenant_id' => Filament::getTenant()->getKey()]);
+    }
+
+    /**
+     * @return array<int, Action>
+     */
+    protected function getHeaderActions(): array
+    {
+        return [HelpHeaderAction::make('scheduler/slack-integration')];
     }
 }
