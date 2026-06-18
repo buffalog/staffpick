@@ -8,6 +8,7 @@ use App\Filament\Dashboard\Resources\IntakeRequests\Pages\EditIntakeRequest;
 use App\Filament\Dashboard\Resources\IntakeRequests\Pages\ListIntakeRequests;
 use App\Filament\Dashboard\Resources\IntakeRequests\Pages\ViewIntakeRequest;
 use App\Models\StaffPick\IntakeRequest;
+use App\Models\StaffPick\Specialty;
 use App\Models\StaffPick\Subject;
 use Filament\Facades\Filament;
 use Livewire\Livewire;
@@ -121,5 +122,42 @@ class IntakeRequestResourceTest extends FeatureTest
         Livewire::test(ViewIntakeRequest::class, ['record' => $record->getKey()])
             ->assertSuccessful()
             ->assertSee('CASE-VIEW-1');
+    }
+
+    public function test_view_page_shows_the_matching_constraints(): void
+    {
+        $tenant = $this->createTenant();
+        $record = IntakeRequest::factory()->create(['tenant_id' => $tenant->id]);
+
+        $record->subject->update([
+            'provider_gender_preference' => 'female',
+            'language_preference' => 'Spanish',
+        ]);
+
+        $specialty = Specialty::create(['tenant_id' => $tenant->id, 'name' => 'Pediatrics', 'is_active' => true]);
+        $record->specialties()->attach($specialty->id);
+
+        $this->actAsTenant($tenant);
+
+        Livewire::test(ViewIntakeRequest::class, ['record' => $record->getKey()])
+            ->assertSuccessful()
+            ->assertSee('Gender Preference')
+            ->assertSee('Female')
+            ->assertSee('Language Preference')
+            ->assertSee('Spanish')
+            ->assertSee('Requested Specialties')
+            ->assertSee('Pediatrics');
+    }
+
+    public function test_list_table_has_toggleable_preference_columns(): void
+    {
+        $tenant = $this->createTenant();
+        IntakeRequest::factory()->create(['tenant_id' => $tenant->id]);
+
+        $this->actAsTenant($tenant);
+
+        Livewire::test(ListIntakeRequests::class)
+            ->assertTableColumnExists('subject.provider_gender_preference')
+            ->assertTableColumnExists('subject.language_preference');
     }
 }
