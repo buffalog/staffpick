@@ -126,7 +126,21 @@ class SchedulerBoardTest extends FeatureTest
         // pending -> offered is engine-only.
         Livewire::test(SchedulerBoard::class)
             ->call('handleDrop', $intake->id, 'pending', 'offered')
-            ->assertDispatched('board-move-rejected');
+            ->assertDispatched('board-move-rejected')
+            ->assertNotified(__('Offers are dispatched automatically by the matching engine.'));
+
+        $this->assertSame('pending', $intake->fresh()->status);
+    }
+
+    public function test_dragging_to_matching_explains_how_to_start_matching(): void
+    {
+        $this->actingAs($this->createTenantAdmin($this->tenant));
+        $intake = $this->intake('pending');
+
+        Livewire::test(SchedulerBoard::class)
+            ->call('handleDrop', $intake->id, 'pending', 'matching')
+            ->assertDispatched('board-move-rejected')
+            ->assertNotified(__("Run 'Find Matches' from the Intake Request to start matching."));
 
         $this->assertSame('pending', $intake->fresh()->status);
     }
@@ -138,9 +152,24 @@ class SchedulerBoardTest extends FeatureTest
 
         Livewire::test(SchedulerBoard::class)
             ->call('handleDrop', $intake->id, 'active', 'pending')
-            ->assertDispatched('board-move-rejected');
+            ->assertDispatched('board-move-rejected')
+            ->assertNotified(__("Cases can't move backwards. Use On Hold to pause a case instead."));
 
         $this->assertSame('active', $intake->fresh()->status);
+    }
+
+    public function test_other_blocked_transitions_point_the_scheduler_to_the_case(): void
+    {
+        $this->actingAs($this->createTenantAdmin($this->tenant));
+        $intake = $this->intake('pending');
+
+        // pending -> assigned_pending is forward but engine-managed (not matching/offered).
+        Livewire::test(SchedulerBoard::class)
+            ->call('handleDrop', $intake->id, 'pending', 'assigned_pending')
+            ->assertDispatched('board-move-rejected')
+            ->assertNotified(__('This transition happens automatically. Open the case to take action.'));
+
+        $this->assertSame('pending', $intake->fresh()->status);
     }
 
     public function test_moving_to_on_hold_requires_a_reason_via_the_mounted_action(): void

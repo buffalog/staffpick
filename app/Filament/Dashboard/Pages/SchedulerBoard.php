@@ -70,6 +70,15 @@ class SchedulerBoard extends Page
         'active' => ['completed' => false, 'on_hold' => true],
     ];
 
+    /**
+     * Linear case pipeline, used only to detect a backwards drag. On Hold is
+     * deliberately excluded — it's an orthogonal pause state, not a pipeline stage,
+     * so moving out of it (e.g. on_hold → active) isn't classified as "backwards".
+     *
+     * @var array<int, string>
+     */
+    private const PIPELINE = ['pending', 'matching', 'offered', 'assigned_pending', 'active', 'completed'];
+
     /** ISO-8601 timestamp of the last board build, for the "updated X seconds ago" indicator. */
     public ?string $lastUpdatedAt = null;
 
@@ -245,7 +254,7 @@ class SchedulerBoard extends Page
         $requiresReason = self::TRANSITIONS[$fromStatus][$toStatus] ?? null;
 
         if ($requiresReason === null) {
-            $this->rejectMove(__('This transition requires system action.'));
+            $this->rejectMove($this->blockedTransitionMessage($fromStatus, $toStatus));
 
             return;
         }
@@ -363,6 +372,31 @@ class SchedulerBoard extends Page
         }
 
         $intake->update($attributes);
+    }
+
+    /**
+     * Contextual guidance for a drag the board can't apply, so the scheduler knows
+     * what to do instead of a generic "system action" rejection. Keyed off the
+     * attempted from/to status.
+     */
+    private function blockedTransitionMessage(string $fromStatus, string $toStatus): string
+    {
+        if ($toStatus === 'matching') {
+            return __("Run 'Find Matches' from the Intake Request to start matching.");
+        }
+
+        if ($toStatus === 'offered') {
+            return __('Offers are dispatched automatically by the matching engine.');
+        }
+
+        $fromIndex = array_search($fromStatus, self::PIPELINE, true);
+        $toIndex = array_search($toStatus, self::PIPELINE, true);
+
+        if ($fromIndex !== false && $toIndex !== false && $toIndex < $fromIndex) {
+            return __("Cases can't move backwards. Use On Hold to pause a case instead.");
+        }
+
+        return __('This transition happens automatically. Open the case to take action.');
     }
 
     private function rejectMove(string $message): void
