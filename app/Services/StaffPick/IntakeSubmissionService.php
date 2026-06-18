@@ -7,6 +7,7 @@ use App\Mail\StaffPick\IntakeReceivedReferrer;
 use App\Mail\StaffPick\IntakeSubmittedStaff;
 use App\Models\StaffPick\IntakeRequest;
 use App\Models\StaffPick\ReferralSource;
+use App\Models\StaffPick\Specialty;
 use App\Models\StaffPick\Subject;
 use App\Models\Tenant;
 use App\Models\User;
@@ -67,7 +68,7 @@ class IntakeSubmissionService
                 'notes' => $data['notes'] ?? null,
             ]);
 
-            $intake->specialties()->sync($data['specialty_ids'] ?? []);
+            $intake->specialties()->sync($this->tenantSpecialtyIds($source, $data));
 
             return $intake;
         });
@@ -75,6 +76,32 @@ class IntakeSubmissionService
         $this->notify($source, $intake);
 
         return $intake;
+    }
+
+    /**
+     * Keep only specialty IDs that actually belong to the referral source's tenant.
+     * The public intake form is a Livewire payload an attacker can forge, so we
+     * never trust the submitted IDs (mirrors ProviderProfileService::syncSpecialties).
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<int, int>
+     */
+    private function tenantSpecialtyIds(ReferralSource $source, array $data): array
+    {
+        $requested = collect($data['specialty_ids'] ?? [])
+            ->map(fn ($id): int => (int) $id)
+            ->filter()
+            ->values();
+
+        if ($requested->isEmpty()) {
+            return [];
+        }
+
+        return Specialty::query()
+            ->where('tenant_id', $source->tenant_id)
+            ->whereIn('id', $requested)
+            ->pluck('id')
+            ->all();
     }
 
     /**

@@ -7,6 +7,7 @@ use App\Mail\StaffPick\IntakeSubmittedStaff;
 use App\Models\StaffPick\Discipline;
 use App\Models\StaffPick\IntakeRequest;
 use App\Models\StaffPick\ReferralSource;
+use App\Models\StaffPick\Specialty;
 use App\Models\StaffPick\Subject;
 use App\Models\Tenant;
 use App\Models\User;
@@ -135,6 +136,25 @@ class IntakeSubmissionServiceTest extends FeatureTest
 
         Mail::assertQueued(IntakeSubmittedStaff::class);
         Mail::assertQueued(IntakeReceivedReferrer::class, fn (IntakeReceivedReferrer $mail): bool => $mail->hasTo('referrals@pbpeds.example.com'));
+    }
+
+    public function test_submit_only_syncs_specialties_belonging_to_the_source_tenant(): void
+    {
+        $ownSpecialty = Specialty::create(['tenant_id' => $this->tenant->id, 'name' => 'Pediatrics', 'is_active' => true]);
+
+        // A specialty owned by a DIFFERENT tenant — a forged Livewire payload could
+        // submit its id, and it must not be attached to this tenant's intake.
+        $otherTenant = $this->createTenant();
+        $foreignSpecialty = Specialty::create(['tenant_id' => $otherTenant->id, 'name' => 'Cardiology', 'is_active' => true]);
+
+        $intake = $this->service()->submit($this->source, $this->intakeData([
+            'specialty_ids' => [$ownSpecialty->id, $foreignSpecialty->id, 999999],
+        ]));
+
+        $syncedIds = $intake->specialties()->pluck('sp_specialties.id')->all();
+
+        $this->assertSame([$ownSpecialty->id], $syncedIds);
+        $this->assertNotContains($foreignSpecialty->id, $syncedIds);
     }
 
     public function test_reference_numbers_are_unique_within_a_tenant(): void

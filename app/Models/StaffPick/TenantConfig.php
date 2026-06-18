@@ -115,9 +115,11 @@ class TenantConfig extends Model
             'rating_min_survey_count' => 'integer',
             'sso_enabled' => 'boolean',
             'sso_required' => 'boolean',
-            // SSO secret is encrypted at rest; the cast transparently encrypts on
-            // write and decrypts on read.
+            // Secrets are encrypted at rest; the cast transparently encrypts on
+            // write and decrypts on read. NOTE: any pre-existing plaintext values
+            // must be re-saved (or migrated) once, or reads will throw on decrypt.
             'sso_client_secret' => 'encrypted',
+            'slack_signing_secret' => 'encrypted',
         ];
     }
 

@@ -7,19 +7,21 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class TeamsTable
 {
     public static function configure(Table $table): Table
     {
         return $table
+            // Aggregate the member count in one query instead of a COUNT per row.
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->withCount('tenantUsers'))
             ->columns([
                 TextColumn::make('name')
                     ->label('Name')
                     ->searchable(),
-                TextColumn::make('member_count')
+                TextColumn::make('tenant_users_count')
                     ->label(__('Member Count'))
-                    ->getStateUsing(fn ($record) => $record->tenantUsers()->count())
                     ->badge()
                     ->sortable(),
                 TextColumn::make('created_at')

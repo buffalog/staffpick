@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Services\TenantPermissionService;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Throwable;
 
 /**
@@ -36,40 +37,47 @@ class ProviderProfileService
      */
     public function submit(Tenant $tenant, User $user, array $data): Provider
     {
+        // Geocode before opening the transaction — it may make an HTTP call and we
+        // never want to hold a DB transaction open across the network.
         [$latitude, $longitude] = $this->resolveCoordinates($data);
 
-        $provider = Provider::updateOrCreate(
-            ['tenant_id' => $tenant->id, 'user_id' => $user->id],
-            [
-                'first_name' => $data['first_name'] ?? '',
-                'last_name' => $data['last_name'] ?? '',
-                'business_name' => $data['business_name'] ?? null,
-                'email' => $data['email'] ?? null,
-                'phone' => $data['phone'] ?? null,
-                'gender' => $data['gender'] ?? null,
-                'address' => $data['address'] ?? null,
-                'city' => $data['city'] ?? null,
-                'state' => $data['state'] ?? null,
-                'zip' => $data['zip'] ?? null,
-                'latitude' => $latitude,
-                'longitude' => $longitude,
-                'discipline_id' => $data['discipline_id'] ?? null,
-                'years_experience' => $data['years_experience'] ?? null,
-                'radius_preferred_miles' => $data['radius_preferred_miles'] ?? 15,
-                'radius_max_miles' => $data['radius_max_miles'] ?? 25,
-                'status' => Provider::STATUS_PENDING,
-                'is_active' => false,
-                'submitted_at' => now(),
-            ],
-        );
+        $provider = DB::transaction(function () use ($tenant, $user, $data, $latitude, $longitude): Provider {
+            $provider = Provider::updateOrCreate(
+                ['tenant_id' => $tenant->id, 'user_id' => $user->id],
+                [
+                    'first_name' => $data['first_name'] ?? '',
+                    'last_name' => $data['last_name'] ?? '',
+                    'business_name' => $data['business_name'] ?? null,
+                    'email' => $data['email'] ?? null,
+                    'phone' => $data['phone'] ?? null,
+                    'gender' => $data['gender'] ?? null,
+                    'address' => $data['address'] ?? null,
+                    'city' => $data['city'] ?? null,
+                    'state' => $data['state'] ?? null,
+                    'zip' => $data['zip'] ?? null,
+                    'latitude' => $latitude,
+                    'longitude' => $longitude,
+                    'discipline_id' => $data['discipline_id'] ?? null,
+                    'years_experience' => $data['years_experience'] ?? null,
+                    'radius_preferred_miles' => $data['radius_preferred_miles'] ?? 15,
+                    'radius_max_miles' => $data['radius_max_miles'] ?? 25,
+                    'status' => Provider::STATUS_PENDING,
+                    'is_active' => false,
+                    'submitted_at' => now(),
+                ],
+            );
 
-        $this->syncSpecialties($provider, $data);
-        $this->syncLanguages($provider, $data);
+            $this->syncSpecialties($provider, $data);
+            $this->syncLanguages($provider, $data);
 
-        $this->replaceAvailability($provider, $data['availability'] ?? []);
-        $this->replaceServiceZone($provider, $data);
-        $this->upsertCredentials($provider, $data['credentials'] ?? []);
+            $this->replaceAvailability($provider, $data['availability'] ?? []);
+            $this->replaceServiceZone($provider, $data);
+            $this->upsertCredentials($provider, $data['credentials'] ?? []);
 
+            return $provider;
+        });
+
+        // Side effects only after the profile is durably committed.
         $this->notifyReviewers($tenant, $user, $provider);
         $this->slack->notifyProviderProfileSubmitted($provider);
 
@@ -86,46 +94,48 @@ class ProviderProfileService
      */
     public function saveDraft(Tenant $tenant, User $user, array $data, ?int $step = null): Provider
     {
-        $provider = Provider::firstOrNew(['tenant_id' => $tenant->id, 'user_id' => $user->id]);
+        return DB::transaction(function () use ($tenant, $user, $data, $step): Provider {
+            $provider = Provider::firstOrNew(['tenant_id' => $tenant->id, 'user_id' => $user->id]);
 
-        if (! $provider->exists || $provider->status === Provider::STATUS_DRAFT) {
-            $provider->status = Provider::STATUS_DRAFT;
-            $provider->is_active = false;
-        }
+            if (! $provider->exists || $provider->status === Provider::STATUS_DRAFT) {
+                $provider->status = Provider::STATUS_DRAFT;
+                $provider->is_active = false;
+            }
 
-        $provider->fill([
-            'first_name' => $data['first_name'] ?? '',
-            'last_name' => $data['last_name'] ?? '',
-            'business_name' => $data['business_name'] ?? null,
-            'email' => $data['email'] ?? null,
-            'phone' => $data['phone'] ?? null,
-            'gender' => $data['gender'] ?? null,
-            'address' => $data['address'] ?? null,
-            'city' => $data['city'] ?? null,
-            'state' => $data['state'] ?? null,
-            'zip' => $data['zip'] ?? null,
-            'latitude' => filled($data['latitude'] ?? null) ? (float) $data['latitude'] : null,
-            'longitude' => filled($data['longitude'] ?? null) ? (float) $data['longitude'] : null,
-            'discipline_id' => filled($data['discipline_id'] ?? null) ? (int) $data['discipline_id'] : null,
-            'years_experience' => filled($data['years_experience'] ?? null) ? (int) $data['years_experience'] : null,
-            'radius_preferred_miles' => filled($data['radius_preferred_miles'] ?? null) ? (int) $data['radius_preferred_miles'] : 15,
-            'radius_max_miles' => filled($data['radius_max_miles'] ?? null) ? (int) $data['radius_max_miles'] : 25,
-        ]);
+            $provider->fill([
+                'first_name' => $data['first_name'] ?? '',
+                'last_name' => $data['last_name'] ?? '',
+                'business_name' => $data['business_name'] ?? null,
+                'email' => $data['email'] ?? null,
+                'phone' => $data['phone'] ?? null,
+                'gender' => $data['gender'] ?? null,
+                'address' => $data['address'] ?? null,
+                'city' => $data['city'] ?? null,
+                'state' => $data['state'] ?? null,
+                'zip' => $data['zip'] ?? null,
+                'latitude' => filled($data['latitude'] ?? null) ? (float) $data['latitude'] : null,
+                'longitude' => filled($data['longitude'] ?? null) ? (float) $data['longitude'] : null,
+                'discipline_id' => filled($data['discipline_id'] ?? null) ? (int) $data['discipline_id'] : null,
+                'years_experience' => filled($data['years_experience'] ?? null) ? (int) $data['years_experience'] : null,
+                'radius_preferred_miles' => filled($data['radius_preferred_miles'] ?? null) ? (int) $data['radius_preferred_miles'] : 15,
+                'radius_max_miles' => filled($data['radius_max_miles'] ?? null) ? (int) $data['radius_max_miles'] : 25,
+            ]);
 
-        if ($step !== null) {
-            $provider->onboarding_step = $step;
-        }
+            if ($step !== null) {
+                $provider->onboarding_step = $step;
+            }
 
-        $provider->save();
+            $provider->save();
 
-        $this->syncSpecialties($provider, $data);
-        $this->syncLanguages($provider, $data);
+            $this->syncSpecialties($provider, $data);
+            $this->syncLanguages($provider, $data);
 
-        $this->replaceAvailability($provider, $data['availability'] ?? []);
-        $this->replaceServiceZone($provider, $data);
-        $this->upsertCredentials($provider, $data['credentials'] ?? []);
+            $this->replaceAvailability($provider, $data['availability'] ?? []);
+            $this->replaceServiceZone($provider, $data);
+            $this->upsertCredentials($provider, $data['credentials'] ?? []);
 
-        return $provider;
+            return $provider;
+        });
     }
 
     /**

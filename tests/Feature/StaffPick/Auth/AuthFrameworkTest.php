@@ -9,6 +9,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Services\StaffPick\Auth\AuthLogger;
 use App\Services\StaffPick\Auth\GoogleWorkspaceSsoProvider;
+use App\Services\StaffPick\Auth\SsoConfigValidator;
 use App\Services\StaffPick\Auth\SsoException;
 use App\Services\StaffPick\Auth\SsoProviderInterface;
 use App\Services\StaffPick\Auth\SsoService;
@@ -129,9 +130,9 @@ class AuthFrameworkTest extends FeatureTest
         $tenant = $this->createTenant();
         $provider = $this->googleProvider($tenant);
 
-        $this->assertTrue($provider->validateEmailDomain('jane@fcts.com', $tenant));
-        $this->assertTrue($provider->validateEmailDomain('JANE@FCTS.COM', $tenant));
-        $this->assertFalse($provider->validateEmailDomain('jane@gmail.com', $tenant));
+        $this->assertTrue($provider->validateEmailDomain('jane@fcts.com'));
+        $this->assertTrue($provider->validateEmailDomain('JANE@FCTS.COM'));
+        $this->assertFalse($provider->validateEmailDomain('jane@gmail.com'));
     }
 
     public function test_sso_rejects_a_user_whose_domain_does_not_match(): void
@@ -186,6 +187,47 @@ class AuthFrameworkTest extends FeatureTest
 
         $config->update(['sso_enabled' => true]);
         $this->assertInstanceOf(GoogleWorkspaceSsoProvider::class, $service->getSsoProvider($tenant->fresh()));
+    }
+
+    public function test_sso_config_validator_reports_missing_fields(): void
+    {
+        $tenant = $this->createTenant();
+        $existing = TenantConfig::create(['tenant_id' => $tenant->id]);
+
+        $result = app(SsoConfigValidator::class)->check($tenant, $existing, ['sso_provider' => 'google_workspace']);
+
+        $this->assertSame('error', $result->status);
+        $this->assertStringContainsString('client ID', $result->body);
+    }
+
+    public function test_sso_config_validator_warns_on_an_unimplemented_provider(): void
+    {
+        $tenant = $this->createTenant();
+        $existing = TenantConfig::create(['tenant_id' => $tenant->id]);
+
+        $result = app(SsoConfigValidator::class)->check($tenant, $existing, [
+            'sso_provider' => 'okta',
+            'sso_client_id' => 'cid',
+            'sso_client_secret' => 'csecret',
+            'sso_domain' => 'fcts.com',
+        ]);
+
+        $this->assertSame('warning', $result->status);
+    }
+
+    public function test_sso_config_validator_accepts_a_complete_google_config(): void
+    {
+        $tenant = $this->createTenant();
+        $existing = TenantConfig::create(['tenant_id' => $tenant->id]);
+
+        $result = app(SsoConfigValidator::class)->check($tenant, $existing, [
+            'sso_provider' => 'google_workspace',
+            'sso_client_id' => 'cid',
+            'sso_client_secret' => 'csecret',
+            'sso_domain' => 'fcts.com',
+        ]);
+
+        $this->assertSame('success', $result->status);
     }
 
     public function test_sso_client_secret_is_encrypted_at_rest(): void

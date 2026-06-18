@@ -6,6 +6,7 @@ use App\Mail\StaffPick\AssignmentConfirmedReferrer;
 use App\Mail\StaffPick\OfferAvailable;
 use App\Models\StaffPick\Assignment;
 use App\Models\StaffPick\AssignmentOffer;
+use App\Models\StaffPick\DeclineReason;
 use App\Models\StaffPick\IntakeRequest;
 use App\Models\StaffPick\Provider;
 use App\Models\StaffPick\TenantConfig;
@@ -164,13 +165,25 @@ class OfferService
 
     public function declineOffer(AssignmentOffer $offer, int $declineReasonId): ?AssignmentOffer
     {
-        $offer->update([
-            'status' => AssignmentOffer::STATUS_DECLINED,
-            'response' => AssignmentOffer::STATUS_DECLINED,
-            'decline_reason_id' => $declineReasonId,
-            'responded_at' => now(),
-        ]);
+        // Defense in depth: only persist a decline reason that belongs to the offer's
+        // tenant. Both callers (MyOffers, ProviderOfferResponse) already validate the
+        // id, but the service must not trust it either.
+        $reasonId = DeclineReason::query()
+            ->where('tenant_id', $offer->tenant_id)
+            ->whereKey($declineReasonId)
+            ->value('id');
 
+        DB::transaction(function () use ($offer, $reasonId): void {
+            $offer->update([
+                'status' => AssignmentOffer::STATUS_DECLINED,
+                'response' => AssignmentOffer::STATUS_DECLINED,
+                'decline_reason_id' => $reasonId !== null ? (int) $reasonId : null,
+                'responded_at' => now(),
+            ]);
+        });
+
+        // Advance the queue only after the decline is durably committed — delivery
+        // makes a synchronous SMS call, so it must stay outside the transaction.
         return $this->sendNextOffer($offer->intakeRequest);
     }
 

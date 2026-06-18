@@ -5,7 +5,7 @@ namespace App\Filament\Dashboard\Pages;
 use App\Constants\TenancyPermissionConstants;
 use App\Models\StaffPick\TenantConfig;
 use App\Models\Tenant;
-use App\Services\StaffPick\Auth\GoogleWorkspaceSsoProvider;
+use App\Services\StaffPick\Auth\SsoConfigValidator;
 use App\Services\TenantPermissionService;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -20,7 +20,6 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
-use Throwable;
 
 /**
  * Per-tenant SSO configuration. Gated to tenant admins via the tenant-settings
@@ -155,77 +154,30 @@ class SsoSettings extends Page
     }
 
     /**
-     * Validate the entered (unsaved) configuration without persisting it. A real OAuth
-     * round-trip needs user consent, so this confirms the config is structurally usable
-     * (supported provider, all fields present, redirect URL builds) and tells the admin
-     * to complete a real sign-in to fully verify.
+     * Validate the entered (unsaved) configuration without persisting it, delegating
+     * the structural check to {@see SsoConfigValidator} and rendering its result.
      */
     public function testConnection(): void
     {
         abort_unless(static::canAccess(), 403);
 
-        $state = $this->form->getState();
-        $missing = [];
+        $result = app(SsoConfigValidator::class)->check(
+            Filament::getTenant(),
+            $this->config(),
+            $this->form->getState(),
+        );
 
-        foreach (['sso_provider' => __('provider'), 'sso_client_id' => __('client ID'), 'sso_domain' => __('domain')] as $key => $label) {
-            if (blank($state[$key] ?? null)) {
-                $missing[] = $label;
-            }
-        }
+        $notification = Notification::make()
+            ->title($result->title)
+            ->body($result->body);
 
-        // The secret may already be saved (left blank to keep it).
-        if (blank($state['sso_client_secret'] ?? null) && blank($this->config()->sso_client_secret)) {
-            $missing[] = __('client secret');
-        }
+        match ($result->status) {
+            'success' => $notification->success(),
+            'warning' => $notification->warning(),
+            default => $notification->danger(),
+        };
 
-        if ($missing !== []) {
-            Notification::make()
-                ->title(__('Incomplete configuration'))
-                ->body(__('Missing: :fields', ['fields' => implode(', ', $missing)]))
-                ->danger()
-                ->send();
-
-            return;
-        }
-
-        if (($state['sso_provider'] ?? null) !== 'google_workspace') {
-            Notification::make()
-                ->title(__('Provider not yet available'))
-                ->body(__('Only Google Workspace is implemented so far.'))
-                ->warning()
-                ->send();
-
-            return;
-        }
-
-        try {
-            // Build the provider against the entered config and confirm a redirect URL
-            // can be generated (validates structural usability, not live credentials).
-            $tenant = Filament::getTenant();
-            $probe = new TenantConfig(array_merge($this->config()->getAttributes(), [
-                'sso_provider' => 'google_workspace',
-                'sso_client_id' => $state['sso_client_id'],
-                'sso_domain' => $state['sso_domain'],
-                'sso_enabled' => true,
-            ]));
-            if (filled($state['sso_client_secret'] ?? null)) {
-                $probe->sso_client_secret = $state['sso_client_secret'];
-            }
-            $provider = new GoogleWorkspaceSsoProvider($tenant, $probe, app(TenantPermissionService::class));
-            $url = $provider->getRedirectUrl($tenant);
-
-            Notification::make()
-                ->title(__('Configuration looks valid'))
-                ->body(__('The redirect URL builds correctly. Complete a real sign-in to fully verify the credentials.'))
-                ->success()
-                ->send();
-        } catch (Throwable $e) {
-            Notification::make()
-                ->title(__('Configuration error'))
-                ->body($e->getMessage())
-                ->danger()
-                ->send();
-        }
+        $notification->send();
     }
 
     private function config(): TenantConfig

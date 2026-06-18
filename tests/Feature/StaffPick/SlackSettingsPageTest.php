@@ -61,8 +61,13 @@ class SlackSettingsPageTest extends FeatureTest
             'tenant_id' => $this->tenant->id,
             'slack_webhook_url' => 'https://hooks.slack.com/services/T0/B0/xyz',
             'slack_intake_keyword' => 'new referral',
-            'slack_signing_secret' => 'super-secret',
         ]);
+
+        // The signing secret is encrypted at rest: the model decrypts it on read,
+        // but the raw column must not contain the plaintext.
+        $config = TenantConfig::where('tenant_id', $this->tenant->id)->firstOrFail();
+        $this->assertSame('super-secret', $config->slack_signing_secret);
+        $this->assertNotSame('super-secret', $config->getRawOriginal('slack_signing_secret'));
     }
 
     public function test_an_invalid_webhook_url_is_rejected(): void

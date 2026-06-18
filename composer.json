@@ -45,6 +45,7 @@
         "symfony/postmark-mailer": "^7.0"
     },
     "require-dev": {
+        "aldesrahim/filament-compass": "^1.4",
         "barryvdh/laravel-debugbar": "^4.0",
         "deployer/deployer": "v8.0.0-rc",
         "doctrine/dbal": "^3.6",

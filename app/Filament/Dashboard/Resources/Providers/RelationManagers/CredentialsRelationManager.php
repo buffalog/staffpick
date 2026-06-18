@@ -7,6 +7,7 @@ use App\Models\StaffPick\ProviderCredential;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Credentials shown on the provider view page, each with its verification status and a
@@ -21,6 +22,8 @@ class CredentialsRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table
+            // Eager-load documentType so the Credential column doesn't N+1 per row.
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('documentType'))
             ->columns([
                 TextColumn::make('documentType.name')->label(__('Credential')),
                 TextColumn::make('license_number')->label(__('License #'))->placeholder('—'),

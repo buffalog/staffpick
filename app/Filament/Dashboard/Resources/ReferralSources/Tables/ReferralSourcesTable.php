@@ -13,12 +13,15 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class ReferralSourcesTable
 {
     public static function configure(Table $table): Table
     {
         return $table
+            // Eager-load the group the table renders to avoid an N+1 on the list.
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('group'))
             ->columns([
                 TextColumn::make('name')
                     ->label(__('Name'))
