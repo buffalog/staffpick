@@ -4,6 +4,7 @@ namespace App\Services\StaffPick;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Throwable;
 
 /**
@@ -57,6 +58,6 @@ class SmsService
     /** Mask all but the last 4 digits so logs never carry a full phone number (PHI). */
     private function maskPhone(string $phone): string
     {
-        return str_repeat('*', max(0, strlen($phone) - 4)).substr($phone, -4);
+        return Str::mask($phone, '*', 0, max(0, mb_strlen($phone) - 4));
     }
 }

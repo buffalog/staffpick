@@ -5,8 +5,9 @@ namespace App\Services\StaffPick\Auth;
 use App\Models\StaffPick\AuthLog;
 
 /**
- * Writes auth audit rows. Every SSO and super-admin login attempt (success and
- * failure) goes through here, capturing the request IP automatically.
+ * Writes auth audit rows for any auth event type (success and failure), capturing
+ * the request IP automatically. App code currently routes SSO redirect/callback
+ * attempts through here.
  */
 class AuthLogger
 {

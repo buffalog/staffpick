@@ -8,7 +8,6 @@ use App\Models\Tenant;
 use App\Services\StaffPick\Auth\AuthLogger;
 use App\Services\StaffPick\Auth\SsoService;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Throwable;
 
@@ -40,10 +39,10 @@ class SsoController extends Controller
             'provider' => $tenantModel->config?->sso_provider,
         ]);
 
-        return redirect()->away($provider->getRedirectUrl($tenantModel));
+        return redirect()->away($provider->getRedirectUrl());
     }
 
-    public function callback(Request $request, string $tenant): RedirectResponse
+    public function callback(string $tenant): RedirectResponse
     {
         $tenantModel = Tenant::query()->where('uuid', $tenant)->firstOrFail();
         $provider = $this->sso->getSsoProvider($tenantModel);
@@ -55,7 +54,7 @@ class SsoController extends Controller
         }
 
         try {
-            $user = $provider->handleCallback($tenantModel, $request);
+            $user = $provider->handleCallback();
         } catch (Throwable $e) {
             $this->log->failure(AuthLog::EVENT_SSO_CALLBACK, $e->getMessage(), [
                 'tenant_id' => $tenantModel->getKey(),

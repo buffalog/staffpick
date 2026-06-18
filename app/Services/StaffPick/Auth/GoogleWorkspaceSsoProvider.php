@@ -7,7 +7,6 @@ use App\Models\StaffPick\TenantConfig;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\TenantPermissionService;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
@@ -28,7 +27,7 @@ class GoogleWorkspaceSsoProvider implements SsoProviderInterface
         private TenantPermissionService $permissions,
     ) {}
 
-    public function getRedirectUrl(Tenant $tenant): string
+    public function getRedirectUrl(): string
     {
         return $this->socialite()
             ->with([
@@ -41,7 +40,7 @@ class GoogleWorkspaceSsoProvider implements SsoProviderInterface
             ->getTargetUrl();
     }
 
-    public function handleCallback(Tenant $tenant, Request $request): User
+    public function handleCallback(): User
     {
         $socialUser = $this->socialite()->user();
 
@@ -52,7 +51,7 @@ class GoogleWorkspaceSsoProvider implements SsoProviderInterface
         );
     }
 
-    public function validateEmailDomain(string $email, Tenant $tenant): bool
+    public function validateEmailDomain(string $email): bool
     {
         $domain = strtolower(trim((string) $this->config->sso_domain));
 
@@ -70,7 +69,7 @@ class GoogleWorkspaceSsoProvider implements SsoProviderInterface
      */
     public function resolveUser(string $email, ?string $name, ?string $googleId): User
     {
-        if (! $this->validateEmailDomain($email, $this->tenant)) {
+        if (! $this->validateEmailDomain($email)) {
             throw new SsoException("The email domain is not permitted for this workspace ({$this->config->sso_domain}).");
         }
 

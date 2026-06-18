@@ -68,46 +68,23 @@ class OAuthController extends RegisterController
                 ['value' => $provider]
             );
 
-            if (property_exists($oauthUser, 'id') && $oauthUser->id) {
-                $user->userParameters()->updateOrCreate(
-                    ['name' => 'oauth_'.$provider.'_id'],
-                    ['value' => $oauthUser->id]
-                );
-            }
+            // Persist whichever optional OAuth attributes this provider returned.
+            $oauthAttributes = [
+                'id' => 'id',
+                'token' => 'token',
+                'refreshToken' => 'refresh_token',
+                'expiresIn' => 'expires_in',
+                'avatar' => 'avatar',
+                'nickname' => 'nickname',
+            ];
 
-            if (property_exists($oauthUser, 'token') && $oauthUser->token) {
-                $user->userParameters()->updateOrCreate(
-                    ['name' => 'oauth_'.$provider.'_token'],
-                    ['value' => $oauthUser->token]
-                );
-            }
-
-            if (property_exists($oauthUser, 'refreshToken') && $oauthUser->refreshToken) {
-                $user->userParameters()->updateOrCreate(
-                    ['name' => 'oauth_'.$provider.'_refresh_token'],
-                    ['value' => $oauthUser->refreshToken]
-                );
-            }
-
-            if (property_exists($oauthUser, 'expiresIn') && $oauthUser->expiresIn) {
-                $user->userParameters()->updateOrCreate(
-                    ['name' => 'oauth_'.$provider.'_expires_in'],
-                    ['value' => $oauthUser->expiresIn]
-                );
-            }
-
-            if (property_exists($oauthUser, 'avatar') && $oauthUser->avatar) {
-                $user->userParameters()->updateOrCreate(
-                    ['name' => 'oauth_'.$provider.'_avatar'],
-                    ['value' => $oauthUser->avatar]
-                );
-            }
-
-            if (property_exists($oauthUser, 'nickname') && $oauthUser->nickname) {
-                $user->userParameters()->updateOrCreate(
-                    ['name' => 'oauth_'.$provider.'_nickname'],
-                    ['value' => $oauthUser->nickname]
-                );
+            foreach ($oauthAttributes as $property => $suffix) {
+                if (property_exists($oauthUser, $property) && $oauthUser->{$property}) {
+                    $user->userParameters()->updateOrCreate(
+                        ['name' => 'oauth_'.$provider.'_'.$suffix],
+                        ['value' => $oauthUser->{$property}]
+                    );
+                }
             }
 
             if (! $user->hasVerifiedEmail()) {
