@@ -9,9 +9,12 @@ use App\Models\StaffPick\Language;
 use App\Models\StaffPick\ReferralSource;
 use App\Models\StaffPick\Subject;
 use App\Models\Tenant;
+use App\Services\StaffPick\SlackNotificationService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
+use Mockery;
+use RuntimeException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Tests\Feature\FeatureTest;
 
@@ -180,5 +183,34 @@ class PublicIntakeFormTest extends FeatureTest
         $subject = Subject::withoutGlobalScopes()->find($intake->subject_id);
 
         $this->assertSame('Haitian Creole', $subject->preferred_language);
+    }
+
+    public function test_a_failing_notification_channel_does_not_break_the_confirmation(): void
+    {
+        // A post-commit side effect (Slack) blows up — the intake is already saved,
+        // so the submitter must still get a clean confirmation, not a 500.
+        $slack = Mockery::mock(SlackNotificationService::class);
+        $slack->shouldReceive('notifyIntakeReceived')->andThrow(new RuntimeException('slack down'));
+        $this->app->instance(SlackNotificationService::class, $slack);
+
+        $component = Livewire::test(PublicIntakeForm::class, ['token' => $this->source->intake_token])
+            ->set('data', [
+                'first_name' => 'Casey',
+                'last_name' => 'Nguyen',
+                'address' => '340 US-1',
+                'city' => 'North Palm Beach',
+                'state' => 'FL',
+                'discipline_id' => $this->discipline->id,
+            ])
+            ->call('submit')
+            ->assertHasNoErrors()
+            ->assertSet('submitted', true);
+
+        $intake = IntakeRequest::withoutGlobalScopes()
+            ->where('referral_source_id', $this->source->id)
+            ->first();
+
+        $this->assertNotNull($intake);
+        $component->assertSet('referenceNumber', $intake->reference_number);
     }
 }
