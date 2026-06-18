@@ -5,7 +5,9 @@ namespace Tests\Feature\StaffPick;
 use App\Livewire\StaffPick\PublicIntakeForm;
 use App\Models\StaffPick\Discipline;
 use App\Models\StaffPick\IntakeRequest;
+use App\Models\StaffPick\Language;
 use App\Models\StaffPick\ReferralSource;
+use App\Models\StaffPick\Subject;
 use App\Models\Tenant;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
@@ -110,5 +112,49 @@ class PublicIntakeFormTest extends FeatureTest
         $this->assertSame('pending', $intake->status);
         $this->assertSame($this->tenant->id, $intake->tenant_id);
         $component->assertSet('referenceNumber', $intake->reference_number);
+    }
+
+    public function test_the_provider_language_options_come_from_sp_languages_ordered_by_name(): void
+    {
+        // Idempotent across the shared-DB FeatureTest run; distinctive names/codes.
+        Language::firstOrCreate(['code' => 'zzt'], ['name' => 'Zzz Test Language']);
+        Language::firstOrCreate(['code' => 'aat'], ['name' => 'Aaa Test Language']);
+
+        $options = Livewire::test(PublicIntakeForm::class, ['token' => $this->source->intake_token])
+            ->instance()->languageOptions();
+
+        // A plain list of names (not id-keyed), ordered alphabetically.
+        $this->assertContains('Aaa Test Language', $options);
+        $this->assertContains('Zzz Test Language', $options);
+        $this->assertLessThan(
+            array_search('Zzz Test Language', $options, true),
+            array_search('Aaa Test Language', $options, true),
+        );
+    }
+
+    public function test_a_submission_stores_the_selected_provider_language_by_name(): void
+    {
+        Livewire::test(PublicIntakeForm::class, ['token' => $this->source->intake_token])
+            ->set('data', [
+                'first_name' => 'Casey',
+                'last_name' => 'Nguyen',
+                'address' => '340 US-1',
+                'city' => 'North Palm Beach',
+                'state' => 'FL',
+                'discipline_id' => $this->discipline->id,
+                // The combobox writes the language NAME, which is what the matching
+                // engine compares against provider language names/codes.
+                'language_preference' => 'Spanish',
+            ])
+            ->call('submit')
+            ->assertHasNoErrors()
+            ->assertSet('submitted', true);
+
+        $intake = IntakeRequest::withoutGlobalScopes()
+            ->where('referral_source_id', $this->source->id)
+            ->first();
+        $subject = Subject::withoutGlobalScopes()->find($intake->subject_id);
+
+        $this->assertSame('Spanish', $subject->language_preference);
     }
 }
