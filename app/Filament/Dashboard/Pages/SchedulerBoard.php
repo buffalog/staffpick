@@ -101,6 +101,11 @@ class SchedulerBoard extends Page
             return false;
         }
 
+        // Super admins have full visibility into any tenant's dashboard via bypass.
+        if (auth()->user()->isSuperAdmin()) {
+            return true;
+        }
+
         return in_array(
             TenancyPermissionConstants::ROLE_ADMIN,
             app(TenantPermissionService::class)->getTenantUserRoles($tenant, auth()->user()),

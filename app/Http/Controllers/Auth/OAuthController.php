@@ -117,6 +117,13 @@ class OAuthController extends RegisterController
             Auth::login($user);
         });
 
+        // StaffPick: a social-login user who belongs to no workspace (and isn't a super
+        // admin) lands on a clear dead-end with a contact path — not a profile wizard.
+        $authUser = Auth::user();
+        if (! $authUser->isSuperAdmin() && $authUser->tenants()->doesntExist()) {
+            return redirect()->route('staffpick.no-workspace');
+        }
+
         if ($isRegistration) {
             return redirect()->route('registration.thank-you');
         }

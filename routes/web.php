@@ -238,6 +238,12 @@ Route::get('/offers/{token}', ProviderOfferResponse::class)
     ->middleware('auth')
     ->name('staffpick.offer.respond');
 
+// StaffPick — dead-end for a signed-in user who belongs to no workspace yet (e.g. a
+// brand-new social-login user). A safe place to land with a contact path, not a wizard.
+Route::view('/no-workspace', 'staffpick.no-workspace')
+    ->middleware('auth')
+    ->name('staffpick.no-workspace');
+
 // StaffPick — tenant SSO handshake (kept off the Filament panel path). {tenant} is
 // the tenant uuid. The callback is rate limited; Socialite handles the OAuth state.
 Route::get('/auth/sso/{tenant}/redirect', [SsoController::class, 'redirect'])
