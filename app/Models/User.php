@@ -37,6 +37,9 @@ class User extends Authenticatable implements FilamentUser, HasTenants, MustVeri
         'email',
         'password',
         'is_admin',
+        // NOTE: is_super_admin is deliberately NOT fillable — it must only be set via
+        // the staffpick:create-super-admin command, never through a mass-assigned form.
+        'google_id',
         'public_name',
         'is_blocked',
         'notes',
@@ -65,6 +68,7 @@ class User extends Authenticatable implements FilamentUser, HasTenants, MustVeri
         'phone_number_verified_at' => 'datetime',
         'password' => 'hashed',
         'last_seen_at' => 'datetime',
+        'is_super_admin' => 'boolean',
     ];
 
     public function roadmapItems(): HasMany
@@ -109,11 +113,21 @@ class User extends Authenticatable implements FilamentUser, HasTenants, MustVeri
 
     public function canAccessPanel(Panel $panel): bool
     {
+        // The global super-admin panel is gated strictly to super admins.
+        if ($panel->getId() === 'superadmin') {
+            return $this->isSuperAdmin();
+        }
+
         if ($panel->getId() == 'admin' && ! $this->is_admin) {
             return false;
         }
 
         return true;
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return (bool) $this->is_super_admin;
     }
 
     public function getPublicName()
@@ -182,11 +196,22 @@ class User extends Authenticatable implements FilamentUser, HasTenants, MustVeri
 
     public function getTenants(Panel $panel): Collection
     {
+        // Super admins can switch into any tenant; everyone else sees only the
+        // tenants they are a member of.
+        if ($this->isSuperAdmin()) {
+            return Tenant::query()->get();
+        }
+
         return $this->tenants;
     }
 
     public function canAccessTenant(Model $tenant): bool
     {
+        // Super admins bypass tenant membership entirely (PART 1).
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
         return $this->tenants()->whereKey($tenant)->exists();
     }
 

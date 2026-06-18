@@ -44,6 +44,12 @@ class TenantConfig extends Model
         'slack_signing_secret',
         'slack_inbound_token',
         'slack_intake_keyword',
+        'sso_provider',
+        'sso_client_id',
+        'sso_client_secret',
+        'sso_domain',
+        'sso_enabled',
+        'sso_required',
     ];
 
     /**
@@ -107,7 +113,22 @@ class TenantConfig extends Model
             'rating_promotion_threshold' => 'decimal:2',
             'rating_demotion_threshold' => 'decimal:2',
             'rating_min_survey_count' => 'integer',
+            'sso_enabled' => 'boolean',
+            'sso_required' => 'boolean',
+            // SSO secret is encrypted at rest; the cast transparently encrypts on
+            // write and decrypts on read.
+            'sso_client_secret' => 'encrypted',
         ];
+    }
+
+    public function ssoEnabled(): bool
+    {
+        return (bool) $this->sso_enabled && filled($this->sso_provider);
+    }
+
+    public function ssoRequired(): bool
+    {
+        return $this->ssoEnabled() && (bool) $this->sso_required;
     }
 
     /**

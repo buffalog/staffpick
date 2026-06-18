@@ -8,6 +8,7 @@ use App\Http\Controllers\PaymentProviders\PaddleController;
 use App\Http\Controllers\ProductCheckoutController;
 use App\Http\Controllers\RoadmapController;
 use App\Http\Controllers\SlackWebhookController;
+use App\Http\Controllers\StaffPick\SsoController;
 use App\Http\Controllers\SubscriptionCheckoutController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\SurveyController;
@@ -236,3 +237,12 @@ Route::post('/webhooks/slack/{token}', SlackWebhookController::class)
 Route::get('/offers/{token}', ProviderOfferResponse::class)
     ->middleware('auth')
     ->name('staffpick.offer.respond');
+
+// StaffPick — tenant SSO handshake (kept off the Filament panel path). {tenant} is
+// the tenant uuid. The callback is rate limited; Socialite handles the OAuth state.
+Route::get('/auth/sso/{tenant}/redirect', [SsoController::class, 'redirect'])
+    ->middleware('throttle:sso')
+    ->name('staffpick.sso.redirect');
+Route::get('/auth/sso/{tenant}/callback', [SsoController::class, 'callback'])
+    ->middleware('throttle:sso')
+    ->name('staffpick.sso.callback');

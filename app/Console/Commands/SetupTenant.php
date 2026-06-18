@@ -24,7 +24,8 @@ class SetupTenant extends Command
         {--user-name= : Admin display name (default: derived from the email)}
         {--name= : Tenant name (default: the bootstrap tenant)}
         {--slug= : Tenant slug / URL identifier (default: derived from the name)}
-        {--password= : Password to set when the admin user is first created}';
+        {--password= : Password to set when the admin user is first created}
+        {--super-admin-email= : Associate a super admin with the tenant via bypass access (not as a member)}';
 
     /**
      * The console command description.
@@ -121,6 +122,28 @@ class SetupTenant extends Command
         // 5. Seed the default StaffPick taxonomy for the tenant (idempotent).
         app(TenantTaxonomySeeder::class)->seedForTenant($tenant);
         $this->info('Seeded default taxonomy (disciplines, tiers, credential document types, reason lists).');
+
+        // 5b. Optionally ensure a super admin exists for the platform. They are NOT
+        //     added to the tenant's members — they reach it through super-admin bypass.
+        if ($superAdminEmail = $this->option('super-admin-email')) {
+            $superAdmin = User::query()->where('email', $superAdminEmail)->first();
+
+            if ($superAdmin === null) {
+                $superAdmin = new User([
+                    'name' => Str::headline(Str::before($superAdminEmail, '@')),
+                    'email' => $superAdminEmail,
+                    'is_admin' => true,
+                ]);
+                $superAdmin->password = Str::password(20);
+                $superAdmin->forceFill(['email_verified_at' => now()]);
+            }
+
+            $superAdmin->is_admin = true;
+            $superAdmin->is_super_admin = true;
+            $superAdmin->save();
+
+            $this->info("Associated super admin {$superAdmin->email} (bypass access — not a tenant member).");
+        }
 
         // 6. Report URLs (and the password, only when one was just generated).
         $dashboardUrl = rtrim(config('app.url'), '/').'/dashboard/'.$tenant->uuid;

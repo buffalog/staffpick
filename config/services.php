@@ -38,7 +38,9 @@ return [
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        'redirect' => env('GOOGLE_CALLBACK', '/auth/google/callback'),
+        // Platform-level Google OAuth for social login. GOOGLE_REDIRECT_URI is the
+        // StaffPick name; GOOGLE_CALLBACK kept as a fallback for existing setups.
+        'redirect' => env('GOOGLE_REDIRECT_URI', env('GOOGLE_CALLBACK', '/auth/google/callback')),
     ],
 
     'github' => [

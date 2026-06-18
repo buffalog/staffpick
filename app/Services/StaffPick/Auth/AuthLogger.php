@@ -1,0 +1,43 @@
+<?php
+
+namespace App\Services\StaffPick\Auth;
+
+use App\Models\StaffPick\AuthLog;
+
+/**
+ * Writes auth audit rows. Every SSO and super-admin login attempt (success and
+ * failure) goes through here, capturing the request IP automatically.
+ */
+class AuthLogger
+{
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    public function success(string $eventType, array $attributes = []): AuthLog
+    {
+        return $this->write($eventType, array_merge($attributes, ['success' => true]));
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    public function failure(string $eventType, string $error, array $attributes = []): AuthLog
+    {
+        return $this->write($eventType, array_merge($attributes, [
+            'success' => false,
+            'error_message' => $error,
+        ]));
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    private function write(string $eventType, array $attributes): AuthLog
+    {
+        return AuthLog::create(array_merge([
+            'event_type' => $eventType,
+            'ip_address' => request()?->ip(),
+            'success' => false,
+        ], $attributes));
+    }
+}
