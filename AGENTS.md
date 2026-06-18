@@ -221,6 +221,69 @@ npm run dev
 ===
 
 <laravel-boost-guidelines>
+=== .ai/deployment-railway rules ===
+
+# Deployment
+
+> Curated, project-specific deployment + database constraints. This file lives in
+> `.ai/guidelines/` so `php artisan boost:install` composes it into the generated
+> guideline block and NEVER overwrites it (Boost only regenerates its own built-in
+> guidelines; user files under `.ai/guidelines/` are merged in untouched). The
+> built-in generic "deploy with Laravel Cloud" guideline is excluded via
+> `config/boost.php` (`guidelines.exclude => ['deployments']`).
+
+## Production: Railway
+
+This application is deployed on **Railway**, not Laravel Cloud or Deployer.
+
+- **Project**: staffpick (ID: `50b12e33-0382-4140-a6ff-7c3153491fff`)
+- **Environment**: staging (ID: `3c4299d6-bf25-4acc-9b40-1b0608e4a0e9`)
+- **App service**: `10a329c9-9655-4aea-ac9c-f853d47c9cd9`
+- **App URL**: `https://app-staging-2263.up.railway.app`
+- **DB service**: `5a853239-7ca7-4b66-a01c-b4258805f743`
+- **Repo**: `buffalog/staffpick` (GitHub), `main` branch — Railway auto-deploys on push
+
+### How deployment works
+
+Pushes to `main` trigger a Railway build. The Dockerfile builds the image (PHP 8.4, sqlsrv extension, Node 22 for Vite assets). On container start, `start.sh` runs:
+1. Creates the `staffpick` database if it doesn't exist (via sqlcmd)
+2. Clears config cache
+3. Runs `php artisan migrate --force`
+4. Runs each seeder individually (RolesAndPermissions suppresses duplicate key errors on subsequent boots)
+5. Caches routes and views
+6. Starts `php artisan serve` on `$PORT`
+
+### Database: Azure SQL (SQL Server) — CRITICAL
+
+The database is **Azure SQL Edge** via the `sqlsrv` Laravel driver at `db.railway.internal:1433`. This is locked in for HIPAA BAA coverage and is **not changing**.
+
+**SQL Server constraints already handled in all existing migrations — do not violate these:**
+
+1. **Cascade cycles** — SQL Server rejects ANY FK that creates multiple cascade paths to the same ancestor table, regardless of action type. All `sp_*` models use plain `unsignedBigInteger` for `tenant_id` — no FK constraint. Do NOT add constrained FKs that create multiple cascade paths back to `users` or `tenants`.
+
+2. **Index-dependent ALTER COLUMN** — SQL Server blocks `ALTER COLUMN` on any column with a dependent index. Pattern: drop index → alter column → recreate index. See `2024_04_09_095954_table_roadmap_items_adjust_slug_type.php` and `2026_02_21_141433_change_versionable_id_to_integer_in_version_tables.php` for reference implementations.
+
+3. **No fulltext index via Blueprint** — `$table->fullText()` is unsupported by the `sqlsrv` driver. Guard with `if (config('database.default') !== 'sqlsrv')`.
+
+4. **No `dropColumn` inside `Schema::create`** — invalid on any DB, crashes on SQL Server.
+
+5. **No local migration runs** — PHP 8.5 on the dev machine seg faults with the `sqlsrv` extension. Migrations are validated via Railway deploys. Write and validate against migration files as source of truth.
+
+### Local development vs Railway
+
+- The local environment uses Laravel Herd and a local MySQL/SQLite DB for general Laravel work
+- The `sp_*` (StaffPick domain) tables only exist on Railway — they are NOT in the local database
+- For StaffPick-specific feature tests requiring `sp_*` tables, use a local Azure SQL Edge container:
+  ```bash
+  docker run -e 'ACCEPT_EULA=1' -e 'MSSQL_SA_PASSWORD=StaffPick_Dev_2026!' \
+    -e 'MSSQL_PID=Developer' -p 1433:1433 --name staffpick-db \
+    -d mcr.microsoft.com/azure-sql-edge:latest
+  sleep 20 && sqlcmd -S 127.0.0.1 -U sa -P 'StaffPick_Dev_2026!' -C -Q "CREATE DATABASE staffpick_test;"
+  ```
+  Then set `.env.testing` to use `DB_CONNECTION=sqlsrv` pointing at `127.0.0.1:1433`.
+- SQLite in-memory is NOT a valid substitute for StaffPick feature tests — SQL Server has different DDL constraints that SQLite does not enforce.
+- **`pdo_sqlsrv` (Railway) returns integer/bigint columns as PHP strings; the local FreeTDS `dblib` driver returns ints.** So a raw, un-cast column read (`$offer->provider_id`) is `"28"` in production but `28` locally. A **strict comparison passes locally and fails on Railway** — e.g. `$provider->id !== $offer->provider_id` 403'd the legitimate owner of `/offers/{token}` because `28 !== "28"`. Tests on the dblib container can't catch this. Rules: cast both sides (`(int) $a !== (int) $b`), or compare loosely (`==`), or push the check into a query `where()` instead of comparing in PHP. Eloquent `$casts`/`$fillable` fix declared model attributes, but **un-cast FK columns and any `DB::`-facade results are returned as strings** — never strict-compare those against an int.
+
 === foundation rules ===
 
 # Laravel Boost Guidelines
@@ -231,7 +294,7 @@ The Laravel Boost guidelines are specifically curated by Laravel maintainers for
 
 This application is a Laravel application and its main Laravel ecosystems package & versions are below. You are an expert with them all. Ensure you abide by these specific packages & versions.
 
-- php - 8.4
+- php - 8.5
 - filament/filament (FILAMENT) - v5
 - laravel/framework (LARAVEL) - v13
 - laravel/horizon (HORIZON) - v5
@@ -251,13 +314,7 @@ This application is a Laravel application and its main Laravel ecosystems packag
 
 ## Skills Activation
 
-This project has domain-specific skills available. You MUST activate the relevant skill whenever you work in that domain—don't wait until you're stuck.
-
-- `laravel-best-practices` — Apply this skill whenever writing, reviewing, or refactoring Laravel PHP code. This includes creating or modifying controllers, models, migrations, form requests, policies, jobs, scheduled commands, service classes, and Eloquent queries. Triggers for N+1 and query performance issues, caching strategies, authorization and security patterns, validation, error handling, queue and job configuration, route definitions, and architectural decisions. Also use for Laravel code reviews and refactoring existing Laravel code to follow best practices. Covers any task involving Laravel backend PHP code patterns.
-- `configuring-horizon` — Use this skill whenever the user mentions Horizon by name in a Laravel context. Covers the full Horizon lifecycle: installing Horizon (horizon:install, Sail setup), configuring config/horizon.php (supervisor blocks, queue assignments, balancing strategies, minProcesses/maxProcesses), fixing the dashboard (authorization via Gate::define viewHorizon, blank metrics, horizon:snapshot scheduling), and troubleshooting production issues (worker crashes, timeout chain ordering, LongWaitDetected notifications, waits config). Also covers job tagging and silencing. Do not use for generic Laravel queues without Horizon, SQS or database drivers, standalone Redis setup, Linux supervisord, Telescope, or job batching.
-- `socialite-development` — Manages OAuth social authentication with Laravel Socialite. Activate when adding social login providers; configuring OAuth redirect/callback flows; retrieving authenticated user details; customizing scopes or parameters; setting up community providers; testing with Socialite fakes; or when the user mentions social login, OAuth, Socialite, or third-party authentication.
-- `livewire-development` — Use for any task or question involving Livewire. Activate if user mentions Livewire, wire: directives, or Livewire-specific concepts like wire:model, wire:click, wire:sort, or islands, invoke this skill. Covers building new components, debugging reactivity issues, real-time form validation, drag-and-drop, loading states, migrating from Livewire 3 to 4, converting component formats (SFC/MFC/class-based), and performance optimization. Do not use for non-Livewire reactive UI (React, Vue, Alpine-only, Inertia.js) or standard Laravel forms without Livewire.
-- `tailwindcss-development` — Always invoke when the user's message includes 'tailwind' in any form. Also invoke for: building responsive grid layouts (multi-column card grids, product grids), flex/grid page structures (dashboards with sidebars, fixed topbars, mobile-toggle navs), styling UI components (cards, tables, navbars, pricing sections, forms, inputs, badges), adding dark mode variants, fixing spacing or typography, and Tailwind v3/v4 work. The core use case: writing or fixing Tailwind utility classes in HTML templates (Blade, JSX, Vue). Skip for backend PHP logic, database queries, API routes, JavaScript with no HTML/CSS component, CSS file audits, build tool configuration, and vanilla CSS.
+This project has domain-specific skills available in `**/skills/**`. You MUST activate the relevant skill whenever you work in that domain—don't wait until you're stuck.
 
 ## Conventions
 
@@ -332,22 +389,9 @@ This project has domain-specific skills available. You MUST activate the relevan
 - Always use curly braces for control structures, even for single-line bodies.
 - Use PHP 8 constructor property promotion: `public function __construct(public GitHub $github) { }`. Do not leave empty zero-parameter `__construct()` methods unless the constructor is private.
 - Use explicit return type declarations and type hints for all method parameters: `function isAccessible(User $user, ?string $path = null): bool`
-- Use TitleCase for Enum keys: `FavoritePerson`, `BestLake`, `Monthly`.
+- Follow existing application Enum naming conventions.
 - Prefer PHPDoc blocks over inline comments. Only add inline comments for exceptionally complex logic.
 - Use array shape type definitions in PHPDoc blocks.
-
-=== deployments rules ===
-
-# Deployment
-
-- Laravel can be deployed using [Laravel Cloud](https://cloud.laravel.com/), which is the fastest way to deploy and scale production Laravel applications.
-
-=== herd rules ===
-
-# Laravel Herd
-
-- The application is served by Laravel Herd at `https?://[kebab-case-project-dir].test`. Use the `get-absolute-url` tool to generate valid URLs. Never run commands to serve the site. It is always available.
-- Use the `herd` CLI to manage services, PHP versions, and sites (e.g. `herd sites`, `herd services:start <service>`, `herd php:list`). Run `herd list` to discover all available commands.
 
 === tests rules ===
 

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "a0c8bca1795405bbef8a1d9d50a8dd8e",
+    "content-hash": "64b32dcb79f77ba87571ea048a45e1df",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -13861,6 +13861,80 @@
         }
     ],
     "packages-dev": [
+        {
+            "name": "aldesrahim/filament-compass",
+            "version": "1.4.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/aldesrahim/filament-compass-pkg.git",
+                "reference": "314abded2df2ebfe090b1ae5b36ae48c24fb85ec"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/aldesrahim/filament-compass-pkg/zipball/314abded2df2ebfe090b1ae5b36ae48c24fb85ec",
+                "reference": "314abded2df2ebfe090b1ae5b36ae48c24fb85ec",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/contracts": "^11.0||^12.0||^13.0",
+                "laravel/boost": "^2.0",
+                "php": "^8.4"
+            },
+            "require-dev": {
+                "larastan/larastan": "^3.9.3",
+                "laravel/pint": "^1.29",
+                "nunomaduro/collision": "^8.9.3",
+                "orchestra/testbench": "^9.0.0||^10.11.0||^11.0",
+                "pestphp/pest": "^4.4.5",
+                "pestphp/pest-plugin-arch": "^4.0",
+                "pestphp/pest-plugin-laravel": "^4.1",
+                "phpstan/extension-installer": "^1.4.3",
+                "phpstan/phpstan-deprecation-rules": "^2.0.4",
+                "phpstan/phpstan-phpunit": "^2.0.16"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Aldesrahim\\FilamentCompass\\FilamentCompassServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Aldesrahim\\FilamentCompass\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Al Desrahim",
+                    "email": "aldesrahim@gmail.com",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Comprehensive documentation for Filament v5, designed for LLMs and AI-assisted development.",
+            "homepage": "https://github.com/aldesrahim/filament-compass-pkg",
+            "keywords": [
+                "aldesrahim",
+                "filament-compass",
+                "laravel"
+            ],
+            "support": {
+                "issues": "https://github.com/aldesrahim/filament-compass-pkg/issues",
+                "source": "https://github.com/aldesrahim/filament-compass-pkg/tree/1.4.0"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/aldesrahim",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-04-29T04:27:35+00:00"
+        },
         {
             "name": "barryvdh/laravel-debugbar",
             "version": "v4.2.8",
