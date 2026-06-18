@@ -233,7 +233,10 @@ class SlackNotificationService
                 return null;
             }
 
-            return IntakeRequestResource::getUrl('view', ['record' => $intake->getKey()], tenant: $tenant);
+            // Force the dashboard panel: Slack alerts are dispatched from queued jobs /
+            // the CheckOfferExpiry cron with no current panel, where getUrl would default
+            // to the admin panel and throw RouteNotFoundException (dropping the link).
+            return IntakeRequestResource::getUrl('view', ['record' => $intake->getKey()], panel: 'dashboard', tenant: $tenant);
         } catch (Throwable) {
             return null;
         }

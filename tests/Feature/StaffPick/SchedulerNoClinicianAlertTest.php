@@ -22,9 +22,10 @@ class SchedulerNoClinicianAlertTest extends FeatureTest
     {
         parent::setUp();
 
+        // Deliberately do NOT set a current Filament panel — the real exhaustion path
+        // runs from the CheckOfferExpiry cron / queued jobs with no panel context, so
+        // the case link must resolve via the explicit panel: 'dashboard' argument.
         $this->tenant = $this->createTenant();
-        Filament::setCurrentPanel(Filament::getPanel('dashboard'));
-        Filament::setTenant($this->tenant, isQuiet: true);
     }
 
     public function test_slack_alert_fires_even_when_email_delivery_throws_and_carries_the_required_fields(): void

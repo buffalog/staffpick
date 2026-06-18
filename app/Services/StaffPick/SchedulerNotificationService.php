@@ -160,7 +160,10 @@ class SchedulerNotificationService
                 return null;
             }
 
-            return IntakeRequestResource::getUrl('view', ['record' => $intake->getKey()], tenant: $tenant);
+            // Force the dashboard panel: this often runs outside a panel request
+            // (the CheckOfferExpiry cron / queued jobs), where getUrl would otherwise
+            // default to the admin panel and throw RouteNotFoundException.
+            return IntakeRequestResource::getUrl('view', ['record' => $intake->getKey()], panel: 'dashboard', tenant: $tenant);
         } catch (Throwable) {
             return null;
         }
