@@ -66,13 +66,14 @@ class PublicIntakeForm extends Component
 
         // Seed the keys that Alpine $wire.$entangle() binds against — entangle
         // errors if the (nested) property path doesn't already exist on $data.
-        // (Pin-drop map: latitude/longitude/geocode_failed; language combobox:
-        // language_preference; specialty multiselect: specialty_ids.)
+        // (Pin-drop map: latitude/longitude/geocode_failed; language comboboxes:
+        // preferred_language / language_preference; specialty multiselect: specialty_ids.)
         $this->data = array_merge([
             'latitude' => null,
             'longitude' => null,
             'geocode_failed' => false,
             'specialty_ids' => [],
+            'preferred_language' => null,
             'language_preference' => null,
         ], $this->data);
     }

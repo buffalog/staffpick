@@ -157,4 +157,28 @@ class PublicIntakeFormTest extends FeatureTest
 
         $this->assertSame('Spanish', $subject->language_preference);
     }
+
+    public function test_a_submission_stores_the_patient_preferred_language_by_name(): void
+    {
+        Livewire::test(PublicIntakeForm::class, ['token' => $this->source->intake_token])
+            ->set('data', [
+                'first_name' => 'Casey',
+                'last_name' => 'Nguyen',
+                'address' => '340 US-1',
+                'city' => 'North Palm Beach',
+                'state' => 'FL',
+                'discipline_id' => $this->discipline->id,
+                'preferred_language' => 'Haitian Creole',
+            ])
+            ->call('submit')
+            ->assertHasNoErrors()
+            ->assertSet('submitted', true);
+
+        $intake = IntakeRequest::withoutGlobalScopes()
+            ->where('referral_source_id', $this->source->id)
+            ->first();
+        $subject = Subject::withoutGlobalScopes()->find($intake->subject_id);
+
+        $this->assertSame('Haitian Creole', $subject->preferred_language);
+    }
 }

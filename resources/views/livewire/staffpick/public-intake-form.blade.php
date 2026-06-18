@@ -75,7 +75,7 @@
                     </div>
                     <div>
                         <label class="{{ $label }}">{{ __('Preferred language') }}</label>
-                        <input type="text" wire:model="data.preferred_language" class="{{ $input }}">
+                        <x-staffpick.language-combobox :options="$this->languageOptions()" model="data.preferred_language" :input-class="$input" />
                     </div>
                 </div>
 
@@ -197,56 +197,7 @@
                     </div>
                     <div>
                         <label class="{{ $label }}">{{ __('Preferred provider language') }}</label>
-                        {{-- Searchable combobox over sp_languages. Stores the language
-                             name (not id) so the matching engine comparison is unchanged. --}}
-                        <div
-                            x-data="{
-                                options: @js($this->languageOptions()),
-                                selected: @entangle('data.language_preference'),
-                                query: '',
-                                open: false,
-                                init() { this.query = this.selected ?? ''; },
-                                matches() {
-                                    const q = (this.query ?? '').trim().toLowerCase();
-                                    if (q === '' || q === (this.selected ?? '').toLowerCase()) { return this.options; }
-                                    return this.options.filter(o => o.toLowerCase().includes(q));
-                                },
-                                choose(value) { this.selected = value; this.query = value; this.open = false; },
-                                close() { this.open = false; if (this.query !== (this.selected ?? '')) { this.query = this.selected ?? ''; } },
-                            }"
-                            @click.outside="close()"
-                            class="relative"
-                        >
-                            <input
-                                type="text"
-                                x-model="query"
-                                @focus="open = true"
-                                @click="open = true"
-                                @keydown.escape.stop="close()"
-                                placeholder="{{ __('No preference') }}"
-                                autocomplete="off"
-                                role="combobox"
-                                aria-autocomplete="list"
-                                :aria-expanded="open"
-                                class="{{ $input }}"
-                            >
-                            <ul
-                                x-show="open"
-                                style="display: none"
-                                class="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-gray-200 bg-white py-1 text-sm shadow-lg dark:border-gray-600 dark:bg-gray-800"
-                            >
-                                <li @click="choose('')" class="cursor-pointer px-3 py-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700">{{ __('No preference') }}</li>
-                                <template x-for="option in matches()" :key="option">
-                                    <li
-                                        @click="choose(option)"
-                                        x-text="option"
-                                        :class="option === selected ? 'bg-primary-50 font-medium dark:bg-gray-700' : ''"
-                                        class="cursor-pointer px-3 py-2 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-700"
-                                    ></li>
-                                </template>
-                                <li x-show="matches().length === 0" class="px-3 py-2 text-gray-400">{{ __('No matches') }}</li>
-                            </ul>
-                        </div>
+                        <x-staffpick.language-combobox :options="$this->languageOptions()" model="data.language_preference" :input-class="$input" />
                     </div>
                 </div>
             </div>
