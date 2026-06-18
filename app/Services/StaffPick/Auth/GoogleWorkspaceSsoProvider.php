@@ -8,6 +8,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Services\TenantPermissionService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\GoogleProvider;
@@ -73,36 +74,40 @@ class GoogleWorkspaceSsoProvider implements SsoProviderInterface
             throw new SsoException("The email domain is not permitted for this workspace ({$this->config->sso_domain}).");
         }
 
-        // The first person to SSO into a brand-new tenant becomes its admin; everyone
-        // after gets the standard member role. Decided before we attach this user.
-        $isFirstMember = $this->tenant->users()->count() === 0;
+        // Find-or-create, attach, and grant the role atomically so a mid-sequence
+        // failure never leaves a user created-but-detached from the tenant.
+        return DB::transaction(function () use ($email, $name, $googleId): User {
+            // The first person to SSO into a brand-new tenant becomes its admin;
+            // everyone after gets the standard member role. Decided before we attach.
+            $isFirstMember = $this->tenant->users()->count() === 0;
 
-        $user = User::query()->where('email', $email)->first();
+            $user = User::query()->where('email', $email)->first();
 
-        if ($user === null) {
-            $user = User::create([
-                'name' => $name ?: $email,
-                'email' => $email,
-                // A random local password keeps email/password fallback possible; the
-                // user can reset it later. The `password` cast hashes it.
-                'password' => Str::password(32),
-                'google_id' => $googleId,
-            ]);
+            if ($user === null) {
+                $user = User::create([
+                    'name' => $name ?: $email,
+                    'email' => $email,
+                    // A random local password keeps email/password fallback possible; the
+                    // user can reset it later. The `password` cast hashes it.
+                    'password' => Str::password(32),
+                    'google_id' => $googleId,
+                ]);
 
-            $user->forceFill(['email_verified_at' => now()])->save();
-        } elseif (filled($googleId) && blank($user->google_id)) {
-            $user->update(['google_id' => $googleId]);
-        }
+                $user->forceFill(['email_verified_at' => now()])->save();
+            } elseif (filled($googleId) && blank($user->google_id)) {
+                $user->update(['google_id' => $googleId]);
+            }
 
-        $this->tenant->users()->syncWithoutDetaching([$user->getKey()]);
+            $this->tenant->users()->syncWithoutDetaching([$user->getKey()]);
 
-        $this->permissions->assignTenantUserRole(
-            $this->tenant,
-            $user,
-            $isFirstMember ? TenancyPermissionConstants::ROLE_ADMIN : TenancyPermissionConstants::ROLE_USER,
-        );
+            $this->permissions->assignTenantUserRole(
+                $this->tenant,
+                $user,
+                $isFirstMember ? TenancyPermissionConstants::ROLE_ADMIN : TenancyPermissionConstants::ROLE_USER,
+            );
 
-        return $user;
+            return $user;
+        });
     }
 
     private function socialite(): GoogleProvider

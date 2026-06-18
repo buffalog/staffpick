@@ -58,6 +58,15 @@ class MyOffers extends Page
         return static::resolveProvider() !== null;
     }
 
+    /**
+     * Per-request memo of the resolved provider, keyed by "tenant:user". Avoids the
+     * 3-5 identical lookups a single render otherwise triggers (canAccess,
+     * shouldRegisterNavigation, and each offer accessor all resolve the provider).
+     *
+     * @var array<string, ?Provider>
+     */
+    protected static array $providerCache = [];
+
     /** The active/pending provider record owned by the current user, if any. */
     protected static function resolveProvider(): ?Provider
     {
@@ -67,11 +76,17 @@ class MyOffers extends Page
             return null;
         }
 
-        return Provider::query()
-            ->where('tenant_id', $tenant->id)
-            ->where('user_id', auth()->id())
-            ->whereIn('status', [Provider::STATUS_ACTIVE, Provider::STATUS_PENDING])
-            ->first();
+        $key = $tenant->id.':'.auth()->id();
+
+        if (! array_key_exists($key, static::$providerCache)) {
+            static::$providerCache[$key] = Provider::query()
+                ->where('tenant_id', $tenant->id)
+                ->where('user_id', auth()->id())
+                ->whereIn('status', [Provider::STATUS_ACTIVE, Provider::STATUS_PENDING])
+                ->first();
+        }
+
+        return static::$providerCache[$key];
     }
 
     /** @return Collection<int, AssignmentOffer> */

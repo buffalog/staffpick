@@ -48,7 +48,9 @@ class SubjectResource extends Resource
         return parent::getEloquentQuery()
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
-            ]);
+            ])
+            // Eager-load the relation the table renders to avoid an N+1 on the list.
+            ->with(['insuranceType']);
     }
 
     public static function getRelations(): array
