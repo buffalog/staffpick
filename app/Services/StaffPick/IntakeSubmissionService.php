@@ -15,6 +15,7 @@ use App\Services\TenantPermissionService;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
 
@@ -185,29 +186,54 @@ class IntakeSubmissionService
         return $candidate;
     }
 
+    /**
+     * Post-commit notifications. The intake is already saved by the time this runs,
+     * so every channel is best-effort: a failure (Slack webhook timeout, mail/queue
+     * hiccup, etc.) is logged but never rethrown, so it can't 500 the submitter's
+     * confirmation. Channels are isolated so one failing can't block the others.
+     */
     private function notify(ReferralSource $source, IntakeRequest $intake): void
     {
         $staff = $this->staffRecipients($source);
 
         if ($staff->isNotEmpty()) {
-            Notification::make()
-                ->title(__('New intake request'))
-                ->body(__(':source submitted intake :reference for review.', [
-                    'source' => $source->name,
-                    'reference' => $intake->reference_number,
-                ]))
-                ->sendToDatabase($staff);
+            $this->dispatchSafely('staff notification', $intake, function () use ($staff, $source, $intake): void {
+                Notification::make()
+                    ->title(__('New intake request'))
+                    ->body(__(':source submitted intake :reference for review.', [
+                        'source' => $source->name,
+                        'reference' => $intake->reference_number,
+                    ]))
+                    ->sendToDatabase($staff);
 
-            $staff
-                ->filter(fn (User $user): bool => filled($user->email))
-                ->each(fn (User $user) => Mail::to($user->email)->queue(new IntakeSubmittedStaff($intake)));
+                $staff
+                    ->filter(fn (User $user): bool => filled($user->email))
+                    ->each(fn (User $user) => Mail::to($user->email)->queue(new IntakeSubmittedStaff($intake)));
+            });
         }
 
         if (filled($source->email)) {
-            Mail::to($source->email)->queue(new IntakeReceivedReferrer($intake));
+            $this->dispatchSafely('referrer email', $intake, fn () => Mail::to($source->email)->queue(new IntakeReceivedReferrer($intake)));
         }
 
-        $this->slack->notifyIntakeReceived($intake);
+        $this->dispatchSafely('slack notification', $intake, fn () => $this->slack->notifyIntakeReceived($intake));
+    }
+
+    /**
+     * Run a best-effort post-commit notification, logging (never rethrowing) failures.
+     */
+    private function dispatchSafely(string $channel, IntakeRequest $intake, callable $callback): void
+    {
+        try {
+            $callback();
+        } catch (Throwable $e) {
+            Log::warning('Intake notification failed.', [
+                'channel' => $channel,
+                'reference' => $intake->reference_number,
+                'intake_id' => $intake->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

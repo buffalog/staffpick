@@ -78,9 +78,10 @@ class IntakeRequestResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            // Eager-load the relationships the list table renders (subject / referral
-            // source / discipline / assigner) to avoid an N+1 across the rows.
-            ->with(['subject', 'referralSource', 'discipline', 'assigner'])
+            // Eager-load the relationships the table/infolist render — subject (drives
+            // the gender/language preference columns + entries) and specialties (the
+            // requested-specialties entry) included — to avoid an N+1 across the rows.
+            ->with(['subject', 'referralSource', 'discipline', 'assigner', 'specialties'])
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
             ]);

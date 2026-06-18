@@ -4,6 +4,7 @@ namespace App\Livewire\StaffPick;
 
 use App\Models\StaffPick\Discipline;
 use App\Models\StaffPick\InsuranceType;
+use App\Models\StaffPick\Language;
 use App\Models\StaffPick\ReferralSource;
 use App\Models\StaffPick\Specialty;
 use App\Services\StaffPick\GeocodingService;
@@ -63,13 +64,17 @@ class PublicIntakeForm extends Component
         $this->sourceName = $source->name;
         $this->inactive = ! $source->isActive();
 
-        // Seed the keys the pin-drop map entangles against — $wire.$entangle()
+        // Seed the keys that Alpine $wire.$entangle() binds against — entangle
         // errors if the (nested) property path doesn't already exist on $data.
+        // (Pin-drop map: latitude/longitude/geocode_failed; language comboboxes:
+        // preferred_language / language_preference; specialty multiselect: specialty_ids.)
         $this->data = array_merge([
             'latitude' => null,
             'longitude' => null,
             'geocode_failed' => false,
             'specialty_ids' => [],
+            'preferred_language' => null,
+            'language_preference' => null,
         ], $this->data);
     }
 
@@ -106,6 +111,18 @@ class PublicIntakeForm extends Component
             ->orderBy('name')
             ->pluck('name', 'id')
             ->all();
+    }
+
+    /**
+     * Language names from the shared sp_languages table (not tenant-scoped), ordered
+     * by name. The select stores the language *name* (not the id) so the matching
+     * engine's name/code comparison continues to work unchanged.
+     *
+     * @return array<int, string>
+     */
+    public function languageOptions(): array
+    {
+        return Language::query()->orderBy('name')->pluck('name')->all();
     }
 
     /**

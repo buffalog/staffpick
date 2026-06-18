@@ -38,6 +38,15 @@ class IntakeRequestsTable
                 TextColumn::make('discipline.name')
                     ->label(TenantConfig::entityLabel('discipline', __('Discipline')))
                     ->toggleable(),
+                TextColumn::make('subject.provider_gender_preference')
+                    ->label(__('Gender Pref.'))
+                    ->formatStateUsing(fn (?string $state): ?string => filled($state) ? str($state)->title() : null)
+                    ->placeholder('—')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('subject.language_preference')
+                    ->label(__('Language Pref.'))
+                    ->placeholder('—')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('status')
                     ->label(__('Status'))
                     ->badge()

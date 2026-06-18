@@ -65,6 +65,20 @@ class IntakeRequestInfolist
                 Section::make(__('Matching & Flags'))
                     ->columns(2)
                     ->schema([
+                        // Constraints captured at intake that directly drive matching —
+                        // shown so schedulers can see what's active before Find Matches.
+                        TextEntry::make('subject.provider_gender_preference')
+                            ->label(__('Gender Preference'))
+                            ->formatStateUsing(fn (?string $state): ?string => filled($state) ? str($state)->title() : null)
+                            ->placeholder(__('No preference')),
+                        TextEntry::make('subject.language_preference')
+                            ->label(__('Language Preference'))
+                            ->placeholder(__('No preference')),
+                        TextEntry::make('specialties.name')
+                            ->label(__('Requested Specialties'))
+                            ->badge()
+                            ->placeholder(__('None'))
+                            ->columnSpanFull(),
                         TextEntry::make('radius_miles')->label(__('Radius'))->suffix(__(' mi'))->placeholder('—'),
                         IconEntry::make('manual_assignment')->label(__('Manual Assignment'))->boolean(),
                         IconEntry::make('needs_emr_transition')->label(__('Needs EMR Transition'))->boolean(),

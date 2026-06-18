@@ -75,7 +75,7 @@
                     </div>
                     <div>
                         <label class="{{ $label }}">{{ __('Preferred language') }}</label>
-                        <input type="text" wire:model="data.preferred_language" class="{{ $input }}">
+                        <x-staffpick.language-combobox :options="$this->languageOptions()" model="data.preferred_language" :input-class="$input" />
                     </div>
                 </div>
 
@@ -197,7 +197,7 @@
                     </div>
                     <div>
                         <label class="{{ $label }}">{{ __('Preferred provider language') }}</label>
-                        <input type="text" wire:model="data.language_preference" class="{{ $input }}">
+                        <x-staffpick.language-combobox :options="$this->languageOptions()" model="data.language_preference" :input-class="$input" />
                     </div>
                 </div>
             </div>
