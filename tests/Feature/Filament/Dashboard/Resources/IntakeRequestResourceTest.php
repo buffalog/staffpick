@@ -109,6 +109,23 @@ class IntakeRequestResourceTest extends FeatureTest
         ]);
     }
 
+    public function test_edit_page_exposes_save_and_cancel_as_header_actions(): void
+    {
+        $tenant = $this->createTenant();
+        $record = IntakeRequest::factory()->create([
+            'tenant_id' => $tenant->id,
+            'status' => 'pending',
+        ]);
+
+        $this->actAsTenant($tenant);
+
+        Livewire::test(EditIntakeRequest::class, ['record' => $record->getKey()])
+            ->assertSuccessful()
+            ->assertActionExists('save')
+            ->assertActionExists('cancel')
+            ->assertActionExists('delete');
+    }
+
     public function test_view_page_renders_record(): void
     {
         $tenant = $this->createTenant();
