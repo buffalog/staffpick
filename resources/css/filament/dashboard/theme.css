@@ -28,3 +28,15 @@
     white-space: normal;
     overflow-wrap: anywhere;
 }
+
+/*
+ * Tenant switcher dropdown list: same treatment as the trigger. Filament's
+ * `.fi-dropdown-list-item-label` applies `truncate`, which clips long tenant names in
+ * the switch-tenant list. Scope the override to the tenant menu so every OTHER dropdown
+ * (user menu, table/bulk actions, column toggles) keeps its default truncation. The
+ * sidebar tenant menu isn't teleported, so its items render inside `.fi-tenant-menu`.
+ */
+.fi-tenant-menu .fi-dropdown-list-item-label {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
