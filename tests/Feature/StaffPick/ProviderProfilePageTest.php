@@ -42,6 +42,40 @@ class ProviderProfilePageTest extends FeatureTest
             ->assertSee('Credentials');
     }
 
+    public function test_a_non_admin_clinician_sees_the_nav_even_before_onboarding(): void
+    {
+        // setUp acts as a non-admin tenant member with no provider record yet —
+        // they must still see the page (it's the onboarding wizard).
+        $this->assertTrue(ProviderProfile::shouldRegisterNavigation());
+        $this->assertTrue(ProviderProfile::canAccess());
+    }
+
+    public function test_the_nav_is_hidden_from_an_admin_only_user_without_a_provider_record(): void
+    {
+        $this->actingAs($this->createTenantAdmin($this->tenant));
+
+        $this->assertFalse(ProviderProfile::shouldRegisterNavigation());
+        $this->assertFalse(ProviderProfile::canAccess());
+    }
+
+    public function test_an_admin_who_is_also_a_clinician_sees_the_nav(): void
+    {
+        $admin = $this->createTenantAdmin($this->tenant);
+        $this->actingAs($admin);
+
+        Provider::create([
+            'tenant_id' => $this->tenant->id,
+            'user_id' => $admin->id,
+            'first_name' => 'Dana',
+            'last_name' => 'Rivera',
+            'status' => Provider::STATUS_ACTIVE,
+            'is_active' => true,
+        ]);
+
+        $this->assertTrue(ProviderProfile::shouldRegisterNavigation());
+        $this->assertTrue(ProviderProfile::canAccess());
+    }
+
     public function test_the_wizard_renders_the_interactive_maps(): void
     {
         Livewire::test(ProviderProfile::class)
