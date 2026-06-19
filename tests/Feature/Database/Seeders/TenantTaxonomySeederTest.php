@@ -8,6 +8,7 @@ use App\Models\StaffPick\DeclineReason;
 use App\Models\StaffPick\Discipline;
 use App\Models\StaffPick\OnHoldReason;
 use App\Models\StaffPick\ProviderTier;
+use App\Models\Tenant;
 use Database\Seeders\TenantTaxonomySeeder;
 use Tests\Feature\FeatureTest;
 
@@ -21,7 +22,7 @@ class TenantTaxonomySeederTest extends FeatureTest
 
         $this->assertSame(3, Discipline::where('tenant_id', $tenant->id)->count());
         $this->assertSame(3, ProviderTier::where('tenant_id', $tenant->id)->count());
-        $this->assertSame(5, CredentialDocumentType::where('tenant_id', $tenant->id)->count());
+        $this->assertSame(7, CredentialDocumentType::where('tenant_id', $tenant->id)->count());
         $this->assertSame(4, OnHoldReason::where('tenant_id', $tenant->id)->count());
         $this->assertSame(4, CancellationReason::where('tenant_id', $tenant->id)->count());
         $this->assertSame(4, DeclineReason::where('tenant_id', $tenant->id)->count());
@@ -43,7 +44,7 @@ class TenantTaxonomySeederTest extends FeatureTest
         $this->assertNotNull($gold);
         $this->assertSame(1, $gold->priority);
 
-        $license = CredentialDocumentType::where('tenant_id', $tenant->id)->where('name', 'State License')->first();
+        $license = CredentialDocumentType::where('tenant_id', $tenant->id)->where('name', 'State License (PT)')->first();
         $this->assertNotNull($license);
         $this->assertTrue($license->is_required);
         $this->assertTrue($license->has_expiry);
@@ -69,10 +70,46 @@ class TenantTaxonomySeederTest extends FeatureTest
         app(TenantTaxonomySeeder::class)->seedForTenant($tenant);
 
         $this->assertSame(3, ProviderTier::where('tenant_id', $tenant->id)->count());
-        $this->assertSame(5, CredentialDocumentType::where('tenant_id', $tenant->id)->count());
+        $this->assertSame(7, CredentialDocumentType::where('tenant_id', $tenant->id)->count());
         $this->assertSame(
             1,
             ProviderTier::where('tenant_id', $tenant->id)->where('name', 'Gold')->value('priority'),
+        );
+    }
+
+    public function test_run_relaxes_credential_requirements_for_the_fcts_demo_tenant(): void
+    {
+        // run() targets the default 'fcts' tenant specifically.
+        $tenant = Tenant::factory()->create(['uuid' => 'fcts']);
+
+        app(TenantTaxonomySeeder::class)->run();
+
+        // Only State License (PT) remains required for the demo tenant.
+        $required = CredentialDocumentType::where('tenant_id', $tenant->id)
+            ->where('is_required', true)
+            ->orderBy('name')
+            ->pluck('name')
+            ->all();
+        $this->assertSame(['State License (PT)'], $required);
+
+        // The other document types still exist — they're just no longer required to submit.
+        $this->assertGreaterThan(1, CredentialDocumentType::where('tenant_id', $tenant->id)->count());
+        $this->assertFalse(
+            (bool) CredentialDocumentType::where('tenant_id', $tenant->id)->where('name', 'CPR Certification')->value('is_required'),
+        );
+    }
+
+    public function test_seed_for_tenant_keeps_the_global_all_required_default(): void
+    {
+        // The shared seedForTenant() path (used by staffpick:setup-tenant for real
+        // tenants) must NOT be relaxed — every credential stays required.
+        $tenant = $this->createTenant();
+
+        app(TenantTaxonomySeeder::class)->seedForTenant($tenant);
+
+        $this->assertSame(
+            0,
+            CredentialDocumentType::where('tenant_id', $tenant->id)->where('is_required', false)->count(),
         );
     }
 
