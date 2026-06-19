@@ -62,7 +62,9 @@ class DashboardNavigationTest extends FeatureTest
         }
         $this->assertContains('Credentialing', $items['Credentialing']);
         $this->assertSame(['My Provider Profile', 'My Offers'], $items['My Account']);
-        $this->assertSame(['Slack Integration', 'Single Sign-On'], $items['Settings']);
+        foreach (['Credentialing Policies', 'Slack Integration', 'Single Sign-On'] as $item) {
+            $this->assertContains($item, $items['Settings']);
+        }
         foreach (['Users', 'Invitations'] as $item) {
             $this->assertContains($item, $items['Administration']);
         }

@@ -134,6 +134,33 @@ class SlackNotificationService
         ]);
     }
 
+    public function notifyProviderDeactivated(Provider $provider, string $credentialType, string $expiry): void
+    {
+        $name = $this->providerName($provider);
+
+        $this->dispatch($provider->tenant_id, __('Provider auto-deactivated: :provider', ['provider' => $name]), [
+            $this->header(__('Provider auto-deactivated')),
+            $this->fields([
+                __('Provider') => $name,
+                __('Credential') => $credentialType,
+                __('Expired') => $expiry,
+            ]),
+        ]);
+    }
+
+    public function notifyProviderReactivated(Provider $provider): void
+    {
+        $name = $this->providerName($provider);
+
+        $this->dispatch($provider->tenant_id, __('Provider reactivated: :provider', ['provider' => $name]), [
+            $this->header(__('Provider reactivated')),
+            $this->fields([
+                __('Provider') => $name,
+                __('Status') => __('All expiring credentials valid again'),
+            ]),
+        ]);
+    }
+
     /**
      * Post a plain text confirmation back to a tenant's Slack (used by the inbound
      * webhook to acknowledge a created draft intake).
