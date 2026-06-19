@@ -11,3 +11,20 @@
 @source '../../../../resources/views/components';
 @source '../../../../app/Livewire';
 @source '../../../../vendor/**/*.blade.php';
+
+/*
+ * Tenant switcher: show the full tenant name in the sidebar instead of clipping it.
+ * Filament's `.fi-tenant-menu-trigger-text` is a grid that sizes to its content, so a
+ * long name (e.g. "First Class Therapy Solutions") renders on one line, overflows the
+ * fixed-width sidebar, and gets cut off. Bound the text box to the available width and
+ * let the name wrap so it always displays in full.
+ */
+.fi-tenant-menu-trigger-text {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.fi-tenant-menu-trigger-tenant-name {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
