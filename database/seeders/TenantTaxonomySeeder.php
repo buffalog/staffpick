@@ -157,7 +157,27 @@ class TenantTaxonomySeeder extends Seeder
         }
 
         $this->seedForTenant($tenant);
+        $this->relaxDemoCredentialRequirements($tenant->getKey());
         $this->command?->info("Seeded default taxonomy for tenant '{$tenant->name}'.");
+    }
+
+    /**
+     * Demo convenience for the 'fcts' showcase tenant ONLY: require just the
+     * State License (PT) credential, so the provider onboarding wizard can be
+     * submitted (and the live RapidAPI verification demoed) without a wall of
+     * unrelated OT/SLP/CPR/insurance/background-check uploads.
+     *
+     * Applied here in run() — which targets only the default 'fcts' tenant — so the
+     * global default (every credential required, per CREDENTIAL_DOCUMENT_TYPES) is
+     * left intact for real tenants provisioned via staffpick:setup-tenant. Runs on
+     * every db:seed, so it survives redeploys that re-run the base taxonomy.
+     */
+    private function relaxDemoCredentialRequirements(int $tenantId): void
+    {
+        CredentialDocumentType::withoutGlobalScopes()
+            ->where('tenant_id', $tenantId)
+            ->where('name', '!=', 'State License (PT)')
+            ->update(['is_required' => false]);
     }
 
     /**
