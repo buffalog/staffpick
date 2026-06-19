@@ -57,6 +57,9 @@ class ProviderProfile extends Page
 
     protected static ?string $slug = 'providers/profile';
 
+    // Within "My Account": before My Offers (sort 2).
+    protected static ?int $navigationSort = 1;
+
     protected string $view = 'filament.dashboard.pages.provider-profile';
 
     /**
@@ -75,6 +78,11 @@ class ProviderProfile extends Page
     public static function getNavigationLabel(): string
     {
         return __('My Provider Profile');
+    }
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('My Account');
     }
 
     public static function canAccess(): bool

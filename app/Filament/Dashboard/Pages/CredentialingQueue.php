@@ -50,7 +50,7 @@ class CredentialingQueue extends Page implements HasTable
 
     public static function getNavigationGroup(): ?string
     {
-        return __('StaffPick');
+        return __('Credentialing');
     }
 
     public static function canAccess(): bool

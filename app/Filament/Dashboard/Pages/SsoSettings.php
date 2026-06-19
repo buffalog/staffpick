@@ -52,7 +52,7 @@ class SsoSettings extends Page
 
     public static function getNavigationGroup(): ?string
     {
-        return __('StaffPick');
+        return __('Settings');
     }
 
     public static function canAccess(): bool

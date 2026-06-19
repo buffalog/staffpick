@@ -53,7 +53,7 @@ class Help extends Page
 
     public static function getNavigationGroup(): ?string
     {
-        return __('StaffPick');
+        return __('Support');
     }
 
     public function role(): string
