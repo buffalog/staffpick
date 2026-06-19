@@ -31,6 +31,9 @@ class MyOffers extends Page
 
     protected static ?string $slug = 'my-offers';
 
+    // Within "My Account": after My Provider Profile (sort 1).
+    protected static ?int $navigationSort = 2;
+
     protected string $view = 'filament.dashboard.pages.my-offers';
 
     public function getTitle(): string|Htmlable
@@ -45,7 +48,7 @@ class MyOffers extends Page
 
     public static function getNavigationGroup(): ?string
     {
-        return __('StaffPick');
+        return __('My Account');
     }
 
     public static function canAccess(): bool

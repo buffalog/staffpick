@@ -116,10 +116,26 @@ class DashboardPanelProvider extends PanelProvider
                 fn (): string => view('filament.dashboard.partials.sortable-assets')->render(),
             )
             ->navigationGroups([
+                // Order + default collapse state of the sidebar groups. Dispatch and
+                // Administration stay expanded; Settings starts collapsed (infrequent).
+                // No group icons: Filament forbids a group icon when its items already
+                // carry icons (which all of these do).
                 NavigationGroup::make()
-                    ->label(__('Team'))
-                    ->icon('heroicon-s-users')
+                    ->label(__('Dispatch')),
+                NavigationGroup::make()
+                    ->label(__('Credentialing')),
+                NavigationGroup::make()
+                    ->label(__('My Account')),
+                NavigationGroup::make()
+                    ->label(__('Settings'))
                     ->collapsed(),
+                NavigationGroup::make()
+                    ->label(__('Administration')),
+                // Listed last so Help is pinned to the bottom of the sidebar (Filament
+                // renders truly-ungrouped items at the top, so a trailing group is the
+                // only way to bottom-pin it).
+                NavigationGroup::make()
+                    ->label(__('Support')),
             ])
             ->renderHook(
                 PanelsRenderHook::BODY_START,

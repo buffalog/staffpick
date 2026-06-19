@@ -105,7 +105,7 @@ class IntakeRequestResource extends Resource
 
     public static function getNavigationGroup(): ?string
     {
-        return __('StaffPick');
+        return __('Dispatch');
     }
 
     public static function getModelLabel(): string
