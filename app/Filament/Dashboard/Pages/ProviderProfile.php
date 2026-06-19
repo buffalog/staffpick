@@ -2,6 +2,7 @@
 
 namespace App\Filament\Dashboard\Pages;
 
+use App\Constants\TenancyPermissionConstants;
 use App\Constants\UsStates;
 use App\Filament\Dashboard\Support\HelpHeaderAction;
 use App\Models\StaffPick\CredentialDocumentType;
@@ -9,8 +10,10 @@ use App\Models\StaffPick\Discipline;
 use App\Models\StaffPick\Language;
 use App\Models\StaffPick\Provider;
 use App\Models\StaffPick\Specialty;
+use App\Models\Tenant;
 use App\Services\StaffPick\GeocodingService;
 use App\Services\StaffPick\ProviderProfileService;
+use App\Services\TenantPermissionService;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
@@ -72,6 +75,49 @@ class ProviderProfile extends Page
     public static function getNavigationLabel(): string
     {
         return __('My Provider Profile');
+    }
+
+    public static function canAccess(): bool
+    {
+        return static::isVisibleToCurrentUser();
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return static::isVisibleToCurrentUser();
+    }
+
+    /**
+     * "My Provider Profile" is a clinician's own page. Show it to any non-admin tenant
+     * member (clinicians — including those who haven't onboarded yet, since this page
+     * IS the onboarding wizard) and to admins who are also clinicians (i.e. have a
+     * provider record linked to them). Hide it from admin/scheduler-only users who have
+     * no provider record.
+     */
+    protected static function isVisibleToCurrentUser(): bool
+    {
+        $tenant = Filament::getTenant();
+        $user = auth()->user();
+
+        if (! $tenant instanceof Tenant || $user === null) {
+            return false;
+        }
+
+        $isAdmin = in_array(
+            TenancyPermissionConstants::ROLE_ADMIN,
+            app(TenantPermissionService::class)->getTenantUserRoles($tenant, $user),
+            true,
+        );
+
+        if (! $isAdmin) {
+            return true;
+        }
+
+        // Admin who is also a clinician — only when a provider record is linked to them.
+        return Provider::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('user_id', $user->getKey())
+            ->exists();
     }
 
     public function mount(): void
