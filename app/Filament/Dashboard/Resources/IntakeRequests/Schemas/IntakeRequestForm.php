@@ -3,6 +3,7 @@
 namespace App\Filament\Dashboard\Resources\IntakeRequests\Schemas;
 
 use App\Filament\Dashboard\Resources\IntakeRequests\IntakeRequestResource;
+use App\Models\StaffPick\Provider;
 use App\Models\StaffPick\Subject;
 use App\Models\StaffPick\TenantConfig;
 use Filament\Facades\Filament;
@@ -42,6 +43,13 @@ class IntakeRequestForm
                             ->relationship('referralSource', 'name')
                             ->searchable()
                             ->preload(),
+                        TextInput::make('referring_clinician_name')
+                            ->label(__('Referring clinician name'))
+                            ->helperText(__('The RN, case manager, or physician sending the referral.'))
+                            ->maxLength(255),
+                        TextInput::make('referring_clinician_phone')
+                            ->label(__('Referring clinician phone'))
+                            ->maxLength(30),
                         Select::make('discipline_id')
                             ->label(TenantConfig::entityLabel('discipline', __('Discipline')))
                             ->hint(__('Select the therapy discipline required for this patient. Only clinicians with this discipline will be matched.'))
@@ -105,7 +113,7 @@ class IntakeRequestForm
                             ->placeholder('e.g. 2x/week')
                             ->maxLength(255),
                         DatePicker::make('start_date')
-                            ->label(__('Start Date')),
+                            ->label(__('Start of Care date')),
                         DatePicker::make('end_date')
                             ->label(__('End Date')),
                         TextInput::make('visits_authorized')
@@ -131,6 +139,29 @@ class IntakeRequestForm
                             ->minValue(0),
                         Toggle::make('manual_assignment')
                             ->label(__('Manual Assignment')),
+                        Toggle::make('is_partial_staffing')
+                            ->label(__('Partial staffing'))
+                            ->helperText(__('Check if an assistant clinician is already placed in-house. Only a lead clinician needs to be matched.'))
+                            ->live()
+                            ->columnSpanFull(),
+                        TextInput::make('assistant_clinician_name')
+                            ->label(__('Assistant clinician (in-house)'))
+                            ->maxLength(255)
+                            ->visible(fn (Get $get): bool => (bool) $get('is_partial_staffing')),
+                        Select::make('lead_clinician_id')
+                            ->label(__('Lead clinician'))
+                            ->options(fn (): array => Provider::query()
+                                ->where('tenant_id', Filament::getTenant()?->getKey())
+                                ->where('status', Provider::STATUS_ACTIVE)
+                                ->where('is_active', true)
+                                ->orderBy('last_name')
+                                ->get()
+                                ->mapWithKeys(fn (Provider $provider): array => [
+                                    $provider->id => trim("{$provider->first_name} {$provider->last_name}"),
+                                ])
+                                ->all())
+                            ->searchable()
+                            ->placeholder(__('Populated after matching')),
                     ]),
 
                 Section::make(__('Flags'))

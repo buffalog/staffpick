@@ -31,7 +31,8 @@ use Throwable;
  *    preferred_language, diagnosis, pcp_name, pcp_phone, insurance_type_id,
  *    insurance_id, insurance_group, provider_gender_preference, language_preference
  *  - Request: discipline_id, visit_type, frequency, start_date, end_date,
- *    visits_authorized, authorization_number, radius_miles, notes
+ *    visits_authorized, authorization_number, radius_miles, notes,
+ *    referring_clinician_name, referring_clinician_phone
  */
 class IntakeSubmissionService
 {
@@ -67,6 +68,8 @@ class IntakeSubmissionService
                 'authorization_number' => $data['authorization_number'] ?? null,
                 'radius_miles' => $data['radius_miles'] ?? null,
                 'notes' => $data['notes'] ?? null,
+                'referring_clinician_name' => $data['referring_clinician_name'] ?? null,
+                'referring_clinician_phone' => $data['referring_clinician_phone'] ?? null,
             ]);
 
             $intake->specialties()->sync($this->tenantSpecialtyIds($source, $data));

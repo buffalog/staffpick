@@ -92,6 +92,17 @@ class IntakeSubmissionServiceTest extends FeatureTest
         $this->assertNull($intake->acknowledged_at);
     }
 
+    public function test_submit_stores_referring_clinician_fields_on_the_intake(): void
+    {
+        $intake = $this->service()->submit($this->source, $this->intakeData([
+            'referring_clinician_name' => 'Dana Okafor, RN',
+            'referring_clinician_phone' => '5615550199',
+        ]));
+
+        $this->assertSame('Dana Okafor, RN', $intake->referring_clinician_name);
+        $this->assertSame('5615550199', $intake->referring_clinician_phone);
+    }
+
     public function test_submit_generates_a_reference_number_in_the_r_format(): void
     {
         $intake = $this->service()->submit($this->source, $this->intakeData());

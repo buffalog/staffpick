@@ -31,6 +31,8 @@ class IntakeRequestInfolist
                                 : null)
                             ->placeholder('—'),
                         TextEntry::make('referralSource.name')->label(__('Referral Source'))->placeholder('—'),
+                        TextEntry::make('referring_clinician_name')->label(__('Referring clinician'))->placeholder('—'),
+                        TextEntry::make('referring_clinician_phone')->label(__('Referring clinician phone'))->placeholder('—'),
                         TextEntry::make('discipline.name')->label(TenantConfig::entityLabel('discipline', __('Discipline')))->placeholder('—'),
                         TextEntry::make('office.name')->label(__('Office'))->placeholder('—'),
                         TextEntry::make('assigner.name')->label(__('Assigner'))->placeholder('—'),
@@ -55,7 +57,7 @@ class IntakeRequestInfolist
                     ->schema([
                         TextEntry::make('authorization_number')->label(__('Authorization Number'))->placeholder('—'),
                         TextEntry::make('frequency')->label(__('Frequency'))->placeholder('—'),
-                        TextEntry::make('start_date')->label(__('Start Date'))->date()->placeholder('—'),
+                        TextEntry::make('start_date')->label(__('Start of Care date'))->date()->placeholder('—'),
                         TextEntry::make('end_date')->label(__('End Date'))->date()->placeholder('—'),
                         TextEntry::make('visits_authorized')->label(__('Visits Authorized'))->placeholder('—'),
                         TextEntry::make('visits_completed')->label(__('Visits Completed')),
@@ -80,6 +82,17 @@ class IntakeRequestInfolist
                             ->placeholder(__('None'))
                             ->columnSpanFull(),
                         TextEntry::make('radius_miles')->label(__('Radius'))->suffix(__(' mi'))->placeholder('—'),
+                        IconEntry::make('is_partial_staffing')->label(__('Partial staffing'))->boolean(),
+                        TextEntry::make('assistant_clinician_name')
+                            ->label(__('Assistant clinician (in-house)'))
+                            ->placeholder('—')
+                            ->visible(fn (IntakeRequest $record): bool => (bool) $record->is_partial_staffing),
+                        TextEntry::make('lead_clinician_name')
+                            ->label(__('Lead clinician'))
+                            ->state(fn (IntakeRequest $record): ?string => $record->leadClinician
+                                ? trim("{$record->leadClinician->first_name} {$record->leadClinician->last_name}")
+                                : null)
+                            ->placeholder('—'),
                         IconEntry::make('manual_assignment')->label(__('Manual Assignment'))->boolean(),
                         IconEntry::make('needs_emr_transition')->label(__('Needs EMR Transition'))->boolean(),
                         IconEntry::make('paperwork_complete')->label(__('Paperwork Complete'))->boolean(),

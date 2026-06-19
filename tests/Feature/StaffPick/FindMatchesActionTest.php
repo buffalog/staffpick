@@ -77,6 +77,21 @@ class FindMatchesActionTest extends FeatureTest
             ->assertActionHasLabel('findMatches', 'Find Matches');
     }
 
+    public function test_partial_staffing_shows_a_notice_in_the_matches_modal(): void
+    {
+        [$tenant, $intake] = $this->seedCase();
+        $intake->update(['is_partial_staffing' => true]);
+        $this->actAsTenant($tenant);
+
+        $html = view('staffpick.intake-requests.matches', [
+            'record' => $intake->fresh(),
+            'results' => app(MatchingEngine::class)->match($intake->fresh()),
+        ])->render();
+
+        $this->assertStringContainsString('Partial staffing', $html);
+        $this->assertStringContainsString('Match a lead clinician only', $html);
+    }
+
     public function test_engine_resolves_eligible_providers_under_filament_tenant_scope(): void
     {
         [$tenant, $intake, $inRange, $outOfRange] = $this->seedCase();

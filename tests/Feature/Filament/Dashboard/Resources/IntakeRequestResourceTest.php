@@ -8,6 +8,7 @@ use App\Filament\Dashboard\Resources\IntakeRequests\Pages\EditIntakeRequest;
 use App\Filament\Dashboard\Resources\IntakeRequests\Pages\ListIntakeRequests;
 use App\Filament\Dashboard\Resources\IntakeRequests\Pages\ViewIntakeRequest;
 use App\Models\StaffPick\IntakeRequest;
+use App\Models\StaffPick\Provider;
 use App\Models\StaffPick\Specialty;
 use App\Models\StaffPick\Subject;
 use Filament\Facades\Filament;
@@ -124,6 +125,71 @@ class IntakeRequestResourceTest extends FeatureTest
             ->assertActionExists('save')
             ->assertActionExists('cancel')
             ->assertActionExists('delete');
+    }
+
+    public function test_edit_saves_partial_staffing_and_referring_clinician_fields(): void
+    {
+        $tenant = $this->createTenant();
+        $lead = Provider::factory()->create([
+            'tenant_id' => $tenant->id,
+            'first_name' => 'Lena',
+            'last_name' => 'Voss',
+            'status' => Provider::STATUS_ACTIVE,
+            'is_active' => true,
+        ]);
+        $record = IntakeRequest::factory()->create(['tenant_id' => $tenant->id, 'status' => 'pending']);
+
+        $this->actAsTenant($tenant);
+
+        Livewire::test(EditIntakeRequest::class, ['record' => $record->getKey()])
+            ->fillForm([
+                'referring_clinician_name' => 'Dana Okafor, RN',
+                'referring_clinician_phone' => '5615550199',
+                'is_partial_staffing' => true,
+                'assistant_clinician_name' => 'Marcus Lee, PTA',
+                'lead_clinician_id' => $lead->id,
+            ])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertDatabaseHas('sp_intake_requests', [
+            'id' => $record->id,
+            'referring_clinician_name' => 'Dana Okafor, RN',
+            'referring_clinician_phone' => '5615550199',
+            'is_partial_staffing' => true,
+            'assistant_clinician_name' => 'Marcus Lee, PTA',
+            'lead_clinician_id' => $lead->id,
+        ]);
+    }
+
+    public function test_view_page_shows_referring_clinician_and_partial_staffing(): void
+    {
+        $tenant = $this->createTenant();
+        $lead = Provider::factory()->create([
+            'tenant_id' => $tenant->id,
+            'first_name' => 'Lena',
+            'last_name' => 'Voss',
+            'status' => Provider::STATUS_ACTIVE,
+            'is_active' => true,
+        ]);
+        $record = IntakeRequest::factory()->create([
+            'tenant_id' => $tenant->id,
+            'referring_clinician_name' => 'Dana Okafor, RN',
+            'referring_clinician_phone' => '5615550199',
+            'is_partial_staffing' => true,
+            'assistant_clinician_name' => 'Marcus Lee, PTA',
+            'lead_clinician_id' => $lead->id,
+        ]);
+
+        $this->actAsTenant($tenant);
+
+        Livewire::test(ViewIntakeRequest::class, ['record' => $record->getKey()])
+            ->assertSuccessful()
+            ->assertSee('Referring clinician')
+            ->assertSee('Dana Okafor, RN')
+            ->assertSee('Partial staffing')
+            ->assertSee('Marcus Lee, PTA')
+            ->assertSee('Lena Voss');
     }
 
     public function test_view_page_renders_record(): void

@@ -9,6 +9,13 @@
 @endphp
 
 <div class="space-y-4 text-sm">
+    @if ($record->is_partial_staffing)
+        <div class="rounded-lg border border-indigo-300 bg-indigo-50 px-4 py-3 text-indigo-800 dark:border-indigo-400/30 dark:bg-indigo-400/10 dark:text-indigo-200">
+            <span class="font-semibold">{{ __('Partial staffing') }}</span> —
+            {{ __('assistant already placed in-house. Match a lead clinician only.') }}
+        </div>
+    @endif
+
     @if ($languageWarning)
         <div class="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-amber-800 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300">
             <span class="font-semibold">{{ __('Language warning:') }}</span>

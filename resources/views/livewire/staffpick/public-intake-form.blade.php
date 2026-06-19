@@ -199,6 +199,15 @@
                         <label class="{{ $label }}">{{ __('Preferred provider language') }}</label>
                         <x-staffpick.language-combobox :options="$this->languageOptions()" model="data.language_preference" :input-class="$input" />
                     </div>
+                    <div>
+                        <label class="{{ $label }}">{{ __('Referring clinician name') }}</label>
+                        <input type="text" wire:model="data.referring_clinician_name" class="{{ $input }}">
+                        <p class="mt-1 text-xs text-gray-500">{{ __('The RN, case manager, or physician sending the referral.') }}</p>
+                    </div>
+                    <div>
+                        <label class="{{ $label }}">{{ __('Referring clinician phone') }}</label>
+                        <input type="text" wire:model="data.referring_clinician_phone" class="{{ $input }}">
+                    </div>
                 </div>
             </div>
 
@@ -246,7 +255,7 @@
                         <input type="text" wire:model="data.authorization_number" class="{{ $input }}">
                     </div>
                     <div>
-                        <label class="{{ $label }}">{{ __('Start date') }}</label>
+                        <label class="{{ $label }}">{{ __('Start of Care date') }}</label>
                         <input type="date" wire:model="data.start_date" class="{{ $input }}">
                     </div>
                     <div>

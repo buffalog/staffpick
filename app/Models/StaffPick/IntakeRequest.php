@@ -44,6 +44,11 @@ class IntakeRequest extends Model
         'emr_id',
         'slack_channel_id',
         'notes',
+        'referring_clinician_name',
+        'referring_clinician_phone',
+        'is_partial_staffing',
+        'assistant_clinician_name',
+        'lead_clinician_id',
         'acknowledged_at',
         'matched_at',
         'assigned_at',
@@ -61,6 +66,8 @@ class IntakeRequest extends Model
             'manual_assignment' => 'boolean',
             'needs_emr_transition' => 'boolean',
             'paperwork_complete' => 'boolean',
+            'is_partial_staffing' => 'boolean',
+            'lead_clinician_id' => 'integer',
             'acknowledged_at' => 'datetime',
             'matched_at' => 'datetime',
             'assigned_at' => 'datetime',
@@ -86,6 +93,15 @@ class IntakeRequest extends Model
     public function office(): BelongsTo
     {
         return $this->belongsTo(Office::class);
+    }
+
+    /**
+     * The lead clinician assigned post-matching. FK-less column (SQL Server cascade
+     * rules), but the belongsTo still resolves the related Provider.
+     */
+    public function leadClinician(): BelongsTo
+    {
+        return $this->belongsTo(Provider::class, 'lead_clinician_id');
     }
 
     public function assigner(): BelongsTo
