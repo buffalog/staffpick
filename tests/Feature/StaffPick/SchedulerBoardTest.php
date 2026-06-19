@@ -68,6 +68,16 @@ class SchedulerBoardTest extends FeatureTest
         $this->assertFalse($allBoardIds->contains($noClinicians->id));
     }
 
+    public function test_a_partial_staffing_card_shows_a_partial_badge(): void
+    {
+        $this->actingAs($this->createTenantAdmin($this->tenant));
+
+        $this->intake('pending')->update(['is_partial_staffing' => true]);
+
+        Livewire::test(SchedulerBoard::class)
+            ->assertSee('Partial');
+    }
+
     public function test_only_statuses_with_a_valid_transition_are_draggable(): void
     {
         $board = new SchedulerBoard;

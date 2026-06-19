@@ -237,6 +237,8 @@ class PublicIntakeForm extends Component
             'data.insurance_group' => ['nullable', 'string', 'max:255'],
             'data.provider_gender_preference' => ['nullable', 'string', 'max:30'],
             'data.language_preference' => ['nullable', 'string', 'max:255'],
+            'data.referring_clinician_name' => ['nullable', 'string', 'max:255'],
+            'data.referring_clinician_phone' => ['nullable', 'string', 'max:30'],
             'data.discipline_id' => ['required', 'integer'],
             'data.specialty_ids' => ['nullable', 'array'],
             'data.specialty_ids.*' => ['integer'],

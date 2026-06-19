@@ -12,6 +12,7 @@
     ][$abbr] ?? ['strip' => 'border-t-gray-300', 'pill' => 'bg-gray-100 text-gray-600'];
 
     $onHold = $card->status === 'on_hold';
+    $partial = (bool) $card->is_partial_staffing;
 
     // HIPAA: first name + last initial only.
     $first = trim($card->subject?->first_name ?? '');
@@ -67,10 +68,13 @@
         </div>
 
         {{-- Status badges --}}
-        @if ($onHold || $hasLanguageWarning)
+        @if ($onHold || $partial || $hasLanguageWarning)
             <div class="flex flex-wrap items-center gap-2">
                 @if ($onHold)
                     <span class="rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-700">{{ __('On hold') }}</span>
+                @endif
+                @if ($partial)
+                    <span class="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700" title="{{ __('Partial staffing — assistant already placed; match a lead clinician only') }}">{{ __('Partial') }}</span>
                 @endif
                 @if ($hasLanguageWarning)
                     <span class="pointer-events-auto inline-flex items-center text-amber-500" title="{{ __('No language match') }}">
