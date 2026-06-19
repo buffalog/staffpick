@@ -4,9 +4,11 @@ namespace App\Services\StaffPick;
 
 use App\Constants\TenancyPermissionConstants;
 use App\Filament\Dashboard\Resources\IntakeRequests\IntakeRequestResource;
+use App\Filament\Dashboard\Resources\Providers\ProviderResource;
 use App\Mail\StaffPick\SchedulerAlert;
 use App\Models\StaffPick\Assignment;
 use App\Models\StaffPick\IntakeRequest;
+use App\Models\StaffPick\Provider;
 use App\Models\StaffPick\ProviderCredential;
 use App\Models\Tenant;
 use App\Models\User;
@@ -69,6 +71,48 @@ class SchedulerNotificationService
         }
 
         $this->slack->notifyCredentialExpiring($credential);
+    }
+
+    /**
+     * Tell tenant admins a provider was auto-deactivated for an expired credential.
+     * The expiry date is pre-formatted by the caller so this never reads the date cast
+     * (which throws on the local FreeTDS driver).
+     */
+    public function providerAutoDeactivated(Provider $provider, string $credentialType, string $expiry): void
+    {
+        $tenant = Tenant::find($provider->tenant_id);
+        $name = trim("{$provider->first_name} {$provider->last_name}") ?: __('A provider');
+
+        $this->toAdmins(
+            $tenant,
+            __('Provider auto-deactivated'),
+            __(':provider has been automatically deactivated — :type expired on :date. Review and reactivate once renewed.', [
+                'provider' => $name,
+                'type' => $credentialType,
+                'date' => $expiry,
+            ]),
+            $this->providerUrl($provider),
+        );
+
+        $this->slack->notifyProviderDeactivated($provider, $credentialType, $expiry);
+    }
+
+    /**
+     * Tell tenant admins a provider was auto-reactivated after renewing credentials.
+     */
+    public function providerReactivated(Provider $provider): void
+    {
+        $tenant = Tenant::find($provider->tenant_id);
+        $name = trim("{$provider->first_name} {$provider->last_name}") ?: __('A provider');
+
+        $this->toAdmins(
+            $tenant,
+            __('Provider reactivated'),
+            __(':provider has been reactivated — all expiring credentials are valid again.', ['provider' => $name]),
+            $this->providerUrl($provider),
+        );
+
+        $this->slack->notifyProviderReactivated($provider);
     }
 
     public function notifyNoClinicians(IntakeRequest $intake): void
@@ -164,6 +208,21 @@ class SchedulerNotificationService
             // (the CheckOfferExpiry cron / queued jobs), where getUrl would otherwise
             // default to the admin panel and throw RouteNotFoundException.
             return IntakeRequestResource::getUrl('view', ['record' => $intake->getKey()], panel: 'dashboard', tenant: $tenant);
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    private function providerUrl(Provider $provider): ?string
+    {
+        try {
+            $tenant = Tenant::find($provider->tenant_id);
+
+            if ($tenant === null) {
+                return null;
+            }
+
+            return ProviderResource::getUrl('view', ['record' => $provider->getKey()], panel: 'dashboard', tenant: $tenant);
         } catch (Throwable) {
             return null;
         }

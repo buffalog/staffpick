@@ -4,6 +4,7 @@ namespace App\Filament\Dashboard\Credentialing;
 
 use App\Models\StaffPick\CredentialDocumentType;
 use App\Models\StaffPick\ProviderCredential;
+use App\Services\StaffPick\CredentialComplianceService;
 use App\Services\StaffPick\Credentialing\LicenseVerificationService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Radio;
@@ -58,6 +59,10 @@ class VerifyCredentialAction
                         'notes' => $data['notes'] ?? $record->notes,
                     ]);
 
+                    if ($data['result'] === ProviderCredential::VERIFICATION_VERIFIED && $record->provider !== null) {
+                        app(CredentialComplianceService::class)->reactivateIfEligible($record->provider);
+                    }
+
                     Notification::make()->title(__('Credential marked :status', ['status' => $data['result']]))->success()->send();
 
                     return;
@@ -86,6 +91,10 @@ class VerifyCredentialAction
 
                 // api
                 if ($result->status === ProviderCredential::VERIFICATION_VERIFIED) {
+                    if ($record->provider !== null) {
+                        app(CredentialComplianceService::class)->reactivateIfEligible($record->provider);
+                    }
+
                     Notification::make()->title(__('License verified'))->success()->send();
                 } else {
                     Notification::make()->title(__('License verification failed'))->body(__('The licensing board did not return an active license.'))->danger()->send();
