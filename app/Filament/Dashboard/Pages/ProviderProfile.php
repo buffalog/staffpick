@@ -399,7 +399,9 @@ class ProviderProfile extends Page
                 if (in_array($type->verification_method, [CredentialDocumentType::METHOD_API, CredentialDocumentType::METHOD_DEEP_LINK], true)) {
                     $fields[] = TextInput::make("credentials.{$type->id}.license_number")
                         ->label(__('License number'))
-                        ->hint(__('Your state-issued license number, e.g. PT34980 for Florida Physical Therapists. Required for automated verification.'));
+                        ->hint($type->verification_method === CredentialDocumentType::METHOD_API
+                            ? __('Your state-issued license number, e.g. PT34980. Required for real-time automated verification against the state licensing board.')
+                            : __('Your state-issued license number. Required for staff to verify your license against the state licensing board.'));
                 }
 
                 if ($type->has_expiry) {
