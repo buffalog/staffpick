@@ -32,7 +32,7 @@ class IntakeRequestForm
                             ->label(__('Reference Number'))
                             ->maxLength(255),
                         Select::make('subject_id')
-                            ->label(__('Subject'))
+                            ->label(__('Case'))
                             ->relationship('subject', 'last_name')
                             ->getOptionLabelFromRecordUsing(fn (Subject $record): string => trim("{$record->first_name} {$record->last_name}"))
                             ->searchable(['first_name', 'last_name'])
@@ -112,6 +112,8 @@ class IntakeRequestForm
                             ->label(__('Frequency'))
                             ->placeholder('e.g. 2x/week')
                             ->maxLength(255),
+                        DatePicker::make('evaluation_date')
+                            ->label(__('Evaluation Date')),
                         DatePicker::make('start_date')
                             ->label(__('Start of Care date')),
                         DatePicker::make('end_date')

@@ -2,13 +2,11 @@
 
 namespace App\Filament\Dashboard\Pages;
 
-use App\Constants\TenancyPermissionConstants;
 use App\Filament\Dashboard\Credentialing\VerifyCredentialAction;
 use App\Filament\Dashboard\Resources\Providers\ProviderResource;
 use App\Filament\Dashboard\Support\HelpHeaderAction;
+use App\Filament\Dashboard\Support\SpRoleAccess;
 use App\Models\StaffPick\ProviderCredential;
-use App\Models\Tenant;
-use App\Services\TenantPermissionService;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
@@ -55,22 +53,7 @@ class CredentialingQueue extends Page implements HasTable
 
     public static function canAccess(): bool
     {
-        $tenant = Filament::getTenant();
-
-        if (! $tenant instanceof Tenant || ! auth()->check()) {
-            return false;
-        }
-
-        // Super admins have full visibility into any tenant's dashboard via bypass.
-        if (auth()->user()->isSuperAdmin()) {
-            return true;
-        }
-
-        return in_array(
-            TenancyPermissionConstants::ROLE_ADMIN,
-            app(TenantPermissionService::class)->getTenantUserRoles($tenant, auth()->user()),
-            true,
-        );
+        return SpRoleAccess::isAdminOrStaff();
     }
 
     public function table(Table $table): Table

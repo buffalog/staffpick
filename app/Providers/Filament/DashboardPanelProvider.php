@@ -6,6 +6,7 @@ use App\Constants\AnnouncementPlacement;
 use App\Constants\TenancyPermissionConstants;
 use App\Filament\Dashboard\Auth\TenantLogin;
 use App\Filament\Dashboard\Pages\CreateWorkspace;
+use App\Filament\Dashboard\Pages\ProviderProfile;
 use App\Filament\Dashboard\Pages\TenantSettings;
 use App\Filament\Dashboard\Pages\TwoFactorAuth\TwoFactorAuth;
 use App\Http\Middleware\UpdateUserLastSeenAt;
@@ -71,6 +72,33 @@ class DashboardPanelProvider extends PanelProvider
                     )
                     ->icon('heroicon-s-cog-8-tooth')
                     ->url(fn () => TenantSettings::getUrl()),
+                Action::make('my-provider-profile')
+                    ->label(__('My Provider Profile'))
+                    ->visible(fn () => ProviderProfile::canAccess())
+                    ->url(fn () => ProviderProfile::getUrl())
+                    ->icon('heroicon-s-user-circle'),
+                Action::make('switch-to-provider-portal')
+                    ->label(__('Provider Portal'))
+                    ->visible(function () {
+                        $tenant = Filament::getTenant();
+
+                        return $tenant && auth()->check() && auth()->user()->hasSpRole(
+                            $tenant->id, TenancyPermissionConstants::ROLE_SP_PROVIDER,
+                        );
+                    })
+                    ->url(fn () => route('filament.provider.pages.dashboard', ['tenant' => Filament::getTenant()?->uuid]))
+                    ->icon('heroicon-s-arrow-right-circle'),
+                Action::make('switch-to-referrer-portal')
+                    ->label(__('Referrer Portal'))
+                    ->visible(function () {
+                        $tenant = Filament::getTenant();
+
+                        return $tenant && auth()->check() && auth()->user()->hasSpRole(
+                            $tenant->id, TenancyPermissionConstants::ROLE_SP_REFERRER,
+                        );
+                    })
+                    ->url(fn () => route('filament.referrer.pages.dashboard', ['tenant' => Filament::getTenant()?->uuid]))
+                    ->icon('heroicon-s-arrow-right-circle'),
                 Action::make('two-factor-auth')
                     ->label(__('2-Factor Authentication'))
                     ->visible(
@@ -124,8 +152,6 @@ class DashboardPanelProvider extends PanelProvider
                     ->label(__('Dispatch')),
                 NavigationGroup::make()
                     ->label(__('Credentialing')),
-                NavigationGroup::make()
-                    ->label(__('My Account')),
                 NavigationGroup::make()
                     ->label(__('Settings'))
                     ->collapsed(),

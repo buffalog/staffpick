@@ -9,6 +9,7 @@ use App\Filament\Dashboard\Resources\ReferralSources\Pages\ViewReferralSource;
 use App\Filament\Dashboard\Resources\ReferralSources\Schemas\ReferralSourceForm;
 use App\Filament\Dashboard\Resources\ReferralSources\Schemas\ReferralSourceInfolist;
 use App\Filament\Dashboard\Resources\ReferralSources\Tables\ReferralSourcesTable;
+use App\Filament\Dashboard\Support\SpRoleAccess;
 use App\Models\StaffPick\ReferralSource;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -53,6 +54,11 @@ class ReferralSourceResource extends Resource
             'view' => ViewReferralSource::route('/{record}'),
             'edit' => EditReferralSource::route('/{record}/edit'),
         ];
+    }
+
+    public static function canAccess(): bool
+    {
+        return SpRoleAccess::isAdminOrStaff();
     }
 
     public static function getNavigationGroup(): ?string

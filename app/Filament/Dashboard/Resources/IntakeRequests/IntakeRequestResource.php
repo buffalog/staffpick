@@ -9,6 +9,7 @@ use App\Filament\Dashboard\Resources\IntakeRequests\Pages\ViewIntakeRequest;
 use App\Filament\Dashboard\Resources\IntakeRequests\Schemas\IntakeRequestForm;
 use App\Filament\Dashboard\Resources\IntakeRequests\Schemas\IntakeRequestInfolist;
 use App\Filament\Dashboard\Resources\IntakeRequests\Tables\IntakeRequestsTable;
+use App\Filament\Dashboard\Support\SpRoleAccess;
 use App\Models\StaffPick\IntakeRequest;
 use App\Models\StaffPick\TenantConfig;
 use BackedEnum;
@@ -101,6 +102,11 @@ class IntakeRequestResource extends Resource
             'view' => ViewIntakeRequest::route('/{record}'),
             'edit' => EditIntakeRequest::route('/{record}/edit'),
         ];
+    }
+
+    public static function canAccess(): bool
+    {
+        return SpRoleAccess::isAdminOrStaff();
     }
 
     public static function getNavigationGroup(): ?string

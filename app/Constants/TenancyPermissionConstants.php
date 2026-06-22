@@ -12,6 +12,21 @@ class TenancyPermissionConstants
 
     public const TENANT_CREATOR_ROLE = self::ROLE_ADMIN;
 
+    public const ROLE_SP_ADMIN = 'sp_admin';
+
+    public const ROLE_SP_STAFF = 'sp_staff';
+
+    public const ROLE_SP_PROVIDER = 'sp_provider';
+
+    public const ROLE_SP_REFERRER = 'sp_referrer';
+
+    public const SP_TENANT_ROLES = [
+        self::ROLE_SP_ADMIN,
+        self::ROLE_SP_STAFF,
+        self::ROLE_SP_PROVIDER,
+        self::ROLE_SP_REFERRER,
+    ];
+
     public const PERMISSION_CREATE_SUBSCRIPTIONS = 'tenancy: create subscriptions';
 
     public const PERMISSION_UPDATE_SUBSCRIPTIONS = 'tenancy: update subscriptions';

@@ -9,6 +9,7 @@ use App\Filament\Dashboard\Resources\Subjects\Pages\ViewSubject;
 use App\Filament\Dashboard\Resources\Subjects\Schemas\SubjectForm;
 use App\Filament\Dashboard\Resources\Subjects\Schemas\SubjectInfolist;
 use App\Filament\Dashboard\Resources\Subjects\Tables\SubjectsTable;
+use App\Filament\Dashboard\Support\SpRoleAccess;
 use App\Models\StaffPick\Subject;
 use App\Models\StaffPick\TenantConfig;
 use BackedEnum;
@@ -69,6 +70,11 @@ class SubjectResource extends Resource
         ];
     }
 
+    public static function canAccess(): bool
+    {
+        return SpRoleAccess::isAdminOrStaff();
+    }
+
     public static function getNavigationGroup(): ?string
     {
         return __('Dispatch');
@@ -76,7 +82,7 @@ class SubjectResource extends Resource
 
     public static function getModelLabel(): string
     {
-        return TenantConfig::entityLabel('subject', __('Subject'));
+        return TenantConfig::entityLabel('subject', __('Case'));
     }
 
     public static function getPluralModelLabel(): string

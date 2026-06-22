@@ -69,7 +69,13 @@ class TenantService
                     $roleName = $invitation->role;
 
                     if ($roleName) {
-                        $this->tenantPermissionService->assignTenantUserRole($invitation->tenant, $user, $roleName);
+                        $roles = array_filter(
+                            is_array($roleName) ? $roleName : [$roleName]
+                        );
+
+                        if (! empty($roles)) {
+                            $this->tenantPermissionService->assignTenantUserRoles($invitation->tenant, $user, array_values($roles));
+                        }
                     }
 
                     if (config('app.teams_enabled', false) && $invitation->team_id) {

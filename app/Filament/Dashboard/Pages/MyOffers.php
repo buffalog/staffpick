@@ -38,17 +38,17 @@ class MyOffers extends Page
 
     public function getTitle(): string|Htmlable
     {
-        return __('My Offers');
+        return __('Case Offerings');
     }
 
     public static function getNavigationLabel(): string
     {
-        return __('My Offers');
+        return __('Case Offerings');
     }
 
     public static function getNavigationGroup(): ?string
     {
-        return __('My Account');
+        return null;
     }
 
     public static function canAccess(): bool
@@ -58,7 +58,7 @@ class MyOffers extends Page
 
     public static function shouldRegisterNavigation(): bool
     {
-        return static::resolveProvider() !== null;
+        return false;
     }
 
     /**

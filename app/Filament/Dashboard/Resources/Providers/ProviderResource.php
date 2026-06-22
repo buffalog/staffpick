@@ -10,6 +10,7 @@ use App\Filament\Dashboard\Resources\Providers\RelationManagers\CredentialsRelat
 use App\Filament\Dashboard\Resources\Providers\Schemas\ProviderForm;
 use App\Filament\Dashboard\Resources\Providers\Schemas\ProviderInfolist;
 use App\Filament\Dashboard\Resources\Providers\Tables\ProvidersTable;
+use App\Filament\Dashboard\Support\SpRoleAccess;
 use App\Models\StaffPick\Provider;
 use App\Models\StaffPick\TenantConfig;
 use BackedEnum;
@@ -70,6 +71,11 @@ class ProviderResource extends Resource
             'view' => ViewProvider::route('/{record}'),
             'edit' => EditProvider::route('/{record}/edit'),
         ];
+    }
+
+    public static function canAccess(): bool
+    {
+        return SpRoleAccess::isAdminOrStaff();
     }
 
     public static function getNavigationGroup(): ?string

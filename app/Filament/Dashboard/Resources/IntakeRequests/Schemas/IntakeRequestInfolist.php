@@ -25,7 +25,7 @@ class IntakeRequestInfolist
                             ->badge()
                             ->color(fn (string $state): string => IntakeRequestResource::statusColor($state)),
                         TextEntry::make('subject_name')
-                            ->label(__('Subject'))
+                            ->label(__('Case'))
                             ->state(fn (IntakeRequest $record): ?string => $record->subject
                                 ? trim("{$record->subject->first_name} {$record->subject->last_name}")
                                 : null)
