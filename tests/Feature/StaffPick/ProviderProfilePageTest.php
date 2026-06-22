@@ -228,6 +228,37 @@ class ProviderProfilePageTest extends FeatureTest
         ]);
     }
 
+    public function test_license_number_hint_matches_the_credential_verification_method(): void
+    {
+        // Isolate the credential types this test asserts against.
+        CredentialDocumentType::query()->where('tenant_id', $this->tenant->id)->delete();
+
+        CredentialDocumentType::create([
+            'tenant_id' => $this->tenant->id,
+            'name' => 'State License (PT)',
+            'verification_method' => CredentialDocumentType::METHOD_API,
+        ]);
+        CredentialDocumentType::create([
+            'tenant_id' => $this->tenant->id,
+            'name' => 'State License (OT)',
+            'verification_method' => CredentialDocumentType::METHOD_DEEP_LINK,
+        ]);
+        CredentialDocumentType::create([
+            'tenant_id' => $this->tenant->id,
+            'name' => 'W-9',
+            'verification_method' => CredentialDocumentType::METHOD_MANUAL,
+        ]);
+
+        Livewire::test(ProviderProfile::class)
+            // api: real-time automated verification wording.
+            ->assertSee('Required for real-time automated verification against the state licensing board.')
+            // deep_link: staff-verifies wording.
+            ->assertSee('Required for staff to verify your license against the state licensing board.')
+            // The inaccurate, PT-specific wording is gone.
+            ->assertDontSee('PT34980 for Florida Physical Therapists')
+            ->assertDontSee('Required for automated verification.');
+    }
+
     public function test_returning_resumes_at_the_saved_step_with_prefilled_data(): void
     {
         Provider::create([
