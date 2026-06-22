@@ -2,10 +2,8 @@
 
 namespace App\Filament\Dashboard\Pages;
 
-use App\Constants\TenancyPermissionConstants;
-use App\Services\TenantPermissionService;
+use App\Filament\Dashboard\Support\SpRoleAccess;
 use BackedEnum;
-use Filament\Facades\Filament;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 
@@ -27,12 +25,6 @@ class Users extends Page
 
     public static function canAccess(): bool
     {
-        $tenantPermissionService = app(TenantPermissionService::class); // a bit ugly, but this is the Filament way :/
-
-        return config('app.allow_tenant_invitations', false) && $tenantPermissionService->tenantUserHasPermissionTo(
-            Filament::getTenant(),
-            auth()->user(),
-            TenancyPermissionConstants::PERMISSION_MANAGE_TEAM
-        );
+        return config('app.allow_tenant_invitations', false) && SpRoleAccess::isAdmin();
     }
 }

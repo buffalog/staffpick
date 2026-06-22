@@ -17,7 +17,8 @@ class DashboardNavigationTest extends FeatureTest
     {
         $tenant = $this->createTenant();
         $admin = $this->createTenantAdmin($tenant);
-        // A provider record so the clinician-gated "My Account" items register.
+        // A linked provider record for the admin (kept for parity with real tenants;
+        // the provider-only pages no longer register in the sidebar regardless).
         Provider::factory()->create([
             'tenant_id' => $tenant->id,
             'user_id' => $admin->id,
@@ -47,7 +48,6 @@ class DashboardNavigationTest extends FeatureTest
             '(ungrouped)',
             'Dispatch',
             'Credentialing',
-            'My Account',
             'Settings',
             'Administration',
             'Support',
@@ -57,11 +57,13 @@ class DashboardNavigationTest extends FeatureTest
         // Item placement.
         $this->assertContains('Dashboard', $items['(ungrouped)']);
         $this->assertSame('Board', $items['Dispatch'][0]);
-        foreach (['Board', 'Intake Requests', 'Providers', 'Referral Sources', 'Subjects'] as $item) {
+        foreach (['Board', 'Intake Requests', 'Providers', 'Referral Sources', 'Cases'] as $item) {
             $this->assertContains($item, $items['Dispatch']);
         }
         $this->assertContains('Credentialing', $items['Credentialing']);
-        $this->assertSame(['My Provider Profile', 'My Offers'], $items['My Account']);
+        // "My Account" group removed: ProviderProfile + MyOffers no longer register in
+        // the sidebar (reached via the user/avatar menu instead).
+        $this->assertArrayNotHasKey('My Account', $items);
         foreach (['Credentialing Policies', 'Slack Integration', 'Single Sign-On'] as $item) {
             $this->assertContains($item, $items['Settings']);
         }

@@ -2,9 +2,13 @@
 
 namespace App\Models;
 
+use App\Constants\TenancyPermissionConstants;
+use App\Models\StaffPick\Provider;
+use App\Models\StaffPick\ReferralSource;
 use App\Notifications\Auth\QueuedVerifyEmail;
 use App\Services\OrderService;
 use App\Services\SubscriptionService;
+use Filament\Facades\Filament;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Models\Contracts\HasTenants;
 use Filament\Panel;
@@ -113,6 +117,24 @@ class User extends Authenticatable implements FilamentUser, HasTenants, MustVeri
 
     public function canAccessPanel(Panel $panel): bool
     {
+        if ($panel->getId() === 'provider') {
+            if ($this->is_super_admin) {
+                return true;
+            }
+            $tenant = Filament::getTenant();
+
+            return $tenant !== null && $this->hasSpRole($tenant->id, TenancyPermissionConstants::ROLE_SP_PROVIDER);
+        }
+
+        if ($panel->getId() === 'referrer') {
+            if ($this->is_super_admin) {
+                return true;
+            }
+            $tenant = Filament::getTenant();
+
+            return $tenant !== null && $this->hasSpRole($tenant->id, TenancyPermissionConstants::ROLE_SP_REFERRER);
+        }
+
         // The global super-admin panel is gated strictly to super admins.
         if ($panel->getId() === 'superadmin') {
             return $this->isSuperAdmin();
@@ -192,6 +214,65 @@ class User extends Authenticatable implements FilamentUser, HasTenants, MustVeri
     public function tenants(): BelongsToMany
     {
         return $this->belongsToMany(Tenant::class)->using(TenantUser::class)->withPivot('id')->withTimestamps();
+    }
+
+    public function providerForTenant(int $tenantId): ?Provider
+    {
+        return Provider::where('tenant_id', $tenantId)
+            ->where('user_id', $this->id)
+            ->first();
+    }
+
+    public function referralSourceForTenant(int $tenantId): ?ReferralSource
+    {
+        return ReferralSource::where('tenant_id', $tenantId)
+            ->where('user_id', $this->id)
+            ->first();
+    }
+
+    public function hasSpRole(int $tenantId, string $role): bool
+    {
+        return in_array($role, $this->spRolesForTenant($tenantId), true);
+    }
+
+    /**
+     * @param  array<int, string>  $roles
+     */
+    public function hasAnySpRole(int $tenantId, array $roles): bool
+    {
+        foreach ($roles as $role) {
+            if ($this->hasSpRole($tenantId, $role)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public function spRolesForTenant(int $tenantId): array
+    {
+        $pivot = $this->tenants()->where('tenant_id', $tenantId)->first()?->pivot;
+        if ($pivot === null) {
+            return [];
+        }
+
+        return $pivot->roles->pluck('name')->toArray();
+    }
+
+    public function defaultSpPanel(int $tenantId): string
+    {
+        $roles = $this->spRolesForTenant($tenantId);
+        if (array_intersect([TenancyPermissionConstants::ROLE_SP_ADMIN, TenancyPermissionConstants::ROLE_SP_STAFF], $roles)) {
+            return 'dashboard';
+        }
+        if (in_array(TenancyPermissionConstants::ROLE_SP_PROVIDER, $roles, true)) {
+            return 'provider';
+        }
+
+        return 'referrer';
     }
 
     public function getTenants(Panel $panel): Collection

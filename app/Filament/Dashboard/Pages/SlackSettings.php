@@ -2,11 +2,10 @@
 
 namespace App\Filament\Dashboard\Pages;
 
-use App\Constants\TenancyPermissionConstants;
 use App\Filament\Dashboard\Support\HelpHeaderAction;
+use App\Filament\Dashboard\Support\SpRoleAccess;
 use App\Models\StaffPick\TenantConfig;
 use App\Services\StaffPick\SlackNotificationService;
-use App\Services\TenantPermissionService;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
@@ -60,11 +59,7 @@ class SlackSettings extends Page
 
     public static function canAccess(): bool
     {
-        return app(TenantPermissionService::class)->tenantUserHasPermissionTo(
-            Filament::getTenant(),
-            auth()->user(),
-            TenancyPermissionConstants::PERMISSION_UPDATE_TENANT_SETTINGS,
-        );
+        return SpRoleAccess::isAdmin();
     }
 
     public function mount(): void

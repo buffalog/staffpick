@@ -2,13 +2,11 @@
 
 namespace App\Filament\Dashboard\Pages;
 
-use App\Constants\TenancyPermissionConstants;
 use App\Filament\Dashboard\Support\HelpHeaderAction;
+use App\Filament\Dashboard\Support\SpRoleAccess;
 use App\Jobs\StaffPick\DispatchOffers;
 use App\Models\StaffPick\IntakeRequest;
 use App\Models\StaffPick\OnHoldReason;
-use App\Models\Tenant;
-use App\Services\TenantPermissionService;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
@@ -104,22 +102,7 @@ class SchedulerBoard extends Page
 
     public static function canAccess(): bool
     {
-        $tenant = Filament::getTenant();
-
-        if (! $tenant instanceof Tenant || ! auth()->check()) {
-            return false;
-        }
-
-        // Super admins have full visibility into any tenant's dashboard via bypass.
-        if (auth()->user()->isSuperAdmin()) {
-            return true;
-        }
-
-        return in_array(
-            TenancyPermissionConstants::ROLE_ADMIN,
-            app(TenantPermissionService::class)->getTenantUserRoles($tenant, auth()->user()),
-            true,
-        );
+        return SpRoleAccess::isAdminOrStaff();
     }
 
     /**

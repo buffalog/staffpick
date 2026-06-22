@@ -118,6 +118,34 @@ class TenantPermissionService
         $user->tenants()->where('tenant_id', $tenant->id)->first()->pivot->assignRole($roleObject);
     }
 
+    /**
+     * Assign a set of tenant roles to a user, replacing any existing roles.
+     *
+     * @param  array<int, string>  $roles
+     */
+    public function assignTenantUserRoles(Tenant $tenant, User $user, array $roles): void
+    {
+        $roleObjects = [];
+
+        foreach ($roles as $role) {
+            $roleObject = $this->findTenantRole($tenant, $role);
+
+            if ($roleObject === null) {
+                throw new InvalidArgumentException("Role '{$role}' does not exist for tenant '{$tenant->name}'.");
+            }
+
+            $roleObjects[] = $roleObject;
+        }
+
+        $pivot = $user->tenants()->where('tenant_id', $tenant->id)->first()->pivot;
+
+        $pivot->syncRoles([]);
+
+        foreach ($roleObjects as $roleObject) {
+            $pivot->assignRole($roleObject);
+        }
+    }
+
     public function removeAllTenantUserRoles(Tenant $tenant, User $user): void
     {
         $user->tenants()->where('tenant_id', $tenant->id)->first()->pivot->syncRoles([]);

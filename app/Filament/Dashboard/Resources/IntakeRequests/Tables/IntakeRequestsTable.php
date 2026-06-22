@@ -29,7 +29,7 @@ class IntakeRequestsTable
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('subject.last_name')
-                    ->label(__('Subject'))
+                    ->label(__('Case'))
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('referralSource.name')

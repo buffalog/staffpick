@@ -38,7 +38,7 @@ class TenantEntityLabelTest extends FeatureTest
         $this->assertSame('Provider', ProviderResource::getModelLabel());
         $this->assertSame('Providers', ProviderResource::getPluralModelLabel());
         $this->assertSame('Providers', ProviderResource::getNavigationLabel());
-        $this->assertSame('Subject', SubjectResource::getModelLabel());
+        $this->assertSame('Case', SubjectResource::getModelLabel());
         $this->assertSame('Intake Requests', IntakeRequestResource::getNavigationLabel());
         $this->assertSame('Discipline', TenantConfig::entityLabel('discipline', __('Discipline')));
     }

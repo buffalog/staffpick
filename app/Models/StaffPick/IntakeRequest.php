@@ -49,6 +49,7 @@ class IntakeRequest extends Model
         'is_partial_staffing',
         'assistant_clinician_name',
         'lead_clinician_id',
+        'evaluation_date',
         'acknowledged_at',
         'matched_at',
         'assigned_at',

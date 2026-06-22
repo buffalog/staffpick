@@ -22,6 +22,10 @@ class Invitation extends Model
         'team_id',
     ];
 
+    protected $casts = [
+        'role' => 'array',
+    ];
+
     public function tenant()
     {
         return $this->belongsTo(Tenant::class);

@@ -7,9 +7,9 @@ use App\Constants\TenancyPermissionConstants;
 use App\Filament\Dashboard\Resources\Invitations\Pages\CreateInvitation;
 use App\Filament\Dashboard\Resources\Invitations\Pages\EditInvitation;
 use App\Filament\Dashboard\Resources\Invitations\Pages\ListInvitations;
+use App\Filament\Dashboard\Support\SpRoleAccess;
 use App\Mapper\InvitationStatusMapper;
 use App\Models\Invitation;
-use App\Services\TenantPermissionService;
 use App\Services\TenantService;
 use BackedEnum;
 use Closure;
@@ -91,12 +91,18 @@ class InvitationResource extends Resource
                         },
                     ]),
                 Select::make('role')
-                    ->options(function (TenantPermissionService $tenantPermissionService) {
-                        return $tenantPermissionService->getAllAvailableTenantRolesForDisplay(Filament::getTenant());
-                    })
-                    ->default(TenancyPermissionConstants::ROLE_USER)
-                    ->label(__('Role'))
-                    ->helperText(__('Choose the role for this user.')),
+                    ->label(__('Roles'))
+                    ->options(array_combine(
+                        TenancyPermissionConstants::SP_TENANT_ROLES,
+                        array_map(
+                            fn ($r) => Str::of($r)->after('sp_')->title()->toString(),
+                            TenancyPermissionConstants::SP_TENANT_ROLES,
+                        ),
+                    ))
+                    ->multiple()
+                    ->default([TenancyPermissionConstants::ROLE_SP_STAFF])
+                    ->required()
+                    ->helperText(__('Choose one or more roles for this user.')),
                 Select::make('team_id')
                     ->label(__('Team'))
                     ->visible(fn (): bool => config('app.teams_enabled', false))
@@ -135,12 +141,19 @@ class InvitationResource extends Resource
                     ->visible(fn (): bool => config('app.teams_enabled', false))
                     ->sortable(),
                 TextColumn::make('role')
-                    ->label(__('Role'))
+                    ->label(__('Roles'))
                     ->default('-')
                     ->formatStateUsing(function ($state) {
-                        return Str::of($state)->title();
-                    })
-                    ->sortable(),
+                        $roles = is_array($state) ? $state : array_filter([$state]);
+
+                        if (empty($roles)) {
+                            return '-';
+                        }
+
+                        return collect($roles)
+                            ->map(fn ($role) => Str::of($role)->after('sp_')->title()->toString())
+                            ->implode(', ');
+                    }),
                 TextColumn::make('expires_at')
                     ->label(__('Expires At'))
                     ->dateTime()
@@ -178,14 +191,7 @@ class InvitationResource extends Resource
 
     public static function canAccess(): bool
     {
-        /** @var TenantPermissionService $tenantPermissionService */
-        $tenantPermissionService = app(TenantPermissionService::class); // a bit ugly, but this is the Filament way :/
-
-        return config('app.allow_tenant_invitations', false) && $tenantPermissionService->tenantUserHasPermissionTo(
-            Filament::getTenant(),
-            auth()->user(),
-            TenancyPermissionConstants::PERMISSION_INVITE_MEMBERS,
-        );
+        return config('app.allow_tenant_invitations', false) && SpRoleAccess::isAdmin();
     }
 
     public static function getPages(): array

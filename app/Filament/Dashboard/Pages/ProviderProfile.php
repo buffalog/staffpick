@@ -82,7 +82,7 @@ class ProviderProfile extends Page
 
     public static function getNavigationGroup(): ?string
     {
-        return __('My Account');
+        return null;
     }
 
     public static function canAccess(): bool
@@ -92,7 +92,7 @@ class ProviderProfile extends Page
 
     public static function shouldRegisterNavigation(): bool
     {
-        return static::isVisibleToCurrentUser();
+        return false;
     }
 
     /**

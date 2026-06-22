@@ -3,6 +3,7 @@
 namespace App\Models\StaffPick;
 
 use App\Models\StaffPick\Concerns\BelongsToTenant;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,6 +20,7 @@ class ReferralSource extends Model
 
     protected $fillable = [
         'tenant_id',
+        'user_id',
         'name',
         'address',
         'city',
@@ -44,6 +46,11 @@ class ReferralSource extends Model
     public function group(): BelongsTo
     {
         return $this->belongsTo(ReferralSourceGroup::class, 'group_id');
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function intakeRequests(): HasMany

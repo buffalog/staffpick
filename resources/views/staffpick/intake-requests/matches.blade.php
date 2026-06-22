@@ -38,7 +38,7 @@
     @if ($results->isEmpty())
         <div class="rounded-lg border border-dashed border-gray-300 p-6 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400">
             @unless ($subjectHasCoordinates)
-                {{ __('This case has no geocoded address, so distance cannot be calculated. Add latitude/longitude to the subject to enable matching.') }}
+                {{ __('This case has no geocoded address, so distance cannot be calculated. Add latitude/longitude to the case to enable matching.') }}
             @else
                 {{ __('No eligible :providers found in range for this case.', ['providers' => \Illuminate\Support\Str::plural($providerLabel)]) }}
             @endunless
