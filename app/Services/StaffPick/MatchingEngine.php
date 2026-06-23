@@ -92,7 +92,12 @@ class MatchingEngine
                 ? $radiusOverrideMiles + $feathering
                 : $maxRadius + $feathering;
 
-            if ($distance > $cutoff) {
+            $isRequested = $requestedProviderId !== null && (int) $provider->id === $requestedProviderId;
+
+            // A referral-requested provider is always surfaced — even beyond their travel
+            // radius (flagged out_of_radius so staff see it's a stretch). Every other
+            // provider is hard-filtered by distance. Gender/rating gates still apply.
+            if ($distance > $cutoff && ! $isRequested) {
                 continue;
             }
 
@@ -126,6 +131,7 @@ class MatchingEngine
                 'score' => self::composeScore($distanceScore, $languageMatched),
                 'tierPriority' => $provider->tier?->priority ?? PHP_INT_MAX,
                 'isPreferred' => (bool) $provider->is_preferred,
+                'outOfRadius' => $distance > $cutoff,
             ]);
         }
 
@@ -143,6 +149,7 @@ class MatchingEngine
                 languageWarning: $languageWarning,
                 factors: [
                     'requested' => $requestedProviderId !== null && $row->provider->id === $requestedProviderId,
+                    'out_of_radius' => $row->outOfRadius,
                     'is_preferred' => $row->isPreferred,
                     'tier_priority' => $row->tierPriority,
                     'distance_score' => round($row->distanceScore, 4),

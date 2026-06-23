@@ -73,6 +73,9 @@
                                     @if (data_get($result->factors, 'requested'))
                                         <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-400/10 dark:text-amber-400" title="{{ __('Requested by referral source') }}">&starf; {{ __('Requested by referral source') }}</span>
                                     @endif
+                                    @if (data_get($result->factors, 'out_of_radius'))
+                                        <span class="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-400/10 dark:text-red-400" title="{{ __("Beyond this provider's travel radius") }}">{{ __('Outside service radius') }}</span>
+                                    @endif
                                     @if (data_get($result->factors, 'is_preferred'))
                                         <span class="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-400/10 dark:text-indigo-400">{{ __('Preferred') }}</span>
                                     @endif
