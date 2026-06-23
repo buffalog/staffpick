@@ -31,11 +31,16 @@ class MyOffers extends Page
 
     protected static ?string $slug = 'my-offers';
 
-    protected string $view = 'filament.dashboard.pages.my-offers';
+    protected string $view = 'filament.provider.pages.my-offers';
 
     public function getTitle(): string|Htmlable
     {
         return __('Case Matches');
+    }
+
+    public function getSubheading(): string|Htmlable|null
+    {
+        return __('Respond within 24 hours to maintain your tier standing.');
     }
 
     public static function getNavigationLabel(): string
