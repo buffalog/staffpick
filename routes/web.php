@@ -6,6 +6,7 @@ use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PaymentProviders\PaddleController;
 use App\Http\Controllers\ProductCheckoutController;
+use App\Http\Controllers\ProviderApplicationController;
 use App\Http\Controllers\RoadmapController;
 use App\Http\Controllers\SlackWebhookController;
 use App\Http\Controllers\StaffPick\SsoController;
@@ -230,6 +231,16 @@ Route::controller(SurveyController::class)
 Route::get('/intake/{token}', PublicIntakeForm::class)
     ->middleware('throttle:30,1')
     ->name('staffpick.intake.show');
+
+// StaffPick — public provider self-serve onboarding wizard (no login). /join/{slug}
+// creates a draft and redirects to the tokenized resume URL. Page-load throttled; the
+// wizard's save/submit Livewire actions run over /livewire/update.
+Route::get('/join/{tenantSlug}', [ProviderApplicationController::class, 'show'])
+    ->middleware('throttle:30,1')
+    ->name('staffpick.application.show');
+Route::get('/join/{tenantSlug}/resume/{token}', [ProviderApplicationController::class, 'resume'])
+    ->middleware('throttle:30,1')
+    ->name('staffpick.application.resume');
 
 // StaffPick — inbound Slack webhook (signature-verified, no login/CSRF). The token
 // namespaces the tenant; rate-limited to blunt abuse of the public endpoint.

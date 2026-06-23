@@ -1,0 +1,23 @@
+<x-layouts.intake>
+    <div class="mx-auto max-w-3xl px-4 py-8">
+        <header class="mb-6 flex items-center gap-3">
+            @if ($tenant->config?->logo_url ?? false)
+                <img src="{{ $tenant->config->logo_url }}" alt="{{ $tenant->name }}" class="h-10 w-auto">
+            @endif
+            <div>
+                <h1 class="text-xl font-semibold text-gray-900">{{ __('Join :tenant', ['tenant' => $tenant->name]) }}</h1>
+                <p class="text-sm text-gray-500">{{ __('Provider application') }}</p>
+            </div>
+        </header>
+
+        {{-- Part 3 mounts the six-step wizard here:
+             @livewire('provider-application-wizard', ['applicationToken' => $application->application_token]) --}}
+        <div class="rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center text-gray-500">
+            {{ __('Loading application…') }}
+        </div>
+
+        <footer class="mt-8 text-center text-xs text-gray-400">
+            {{ __('Powered by StaffPick') }}
+        </footer>
+    </div>
+</x-layouts.intake>
