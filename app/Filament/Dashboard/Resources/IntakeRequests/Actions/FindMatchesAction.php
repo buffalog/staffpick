@@ -2,6 +2,7 @@
 
 namespace App\Filament\Dashboard\Resources\IntakeRequests\Actions;
 
+use App\Models\StaffPick\Assignment;
 use App\Models\StaffPick\AssignmentOffer;
 use App\Models\StaffPick\IntakeRequest;
 use App\Services\StaffPick\MatchingEngine;
@@ -22,6 +23,11 @@ class FindMatchesAction
             ->label(__('Find Matches'))
             ->icon(Heroicon::OutlinedSparkles)
             ->color('primary')
+            // No re-matching a case that's already actively assigned.
+            ->disabled(fn (IntakeRequest $record): bool => self::hasActiveAssignment($record))
+            ->tooltip(fn (IntakeRequest $record): ?string => self::hasActiveAssignment($record)
+                ? __('This case already has an active assignment.')
+                : null)
             ->modalHeading(fn (IntakeRequest $record): string => __('Provider matches for :reference', [
                 'reference' => $record->reference_number ?: "#{$record->id}",
             ]))
@@ -46,5 +52,12 @@ class FindMatchesAction
                     ->pluck('provider_id')
                     ->all(),
             ]));
+    }
+
+    private static function hasActiveAssignment(IntakeRequest $record): bool
+    {
+        return $record->assignments()
+            ->where('status', Assignment::STATUS_ACTIVE)
+            ->exists();
     }
 }
