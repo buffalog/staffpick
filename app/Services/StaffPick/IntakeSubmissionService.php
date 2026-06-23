@@ -6,6 +6,7 @@ use App\Constants\TenancyPermissionConstants;
 use App\Mail\StaffPick\IntakeReceivedReferrer;
 use App\Mail\StaffPick\IntakeSubmittedStaff;
 use App\Models\StaffPick\IntakeRequest;
+use App\Models\StaffPick\Provider;
 use App\Models\StaffPick\ReferralSource;
 use App\Models\StaffPick\Specialty;
 use App\Models\StaffPick\Subject;
@@ -70,6 +71,7 @@ class IntakeSubmissionService
                 'notes' => $data['notes'] ?? null,
                 'referring_clinician_name' => $data['referring_clinician_name'] ?? null,
                 'referring_clinician_phone' => $data['referring_clinician_phone'] ?? null,
+                'requested_provider_id' => $this->safeRequestedProviderId($source, $data),
             ]);
 
             $intake->specialties()->sync($this->tenantSpecialtyIds($source, $data));
@@ -106,6 +108,28 @@ class IntakeSubmissionService
             ->whereIn('id', $requested)
             ->pluck('id')
             ->all();
+    }
+
+    /**
+     * Resolve the optional requested provider, trusting the (forgeable) public payload
+     * only if the provider exists in the source's tenant and is active. Returns null
+     * otherwise.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function safeRequestedProviderId(ReferralSource $source, array $data): ?int
+    {
+        $requested = (int) ($data['requested_provider_id'] ?? 0);
+
+        if ($requested <= 0) {
+            return null;
+        }
+
+        return Provider::query()
+            ->where('tenant_id', $source->tenant_id)
+            ->where('is_active', true)
+            ->whereKey($requested)
+            ->value('id');
     }
 
     /**

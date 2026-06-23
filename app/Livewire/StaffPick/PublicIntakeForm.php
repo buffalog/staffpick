@@ -5,6 +5,7 @@ namespace App\Livewire\StaffPick;
 use App\Models\StaffPick\Discipline;
 use App\Models\StaffPick\InsuranceType;
 use App\Models\StaffPick\Language;
+use App\Models\StaffPick\Provider;
 use App\Models\StaffPick\ReferralSource;
 use App\Models\StaffPick\Specialty;
 use App\Services\StaffPick\GeocodingService;
@@ -73,6 +74,7 @@ class PublicIntakeForm extends Component
             'longitude' => null,
             'geocode_failed' => false,
             'specialty_ids' => [],
+            'requested_provider_id' => null,
             'preferred_language' => null,
             'language_preference' => null,
         ], $this->data);
@@ -114,6 +116,30 @@ class PublicIntakeForm extends Component
     }
 
     /**
+     * Active providers for the optional "Requested Provider" dropdown — scoped to the
+     * selected discipline when one is chosen, otherwise all active providers. Label
+     * shows the discipline so the referral source knows who they're picking.
+     *
+     * @return array<int|string, string>
+     */
+    public function requestedProviderOptions(): array
+    {
+        $disciplineId = $this->data['discipline_id'] ?? null;
+
+        return Provider::withoutGlobalScopes()
+            ->where('tenant_id', $this->tenantId)
+            ->where('is_active', true)
+            ->when(filled($disciplineId), fn (Builder $query) => $query->where('discipline_id', $disciplineId))
+            ->with('discipline')
+            ->orderBy('last_name')
+            ->get()
+            ->mapWithKeys(fn (Provider $provider): array => [
+                $provider->id => trim("{$provider->first_name} {$provider->last_name}").' · '.($provider->discipline?->name ?? __('—')),
+            ])
+            ->all();
+    }
+
+    /**
      * Language names from the shared sp_languages table (not tenant-scoped), ordered
      * by name. The select stores the language *name* (not the id) so the matching
      * engine's name/code comparison continues to work unchanged.
@@ -139,9 +165,11 @@ class PublicIntakeForm extends Component
 
     public function updated(string $name): void
     {
-        // Specialties are scoped to the discipline; clear them when it changes.
+        // Specialties + requested provider are scoped to the discipline; clear them
+        // when it changes so a stale (wrong-discipline) selection can't persist.
         if ($name === 'data.discipline_id') {
             $this->data['specialty_ids'] = [];
+            $this->data['requested_provider_id'] = null;
         }
 
         if (in_array($name, ['data.address', 'data.city', 'data.state', 'data.zip'], true)) {
@@ -240,6 +268,7 @@ class PublicIntakeForm extends Component
             'data.referring_clinician_name' => ['nullable', 'string', 'max:255'],
             'data.referring_clinician_phone' => ['nullable', 'string', 'max:30'],
             'data.discipline_id' => ['required', 'integer'],
+            'data.requested_provider_id' => ['nullable', 'integer'],
             'data.specialty_ids' => ['nullable', 'array'],
             'data.specialty_ids.*' => ['integer'],
             'data.visit_type' => ['nullable', 'string', 'max:255'],

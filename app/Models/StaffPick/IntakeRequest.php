@@ -49,6 +49,7 @@ class IntakeRequest extends Model
         'is_partial_staffing',
         'assistant_clinician_name',
         'lead_clinician_id',
+        'requested_provider_id',
         'evaluation_date',
         'acknowledged_at',
         'matched_at',
@@ -69,6 +70,7 @@ class IntakeRequest extends Model
             'paperwork_complete' => 'boolean',
             'is_partial_staffing' => 'boolean',
             'lead_clinician_id' => 'integer',
+            'requested_provider_id' => 'integer',
             'acknowledged_at' => 'datetime',
             'matched_at' => 'datetime',
             'assigned_at' => 'datetime',
@@ -103,6 +105,11 @@ class IntakeRequest extends Model
     public function leadClinician(): BelongsTo
     {
         return $this->belongsTo(Provider::class, 'lead_clinician_id');
+    }
+
+    public function requestedProvider(): BelongsTo
+    {
+        return $this->belongsTo(Provider::class, 'requested_provider_id');
     }
 
     public function assigner(): BelongsTo

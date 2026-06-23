@@ -101,6 +101,12 @@ class IntakeRequestInfolist
                                 TextEntry::make('subject.language_preference')
                                     ->label(__('Language Preference'))
                                     ->placeholder(__('No preference')),
+                                TextEntry::make('requested_provider')
+                                    ->label(__('Requested Provider'))
+                                    ->state(fn (IntakeRequest $record): ?string => $record->requestedProvider
+                                        ? trim("{$record->requestedProvider->first_name} {$record->requestedProvider->last_name}")
+                                        : null)
+                                    ->placeholder(__('None')),
                                 TextEntry::make('specialties.name')
                                     ->label(__('Requested Specialties'))
                                     ->badge()

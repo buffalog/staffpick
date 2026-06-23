@@ -70,6 +70,7 @@ class MatchingEngine
 
         $genderPreference = $subject->provider_gender_preference;
         $languagePreference = $subject->language_preference;
+        $requestedProviderId = $intakeRequest->requested_provider_id !== null ? (int) $intakeRequest->requested_provider_id : null;
 
         $providers = Provider::query()
             ->where('tenant_id', $intakeRequest->tenant_id)
@@ -141,6 +142,7 @@ class MatchingEngine
                 languageMatched: $row->languageMatched,
                 languageWarning: $languageWarning,
                 factors: [
+                    'requested' => $requestedProviderId !== null && $row->provider->id === $requestedProviderId,
                     'is_preferred' => $row->isPreferred,
                     'tier_priority' => $row->tierPriority,
                     'distance_score' => round($row->distanceScore, 4),
@@ -148,10 +150,13 @@ class MatchingEngine
                 ],
             ))
             ->sort(function (MatchingResult $a, MatchingResult $b): int {
-                // Preferred first, then tier ascending, then score descending.
-                return ($b->factors['is_preferred'] <=> $a->factors['is_preferred'])
-                    ?: (($a->factors['tier_priority'] <=> $b->factors['tier_priority'])
-                        ?: ($b->score <=> $a->score));
+                // Referral-requested provider first, then preferred, then tier ascending,
+                // then score descending. (Requested still flows through the normal offer
+                // queue — surfacing only changes order, not the pipeline.)
+                return ($b->factors['requested'] <=> $a->factors['requested'])
+                    ?: (($b->factors['is_preferred'] <=> $a->factors['is_preferred'])
+                        ?: (($a->factors['tier_priority'] <=> $b->factors['tier_priority'])
+                            ?: ($b->score <=> $a->score)));
             })
             ->values();
     }

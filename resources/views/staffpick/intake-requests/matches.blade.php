@@ -70,6 +70,9 @@
                             <td class="px-3 py-2">
                                 <div class="flex items-center gap-2">
                                     <span class="font-medium text-gray-900 dark:text-white">{{ trim("{$provider->first_name} {$provider->last_name}") }}</span>
+                                    @if (data_get($result->factors, 'requested'))
+                                        <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-400/10 dark:text-amber-400" title="{{ __('Requested by referral source') }}">&starf; {{ __('Requested by referral source') }}</span>
+                                    @endif
                                     @if (data_get($result->factors, 'is_preferred'))
                                         <span class="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-400/10 dark:text-indigo-400">{{ __('Preferred') }}</span>
                                     @endif
