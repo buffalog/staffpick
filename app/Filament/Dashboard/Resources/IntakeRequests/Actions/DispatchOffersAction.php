@@ -2,12 +2,12 @@
 
 namespace App\Filament\Dashboard\Resources\IntakeRequests\Actions;
 
+use App\Filament\Dashboard\Support\SpRoleAccess;
 use App\Jobs\StaffPick\DispatchOffers;
 use App\Models\StaffPick\IntakeRequest;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Support\Icons\Heroicon;
-use Illuminate\Support\Facades\Gate;
 
 /**
  * "Auto Dispatch" — full-auto pipeline: builds the ranked provider queue and fires
@@ -24,7 +24,7 @@ class DispatchOffersAction
             ->color('primary')
             ->visible(fn (IntakeRequest $record): bool => in_array($record->status, ['pending', 'matching'], true))
             ->action(function (IntakeRequest $record): void {
-                abort_unless(Gate::allows('update', $record), 403);
+                abort_unless(SpRoleAccess::isAdminOrStaff(), 403);
 
                 DispatchOffers::dispatch($record->id);
 

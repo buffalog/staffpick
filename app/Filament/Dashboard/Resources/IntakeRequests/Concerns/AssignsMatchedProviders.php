@@ -2,12 +2,12 @@
 
 namespace App\Filament\Dashboard\Resources\IntakeRequests\Concerns;
 
+use App\Filament\Dashboard\Support\SpRoleAccess;
 use App\Models\StaffPick\IntakeRequest;
 use App\Models\StaffPick\Provider;
 use App\Services\StaffPick\AssignmentService;
 use App\Services\StaffPick\OfferService;
 use Filament\Notifications\Notification;
-use Illuminate\Support\Facades\Gate;
 
 /**
  * Shared Livewire actions for the "Find Matches" modal: assign a matched provider
@@ -38,7 +38,7 @@ trait AssignsMatchedProviders
             return;
         }
 
-        abort_unless(Gate::allows('update', $intakeRequest), 403);
+        abort_unless(SpRoleAccess::isAdminOrStaff(), 403);
 
         app(OfferService::class)->dispatchToProvider($intakeRequest, $provider);
 
@@ -65,7 +65,7 @@ trait AssignsMatchedProviders
 
         // Defense in depth: the hosting resource is already admin-gated, but this
         // is a directly-invokable Livewire RPC, so authorize the mutation here too.
-        abort_unless(Gate::allows('update', $intakeRequest), 403);
+        abort_unless(SpRoleAccess::isAdminOrStaff(), 403);
 
         app(AssignmentService::class)->assign($intakeRequest, $provider);
 
