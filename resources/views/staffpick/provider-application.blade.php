@@ -10,11 +10,7 @@
             </div>
         </header>
 
-        {{-- Part 3 mounts the six-step wizard here:
-             @livewire('provider-application-wizard', ['applicationToken' => $application->application_token]) --}}
-        <div class="rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center text-gray-500">
-            {{ __('Loading application…') }}
-        </div>
+        @livewire(\App\Livewire\StaffPick\ProviderApplicationWizard::class, ['applicationToken' => $application->application_token])
 
         <footer class="mt-8 text-center text-xs text-gray-400">
             {{ __('Powered by StaffPick') }}
