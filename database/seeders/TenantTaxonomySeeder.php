@@ -78,7 +78,7 @@ class TenantTaxonomySeeder extends Seeder
             'Clinical Electrophysiology',
             'Wound Management',
             'Hand Therapy',
-            'Performing Arts Physical Therapy',
+            'Orthopedic Rehabilitation',
             'Critical Care',
             'Other (write in)',
         ],
