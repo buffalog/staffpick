@@ -200,6 +200,11 @@ Route::get('/invitations', [
     'index',
 ])->name('invitations')->middleware('auth');
 
+Route::get('/invitations/accept/{token}', [
+    InvitationController::class,
+    'accept',
+])->name('invitations.accept')->middleware('auth');
+
 // Invoice
 
 Route::controller(InvoiceController::class)
