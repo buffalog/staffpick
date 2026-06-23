@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Filament\Dashboard;
 
+use App\Constants\TenancyPermissionConstants;
 use App\Models\User;
 use App\Services\TeamService;
 use App\Services\TenantPermissionService;
@@ -11,16 +12,18 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
-use Filament\Tables\Columns\SelectColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Str;
 use Livewire\Component;
 
 class Users extends Component implements HasActions, HasForms, HasTable
@@ -45,31 +48,14 @@ class Users extends Component implements HasActions, HasForms, HasTable
                     ->searchable(),
                 TextColumn::make('email')
                     ->searchable(),
-                SelectColumn::make('role')
-                    ->getStateUsing(function (User $user, TenantPermissionService $tenantPermissionService) {
-                        return $tenantPermissionService->getTenantUserRoles(Filament::getTenant(), $user)[0] ?? null;
-                    })
-                    ->options(function (TenantPermissionService $tenantPermissionService) {
-                        return $tenantPermissionService->getAllAvailableTenantRolesForDisplay(Filament::getTenant());
-                    })
-                    ->disabled(function (User $user) {
-                        return $user->id === auth()->user()->id;
-                    })
-                    ->updateStateUsing(function (User $user, ?string $state, TenantPermissionService $tenantPermissionService) {
-                        if ($state === null) {
-                            $tenantPermissionService->removeAllTenantUserRoles(Filament::getTenant(), $user);
-
-                            return;
-                        }
-
-                        $tenantPermissionService->assignTenantUserRole(Filament::getTenant(), $user, $state);
-
-                        Notification::make()
-                            ->title(__('User role has been updated.'))
-                            ->success()
-                            ->send();
-                    })
-                    ->searchable(),
+                TextColumn::make('sp_roles')
+                    ->label(__('Role'))
+                    ->badge()
+                    ->placeholder('—')
+                    ->getStateUsing(fn (User $user): array => collect($user->spRolesForTenant(Filament::getTenant()->id))
+                        ->map(fn (string $role): string => Str::of($role)->after('sp_')->title()->toString())
+                        ->values()
+                        ->all()),
                 TextColumn::make('teams')
                     ->getStateUsing(function (User $record, TeamService $teamService) {
                         $teams = $teamService->getUserTeams($record, Filament::getTenant())->pluck('name')->toArray();
@@ -92,7 +78,103 @@ class Users extends Component implements HasActions, HasForms, HasTable
             ->filters([
                 //
             ])
+            ->headerActions([
+                Action::make('addUser')
+                    ->label(__('Add User'))
+                    ->icon('heroicon-o-user-plus')
+                    ->modalHeading(__('Add User'))
+                    ->modalSubmitActionLabel(__('Create User'))
+                    ->schema([
+                        TextInput::make('name')
+                            ->label(__('Name'))
+                            ->required()
+                            ->maxLength(255),
+                        TextInput::make('email')
+                            ->label(__('Email'))
+                            ->email()
+                            ->required()
+                            ->maxLength(255)
+                            ->unique(table: User::class),
+                        TextInput::make('password')
+                            ->label(__('Temporary Password'))
+                            ->password()
+                            ->required()
+                            ->maxLength(255)
+                            ->helperText(__('Share this with the user. They should change it after first login.')),
+                        Select::make('role')
+                            ->label(__('Role'))
+                            ->required()
+                            ->options(collect(TenancyPermissionConstants::SP_TENANT_ROLES)
+                                ->mapWithKeys(fn (string $role): array => [
+                                    $role => Str::of($role)->after('sp_')->title()->toString(),
+                                ])
+                                ->all()),
+                    ])
+                    ->action(function (array $data, TenantService $tenantService, TenantPermissionService $tenantPermissionService): void {
+                        $tenant = Filament::getTenant();
+
+                        $user = User::create([
+                            'name' => $data['name'],
+                            'email' => $data['email'],
+                            'password' => bcrypt($data['password']),
+                            'email_verified_at' => now(),
+                        ]);
+
+                        // Reuse the existing attach path (seat checks + default tenant).
+                        if (! $tenantService->addUserToTenant($tenant, $user)) {
+                            $user->delete();
+
+                            Notification::make()
+                                ->title(__('Could not add user — workspace seat limit reached.'))
+                                ->danger()
+                                ->send();
+
+                            return;
+                        }
+
+                        $tenantPermissionService->assignTenantUserRoles($tenant, $user, [$data['role']]);
+
+                        Notification::make()
+                            ->title(__('User created.'))
+                            ->success()
+                            ->send();
+                    }),
+            ])
             ->recordActions([
+                Action::make('editRoles')
+                    ->label(__('Edit Roles'))
+                    ->icon('heroicon-o-shield-check')
+                    ->modalHeading(__('Edit Roles'))
+                    ->modalSubmitActionLabel(__('Save'))
+                    // Don't let an admin edit their own roles (and risk locking
+                    // themselves out) — mirrors the old self-disabled role column.
+                    ->disabled(fn (User $user): bool => $user->id === auth()->id())
+                    ->fillForm(fn (User $user): array => [
+                        'roles' => $user->spRolesForTenant(Filament::getTenant()->id),
+                    ])
+                    ->schema([
+                        Select::make('roles')
+                            ->label(__('Roles'))
+                            ->multiple()
+                            ->required()
+                            ->options(collect(TenancyPermissionConstants::SP_TENANT_ROLES)
+                                ->mapWithKeys(fn (string $role): array => [
+                                    $role => Str::of($role)->after('sp_')->title()->toString(),
+                                ])
+                                ->all()),
+                    ])
+                    ->action(function (User $user, array $data, TenantPermissionService $tenantPermissionService): void {
+                        $tenantPermissionService->assignTenantUserRoles(
+                            Filament::getTenant(),
+                            $user,
+                            array_values($data['roles']),
+                        );
+
+                        Notification::make()
+                            ->title(__('User roles updated.'))
+                            ->success()
+                            ->send();
+                    }),
                 Action::make('remove')
                     ->label(__('Remove User'))
                     ->color('danger')
