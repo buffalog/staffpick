@@ -39,11 +39,14 @@ class ProviderStatsWidget extends BaseWidget
             ->descriptionIcon('heroicon-o-exclamation-triangle')
             ->color($alertCount > 0 ? 'danger' : 'success');
 
-        // Only make the card actionable when there's something to act on. No dedicated
-        // provider-panel credentials page exists yet, so link to the provider profile
-        // (dashboard panel) where credentials are managed — same target as "My Profile".
+        // Only make the card actionable when there's something to act on. Deep-link
+        // straight to the credentials step of the profile wizard (dashboard panel).
+        // Built off getUrl() so the tenant segment always resolves, then the step query.
         if ($alertCount > 0) {
-            $credentialAlerts->url(ProviderProfile::getUrl(panel: 'dashboard', tenant: Filament::getTenant()));
+            $credentialAlerts->url(
+                ProviderProfile::getUrl(panel: 'dashboard', tenant: Filament::getTenant())
+                .'?step=form.credentials%3A%3Adata%3A%3Awizard-step'
+            );
         }
 
         return [
