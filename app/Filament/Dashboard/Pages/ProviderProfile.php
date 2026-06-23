@@ -332,6 +332,9 @@ class ProviderProfile extends Page
                             ->viewData([
                                 'mode' => 'polygon',
                                 'pointsModel' => 'data.service_zone_points',
+                                'centerLatModel' => 'data.latitude',
+                                'centerLngModel' => 'data.longitude',
+                                'radiusModel' => 'data.radius_preferred_miles',
                             ]),
                     ]),
             ]);

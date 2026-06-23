@@ -18,6 +18,13 @@
         failed: $wire.$entangle('{{ $failedModel }}'),
         @else
         points: $wire.$entangle('{{ $pointsModel }}'),
+        @if (! empty($centerLatModel ?? null))
+        centerLat: $wire.$entangle('{{ $centerLatModel }}'),
+        centerLng: $wire.$entangle('{{ $centerLngModel }}'),
+        @endif
+        @if (! empty($radiusModel ?? null))
+        radiusMiles: $wire.$entangle('{{ $radiusModel }}'),
+        @endif
         @endif
     })"
     data-sp-leaflet="{{ $mode }}"

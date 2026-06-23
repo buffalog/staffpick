@@ -170,6 +170,9 @@
                 @include('filament.forms.leaflet-map', [
                     'mode' => 'polygon',
                     'pointsModel' => 'data.service_zones',
+                    'centerLatModel' => 'data.latitude',
+                    'centerLngModel' => 'data.longitude',
+                    'radiusModel' => 'data.preferred_radius',
                 ])
             @endif
 
