@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Dashboard\Pages;
+namespace App\Filament\Provider\Pages;
 
 use App\Filament\Dashboard\Support\HelpHeaderAction;
 use App\Models\StaffPick\AssignmentOffer;
@@ -20,19 +20,16 @@ use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 
 /**
- * Provider-facing list of their assignment offers. Visible only to a user who owns an
- * active/pending provider record. Pending (still-open) offers can be accepted or
- * declined inline; expired offers are listed read-only. Thin UI over
- * {@see OfferService}; full case detail lives behind /offers/{token}.
+ * Provider-panel "Case Matches": the signed-in clinician's own assignment offers,
+ * scoped strictly to the provider record they own (provider_id = their provider).
+ * Reached from the provider avatar menu, never the sidebar. Mirrors the dashboard
+ * MyOffers page (kept for admin/staff) and reuses its blade view.
  */
 class MyOffers extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedInbox;
 
     protected static ?string $slug = 'my-offers';
-
-    // Within "My Account": after My Provider Profile (sort 1).
-    protected static ?int $navigationSort = 2;
 
     protected string $view = 'filament.dashboard.pages.my-offers';
 
@@ -46,11 +43,6 @@ class MyOffers extends Page
         return __('Case Matches');
     }
 
-    public static function getNavigationGroup(): ?string
-    {
-        return null;
-    }
-
     public static function canAccess(): bool
     {
         return static::resolveProvider() !== null;
@@ -62,9 +54,7 @@ class MyOffers extends Page
     }
 
     /**
-     * Per-request memo of the resolved provider, keyed by "tenant:user". Avoids the
-     * 3-5 identical lookups a single render otherwise triggers (canAccess,
-     * shouldRegisterNavigation, and each offer accessor all resolve the provider).
+     * Per-request memo of the resolved provider, keyed by "tenant:user".
      *
      * @var array<string, ?Provider>
      */
