@@ -69,7 +69,7 @@ class ProviderApplicationReviewService
 
             // Create the invitation row inside the transaction so an invite failure
             // rolls back the whole approval (no orphaned provider on retry).
-            $invitation = $this->createInvitation($application);
+            $invitation = $this->createInvitation($application, $reviewer);
 
             return $provider;
         });
@@ -173,7 +173,7 @@ class ProviderApplicationReviewService
         }
     }
 
-    private function createInvitation(ProviderApplication $application): ?Invitation
+    private function createInvitation(ProviderApplication $application, User $reviewer): ?Invitation
     {
         $tenant = Tenant::find($application->tenant_id);
 
@@ -181,10 +181,14 @@ class ProviderApplicationReviewService
             return null;
         }
 
+        // Mirrors CreateInvitation: uuid/token/expires_at/user_id are all required
+        // (NOT NULL). The inviting user is the reviewer approving the application.
         return $tenant->invitations()->create([
             'uuid' => (string) Str::uuid(),
             'email' => $application->email,
-            'token' => Str::random(40),
+            'token' => Str::random(60),
+            'expires_at' => now()->addDays(7),
+            'user_id' => $reviewer->id,
             'status' => InvitationStatus::PENDING->value,
             'role' => [TenancyPermissionConstants::ROLE_SP_PROVIDER],
         ]);
