@@ -6,6 +6,10 @@
     $disciplineName = $record->discipline?->name;
     $subjectHasCoordinates = $record->subject && $record->subject->latitude !== null && $record->subject->longitude !== null;
     $languageWarning = $results->isNotEmpty() && $results->first()->languageWarning;
+
+    // "Offer Sent" state = a live offer in the DB (recomputed each render) unioned with
+    // any dispatched in this modal session (host component property).
+    $offeredIds = array_merge($alreadyOfferedProviderIds ?? [], $this->offeredProviderIds ?? []);
 @endphp
 
 <div class="space-y-4 text-sm">
@@ -85,15 +89,32 @@
                                     <span class="text-gray-300 dark:text-gray-600">&mdash;</span>
                                 @endif
                             </td>
-                            <td class="px-3 py-2 text-right">
-                                <button
-                                    type="button"
-                                    wire:click="assignProvider({{ $record->id }}, {{ $provider->id }})"
-                                    wire:loading.attr="disabled"
-                                    class="rounded-md bg-primary-600 px-3 py-1 text-xs font-medium text-white hover:bg-primary-500 disabled:opacity-50"
-                                >
-                                    {{ __('Assign') }}
-                                </button>
+                            <td class="px-3 py-2">
+                                <div class="flex items-center justify-end gap-2">
+                                    @if (in_array($provider->id, $offeredIds))
+                                        <span class="inline-flex items-center gap-1 rounded-md bg-green-100 px-3 py-1 text-xs font-medium text-green-700 dark:bg-green-400/10 dark:text-green-400">
+                                            &checkmark; {{ __('Offer Sent') }}
+                                        </span>
+                                    @else
+                                        <button
+                                            type="button"
+                                            wire:click="dispatchOfferToProvider({{ $record->id }}, {{ $provider->id }})"
+                                            wire:loading.attr="disabled"
+                                            wire:target="dispatchOfferToProvider({{ $record->id }}, {{ $provider->id }})"
+                                            class="rounded-md bg-primary-600 px-3 py-1 text-xs font-medium text-white hover:bg-primary-500 disabled:opacity-50"
+                                        >
+                                            {{ __('Dispatch Offer') }}
+                                        </button>
+                                    @endif
+                                    <button
+                                        type="button"
+                                        wire:click="assignProvider({{ $record->id }}, {{ $provider->id }})"
+                                        wire:loading.attr="disabled"
+                                        class="rounded-md px-3 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:opacity-50 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-white/5"
+                                    >
+                                        {{ __('Assign') }}
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     @endforeach

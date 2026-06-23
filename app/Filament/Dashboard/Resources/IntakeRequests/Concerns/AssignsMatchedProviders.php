@@ -5,16 +5,53 @@ namespace App\Filament\Dashboard\Resources\IntakeRequests\Concerns;
 use App\Models\StaffPick\IntakeRequest;
 use App\Models\StaffPick\Provider;
 use App\Services\StaffPick\AssignmentService;
+use App\Services\StaffPick\OfferService;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Gate;
 
 /**
- * Shared Livewire action for the "Find Matches" modal: assigns a matched provider
- * to an intake request. Included by the list and view pages so the modal's per-row
- * Assign buttons resolve to a method on whichever page hosts the modal.
+ * Shared Livewire actions for the "Find Matches" modal: assign a matched provider
+ * directly, or dispatch a single offer to them (semi-auto flow). Included by the list
+ * and view pages so the modal's per-row buttons resolve to a method on whichever page
+ * hosts the modal.
  */
 trait AssignsMatchedProviders
 {
+    /**
+     * Provider IDs dispatched an offer during this modal session — drives the inline
+     * "Offer Sent ✓" state. Unioned with live DB offers in the view.
+     *
+     * @var array<int, int>
+     */
+    public array $offeredProviderIds = [];
+
+    /**
+     * Semi-auto: dispatch a single offer to one matched provider. Keeps the modal open
+     * so staff can offer multiple providers; does not unmount the action.
+     */
+    public function dispatchOfferToProvider(int $intakeRequestId, int $providerId): void
+    {
+        $intakeRequest = IntakeRequest::find($intakeRequestId);
+        $provider = Provider::find($providerId);
+
+        if ($intakeRequest === null || $provider === null) {
+            return;
+        }
+
+        abort_unless(Gate::allows('update', $intakeRequest), 403);
+
+        app(OfferService::class)->dispatchToProvider($intakeRequest, $provider);
+
+        if (! in_array($providerId, $this->offeredProviderIds, true)) {
+            $this->offeredProviderIds[] = $providerId;
+        }
+
+        Notification::make()
+            ->title(__('Offer dispatched to :provider', ['provider' => trim("{$provider->first_name} {$provider->last_name}")]))
+            ->success()
+            ->send();
+    }
+
     public function assignProvider(int $intakeRequestId, int $providerId): void
     {
         // Both lookups run through the BelongsToTenant scope, so a record from

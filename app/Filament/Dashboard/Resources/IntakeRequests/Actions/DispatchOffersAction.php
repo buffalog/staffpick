@@ -10,20 +10,19 @@ use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Facades\Gate;
 
 /**
- * "Dispatch Offers" — starts the assignment-offer pipeline for an intake: builds the
- * ranked queue and sends the first offer. Shown while the case is awaiting matching.
+ * "Auto Dispatch" — full-auto pipeline: builds the ranked provider queue and fires
+ * sequential offers to all eligible providers with no staff review (no modal). The
+ * semi-auto, review-each-provider path lives in the Find Matches modal.
  */
 class DispatchOffersAction
 {
     public static function make(): Action
     {
         return Action::make('dispatchOffers')
-            ->label(__('Dispatch Offers'))
+            ->label(__('Auto Dispatch'))
             ->icon(Heroicon::OutlinedPaperAirplane)
             ->color('primary')
             ->visible(fn (IntakeRequest $record): bool => in_array($record->status, ['pending', 'matching'], true))
-            ->requiresConfirmation()
-            ->modalDescription(__('Build the ranked provider queue and start sending offers one at a time.'))
             ->action(function (IntakeRequest $record): void {
                 abort_unless(Gate::allows('update', $record), 403);
 
