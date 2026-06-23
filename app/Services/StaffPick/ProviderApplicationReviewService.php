@@ -30,7 +30,9 @@ class ProviderApplicationReviewService
 
     public function approve(ProviderApplication $application, User $reviewer): Provider
     {
-        $provider = DB::transaction(function () use ($application, $reviewer): Provider {
+        $invitation = null;
+
+        $provider = DB::transaction(function () use ($application, $reviewer, &$invitation): Provider {
             $provider = Provider::create([
                 'tenant_id' => $application->tenant_id,
                 'first_name' => $application->first_name,
@@ -65,10 +67,17 @@ class ProviderApplicationReviewService
                 'reviewed_at' => now(),
             ]);
 
+            // Create the invitation row inside the transaction so an invite failure
+            // rolls back the whole approval (no orphaned provider on retry).
+            $invitation = $this->createInvitation($application);
+
             return $provider;
         });
 
-        $this->inviteProvider($application);
+        // Side effect (email/event) only after the approval is durably committed.
+        if ($invitation !== null) {
+            $this->tenants->handleAfterInvitationCreated($invitation);
+        }
 
         return $provider;
     }
@@ -164,21 +173,20 @@ class ProviderApplicationReviewService
         }
     }
 
-    private function inviteProvider(ProviderApplication $application): void
+    private function createInvitation(ProviderApplication $application): ?Invitation
     {
         $tenant = Tenant::find($application->tenant_id);
 
         if (! $tenant instanceof Tenant || blank($application->email)) {
-            return;
+            return null;
         }
 
-        $invitation = $tenant->invitations()->create([
+        return $tenant->invitations()->create([
+            'uuid' => (string) Str::uuid(),
             'email' => $application->email,
             'token' => Str::random(40),
             'status' => InvitationStatus::PENDING->value,
             'role' => [TenancyPermissionConstants::ROLE_SP_PROVIDER],
         ]);
-
-        $this->tenants->handleAfterInvitationCreated($invitation);
     }
 }
