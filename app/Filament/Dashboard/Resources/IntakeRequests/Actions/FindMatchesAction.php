@@ -54,10 +54,17 @@ class FindMatchesAction
             ]));
     }
 
+    /** @var array<int, bool> */
+    private static array $assignmentCache = [];
+
     private static function hasActiveAssignment(IntakeRequest $record): bool
     {
-        return $record->assignments()
-            ->where('status', Assignment::STATUS_ACTIVE)
-            ->exists();
+        if (! isset(self::$assignmentCache[$record->id])) {
+            self::$assignmentCache[$record->id] = $record->assignments()
+                ->where('status', Assignment::STATUS_ACTIVE)
+                ->exists();
+        }
+
+        return self::$assignmentCache[$record->id];
     }
 }
