@@ -29,6 +29,8 @@ class ProviderPanelProvider extends PanelProvider
         return $panel
             ->id('provider')
             ->path('provider')
+            // Login page so logged-out users are redirected to sign in, not 403'd.
+            ->login()
             ->brandName('StaffPick · Provider Portal')
             ->colors([
                 'primary' => Color::Indigo,

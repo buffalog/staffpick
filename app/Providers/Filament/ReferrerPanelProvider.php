@@ -29,6 +29,8 @@ class ReferrerPanelProvider extends PanelProvider
         return $panel
             ->id('referrer')
             ->path('referrer')
+            // Login page so logged-out users are redirected to sign in, not 403'd.
+            ->login()
             ->brandName('StaffPick · Referrer Portal')
             ->colors([
                 'primary' => Color::Emerald,

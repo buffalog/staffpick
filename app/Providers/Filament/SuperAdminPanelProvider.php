@@ -30,6 +30,9 @@ class SuperAdminPanelProvider extends PanelProvider
         return $panel
             ->id('superadmin')
             ->path('superadmin')
+            // Without a login page, a logged-out user hitting this panel gets a bare
+            // 403 instead of being redirected to sign in. Standard email/password.
+            ->login()
             ->colors([
                 'primary' => Color::Rose,
             ])
