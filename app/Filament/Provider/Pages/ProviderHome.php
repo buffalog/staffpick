@@ -11,7 +11,6 @@ use App\Models\Tenant;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Pages\Page;
 use Filament\Panel;
 use Filament\Support\Icons\Heroicon;
@@ -128,26 +127,7 @@ class ProviderHome extends Page implements HasTable
             ->recordActions([
                 Action::make('view')
                     ->label(__('View'))
-                    ->modalHeading(fn (IntakeRequest $record): string => trim("{$record->subject?->first_name} {$record->subject?->last_name}") ?: __('Case'))
-                    ->modalSubmitAction(false)
-                    ->modalCancelActionLabel(__('Close'))
-                    ->infolist([
-                        TextEntry::make('subject_name')
-                            ->label(__('Case Name'))
-                            ->state(fn (IntakeRequest $record): string => trim("{$record->subject?->first_name} {$record->subject?->last_name}"))
-                            ->placeholder('—'),
-                        TextEntry::make('discipline.name')->label(__('Discipline'))->placeholder('—'),
-                        TextEntry::make('status')
-                            ->label(__('Status'))
-                            ->badge()
-                            ->formatStateUsing(fn (string $state): string => IntakeRequestResource::statusOptions()[$state] ?? str($state)->headline())
-                            ->color(fn (string $state): string => IntakeRequestResource::statusColor($state)),
-                        TextEntry::make('evaluation_date')->label(__('Evaluation Date'))->date()->placeholder('—'),
-                        TextEntry::make('referralSource.name')->label(__('Referral Source'))->placeholder('—'),
-                        TextEntry::make('frequency')->label(__('Frequency'))->placeholder('—'),
-                        TextEntry::make('visit_type')->label(__('Visit Type'))->placeholder('—'),
-                        TextEntry::make('notes')->label(__('Notes'))->placeholder('—')->columnSpanFull(),
-                    ]),
+                    ->url(fn (IntakeRequest $record): string => ViewCase::getUrl(['intakeRequest' => $record->id])),
             ])
             ->recordAction('view')
             ->emptyStateHeading(__('No cases assigned'))
