@@ -243,6 +243,18 @@
                         @error('data.specialty_ids') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                     </div>
                     <div>
+                        @php $requestedProviderOptions = $this->requestedProviderOptions(); @endphp
+                        <label class="{{ $label }}">{{ __('Requested Provider (optional)') }}</label>
+                        <select wire:model="data.requested_provider_id" class="{{ $input }}">
+                            <option value="">{{ __('No preference') }}</option>
+                            @foreach ($requestedProviderOptions as $id => $name)
+                                <option value="{{ $id }}">{{ $name }}</option>
+                            @endforeach
+                        </select>
+                        <p class="mt-1 text-xs text-gray-500">{{ __('If you\'d like to request a specific provider, select them here.') }}</p>
+                        @error('data.requested_provider_id') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
                         <label class="{{ $label }}">{{ __('Visit type') }}</label>
                         <input type="text" wire:model="data.visit_type" class="{{ $input }}">
                     </div>
