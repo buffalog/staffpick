@@ -30,6 +30,8 @@ class ProviderResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'last_name';
 
+    protected static ?int $navigationSort = 1;
+
     public static function form(Schema $schema): Schema
     {
         return ProviderForm::configure($schema);
@@ -80,7 +82,7 @@ class ProviderResource extends Resource
 
     public static function getNavigationGroup(): ?string
     {
-        return __('Dispatch');
+        return __('Our Providers');
     }
 
     public static function getModelLabel(): string
@@ -95,6 +97,6 @@ class ProviderResource extends Resource
 
     public static function getNavigationLabel(): string
     {
-        return static::getPluralModelLabel();
+        return __('Provider List');
     }
 }

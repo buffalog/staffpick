@@ -20,7 +20,7 @@ class Cases extends ListRecords
 
     public function getTitle(): string
     {
-        return __('Cases');
+        return __('Active Cases');
     }
 
     public function table(Table $table): Table

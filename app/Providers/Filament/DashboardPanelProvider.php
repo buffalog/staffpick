@@ -140,14 +140,15 @@ class DashboardPanelProvider extends PanelProvider
                 fn (): string => view('filament.dashboard.partials.sortable-assets')->render(),
             )
             ->navigationGroups([
-                // Order + default collapse state of the sidebar groups. Dispatch and
-                // Administration stay expanded; Settings starts collapsed (infrequent).
+                // Order + default collapse state of the sidebar groups. Cases and
+                // Our Providers stay expanded; Settings starts collapsed (infrequent).
                 // No group icons: Filament forbids a group icon when its items already
-                // carry icons (which all of these do).
+                // carry icons (which all of these do). Full Board is ungrouped (renders
+                // at the top alongside the dashboard).
                 NavigationGroup::make()
-                    ->label(__('Dispatch')),
+                    ->label(__('Cases')),
                 NavigationGroup::make()
-                    ->label(__('Credentialing')),
+                    ->label(__('Our Providers')),
                 NavigationGroup::make()
                     ->label(__('Settings'))
                     ->collapsed(),
