@@ -37,6 +37,8 @@ class ProviderHome extends Page implements HasTable
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedHome;
 
+    protected static ?int $navigationSort = 1;
+
     protected string $view = 'filament.provider.pages.provider-home';
 
     /** @var array<string, ?Provider> */

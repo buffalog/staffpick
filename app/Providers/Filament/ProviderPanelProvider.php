@@ -3,8 +3,6 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Dashboard\Pages\ProviderProfile;
-use App\Filament\Provider\Pages\MyCases;
-use App\Filament\Provider\Pages\MyOffers;
 use App\Filament\Provider\Pages\ProviderHome;
 use App\Http\Middleware\UpdateUserLastSeenAt;
 use App\Models\Tenant;
@@ -40,14 +38,6 @@ class ProviderPanelProvider extends PanelProvider
                     ->label(__('My Profile'))
                     ->url(fn () => ProviderProfile::getUrl(panel: 'dashboard', tenant: Filament::getTenant()))
                     ->icon('heroicon-s-user-circle'),
-                Action::make('my-cases')
-                    ->label(__('My Cases'))
-                    ->url(fn () => MyCases::getUrl(panel: 'provider', tenant: Filament::getTenant()))
-                    ->icon('heroicon-s-calendar-days'),
-                Action::make('case-offerings')
-                    ->label(__('Case Matches'))
-                    ->url(fn () => MyOffers::getUrl(panel: 'provider', tenant: Filament::getTenant()))
-                    ->icon('heroicon-s-inbox-arrow-down'),
             ])
             ->discoverResources(in: app_path('Filament/Provider/Resources'), for: 'App\\Filament\\Provider\\Resources')
             ->discoverPages(in: app_path('Filament/Provider/Pages'), for: 'App\\Filament\\Provider\\Pages')

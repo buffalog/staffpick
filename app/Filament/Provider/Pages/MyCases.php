@@ -7,10 +7,12 @@ use App\Models\StaffPick\Assignment;
 use App\Models\StaffPick\IntakeRequest;
 use App\Models\StaffPick\Provider;
 use App\Models\Tenant;
+use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Pages\Page;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
@@ -30,6 +32,10 @@ class MyCases extends Page implements HasTable
 
     protected static ?string $slug = 'my-cases';
 
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBriefcase;
+
+    protected static ?int $navigationSort = 2;
+
     protected string $view = 'filament.provider.pages.my-cases';
 
     /** @var array<string, ?Provider> */
@@ -47,7 +53,7 @@ class MyCases extends Page implements HasTable
 
     public static function shouldRegisterNavigation(): bool
     {
-        return false;
+        return true;
     }
 
     /** The Provider record linked to the current user for the active tenant, if any. */
