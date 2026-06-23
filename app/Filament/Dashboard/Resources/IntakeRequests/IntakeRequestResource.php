@@ -40,7 +40,7 @@ class IntakeRequestResource extends Resource
             'matching' => __('Matching'),
             'offered' => __('Offered'),
             'no_clinicians_available' => __('No clinicians available'),
-            'assigned_pending' => __('Assigned (pending)'),
+            'assigned_pending' => __('Assigned (Pending)'),
             'active' => __('Active'),
             'on_hold' => __('On hold'),
             'completed' => __('Completed'),
