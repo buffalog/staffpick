@@ -98,9 +98,31 @@
                 @endforelse
             </ul>
             <div class="mt-4">
-                <a href="{{ $this->addProviderUrl() }}">
-                    <x-filament::button icon="heroicon-o-plus" tag="span">{{ __('Add Provider') }}</x-filament::button>
-                </a>
+                <x-filament::dropdown placement="bottom-start">
+                    <x-slot name="trigger">
+                        <x-filament::button icon="heroicon-o-plus" tag="span">{{ __('Add Provider') }}</x-filament::button>
+                    </x-slot>
+
+                    <x-filament::dropdown.list>
+                        <x-filament::dropdown.list.item
+                            tag="a"
+                            href="{{ $this->addProviderUrl() }}"
+                            icon="heroicon-o-pencil-square"
+                        >
+                            {{ __('Onboard Manually') }}
+                        </x-filament::dropdown.list.item>
+
+                        <x-filament::dropdown.list.item
+                            icon="heroicon-o-link"
+                            x-on:click="
+                                window.navigator.clipboard.writeText(@js($this->applicationLinkUrl()));
+                                new FilamentNotification().title(@js(__('Application link copied'))).success().send();
+                            "
+                        >
+                            {{ __('Copy Application Link') }}
+                        </x-filament::dropdown.list.item>
+                    </x-filament::dropdown.list>
+                </x-filament::dropdown>
             </div>
         </x-filament::section>
 
