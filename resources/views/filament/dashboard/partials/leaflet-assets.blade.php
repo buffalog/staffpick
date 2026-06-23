@@ -39,6 +39,13 @@
             lng: config.lng ?? null,
             failed: config.failed ?? null,
             points: config.points ?? null,
+            // Polygon mode only: pre-center on the applicant and draw their radius as a
+            // coverage circle so they see their default service area before drawing.
+            centerLat: config.centerLat ?? null,
+            centerLng: config.centerLng ?? null,
+            radiusMiles: config.radiusMiles ?? null,
+            radiusCircle: null,
+            centerMarker: null,
 
             init() {
                 // Defer until the container is in the DOM with layout.
@@ -55,8 +62,12 @@
                 }
 
                 const el = this.$refs.map;
-                const hasPin = this.lat && this.lng;
-                const center = hasPin ? [this.lat, this.lng] : this.defaultCenter();
+                // Polygon mode has no lat/lng of its own — fall back to the applicant's
+                // center coords so the map opens on them rather than the US default.
+                const pinLat = this.lat ?? this.centerLat;
+                const pinLng = this.lng ?? this.centerLng;
+                const hasPin = pinLat && pinLng;
+                const center = hasPin ? [pinLat, pinLng] : this.defaultCenter();
                 const zoom = hasPin ? 13 : 4;
 
                 this.map = L.map(el).setView(center, zoom);
@@ -134,6 +145,12 @@
                     this.map.fitBounds(poly.getBounds(), { maxZoom: 13 });
                 }
 
+                // Pre-draw the applicant's coverage circle from their address + radius.
+                if (this.centerLat && this.centerLng) {
+                    this.drawCoverage();
+                    this.$watch('radiusMiles', () => this.updateCircle());
+                }
+
                 this.map.addControl(new L.Control.Draw({
                     draw: {
                         polygon: { allowIntersection: false, showArea: true },
@@ -153,6 +170,48 @@
                 });
                 this.map.on(L.Draw.Event.EDITED, () => this.writePoints());
                 this.map.on(L.Draw.Event.DELETED, () => this.writePoints());
+            },
+
+            /* ---- coverage circle (applicant's address + radius) ---- */
+
+            drawCoverage() {
+                const center = [parseFloat(this.centerLat), parseFloat(this.centerLng)];
+
+                if (this.centerMarker) {
+                    this.centerMarker.setLatLng(center);
+                } else {
+                    this.centerMarker = L.circleMarker(center, {
+                        radius: 5, color: '#4f46e5', fillColor: '#4f46e5', fillOpacity: 1,
+                    }).addTo(this.map);
+                }
+
+                this.updateCircle();
+            },
+
+            updateCircle() {
+                if (!this.centerLat || !this.centerLng) {
+                    return;
+                }
+
+                const center = [parseFloat(this.centerLat), parseFloat(this.centerLng)];
+                const meters = (parseFloat(this.radiusMiles) || 0) * 1609.34;
+
+                if (meters <= 0) {
+                    return;
+                }
+
+                if (this.radiusCircle) {
+                    this.radiusCircle.setLatLng(center).setRadius(meters);
+                } else {
+                    this.radiusCircle = L.circle(center, {
+                        radius: meters, color: '#4f46e5', weight: 1, fillColor: '#4f46e5', fillOpacity: 0.08,
+                    }).addTo(this.map);
+                }
+
+                // Frame the circle only while no polygon has been drawn yet.
+                if (this.drawnItems && this.drawnItems.getLayers().length === 0) {
+                    this.map.fitBounds(this.radiusCircle.getBounds(), { maxZoom: 13 });
+                }
             },
 
             toLatLngs(points) {
