@@ -2,14 +2,18 @@
 
 namespace App\Filament\Dashboard\Pages;
 
+use App\Filament\Dashboard\Credentialing\ManualCredential;
 use App\Filament\Dashboard\Credentialing\VerifyCredentialAction;
 use App\Filament\Dashboard\Resources\Providers\ProviderResource;
 use App\Filament\Dashboard\Support\HelpHeaderAction;
 use App\Filament\Dashboard\Support\SpRoleAccess;
+use App\Models\StaffPick\Provider;
 use App\Models\StaffPick\ProviderCredential;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\Select;
+use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
@@ -133,6 +137,35 @@ class CredentialingQueue extends Page implements HasTable
      */
     protected function getHeaderActions(): array
     {
-        return [HelpHeaderAction::make('scheduler/credentialing')];
+        return [
+            Action::make('addCredential')
+                ->label(__('Add Credential'))
+                ->icon(Heroicon::OutlinedPlus)
+                ->modalHeading(__('Add Credential'))
+                ->modalSubmitActionLabel(__('Add'))
+                ->schema(array_merge([
+                    Select::make('provider_id')
+                        ->label(__('Provider'))
+                        ->required()
+                        ->searchable()
+                        ->options(fn (): array => Provider::query()
+                            ->where('tenant_id', Filament::getTenant()?->id)
+                            ->orderBy('last_name')
+                            ->get()
+                            ->mapWithKeys(fn (Provider $provider): array => [
+                                $provider->id => trim("{$provider->first_name} {$provider->last_name}"),
+                            ])
+                            ->all()),
+                ], ManualCredential::fields((int) Filament::getTenant()?->id)))
+                ->action(function (array $data): void {
+                    ManualCredential::create($data, (int) $data['provider_id'], (int) Filament::getTenant()?->id);
+
+                    Notification::make()
+                        ->title(__('Credential added'))
+                        ->success()
+                        ->send();
+                }),
+            HelpHeaderAction::make('scheduler/credentialing'),
+        ];
     }
 }
