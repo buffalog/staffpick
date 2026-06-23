@@ -241,6 +241,11 @@ Route::get('/join/{tenantSlug}', [ProviderApplicationController::class, 'show'])
 Route::get('/join/{tenantSlug}/resume/{token}', [ProviderApplicationController::class, 'resume'])
     ->middleware('throttle:30,1')
     ->name('staffpick.application.resume');
+// Authenticated staff download of an applicant's uploaded credential (authorized in the
+// controller to admins/staff of the application's tenant).
+Route::get('/staff/applications/{application}/credentials/{index}', [ProviderApplicationController::class, 'downloadCredential'])
+    ->middleware('auth')
+    ->name('staffpick.application.credential');
 
 // StaffPick — inbound Slack webhook (signature-verified, no login/CSRF). The token
 // namespaces the tenant; rate-limited to blunt abuse of the public endpoint.

@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Constants\TenancyPermissionConstants;
 use App\Models\StaffPick\ProviderApplication;
 use App\Models\Tenant;
+use App\Models\User;
 use App\Services\StaffPick\ProviderApplicationService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Public entry points for the provider self-serve onboarding wizard. No auth: the
@@ -51,6 +55,28 @@ class ProviderApplicationController extends Controller
             'tenant' => $tenant,
             'application' => $application,
         ]);
+    }
+
+    /**
+     * Download a credential file an applicant uploaded. Authenticated + restricted to
+     * admins/staff of the application's tenant (PHI-adjacent documents).
+     */
+    public function downloadCredential(ProviderApplication $application, int $index): StreamedResponse
+    {
+        $user = auth()->user();
+        abort_unless($user instanceof User && $this->canReview($user, $application), 403);
+
+        $upload = ($application->credential_uploads ?? [])[$index] ?? null;
+        abort_if($upload === null || blank($upload['path'] ?? null) || ! Storage::exists($upload['path']), 404);
+
+        return Storage::download($upload['path'], $upload['original_name'] ?? basename($upload['path']));
+    }
+
+    private function canReview(User $user, ProviderApplication $application): bool
+    {
+        return $user->is_super_admin
+            || $user->hasSpRole($application->tenant_id, TenancyPermissionConstants::ROLE_SP_ADMIN)
+            || $user->hasSpRole($application->tenant_id, TenancyPermissionConstants::ROLE_SP_STAFF);
     }
 
     private function resolveTenant(string $tenantSlug): Tenant
