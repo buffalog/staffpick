@@ -75,9 +75,11 @@ class SubjectResource extends Resource
         return SpRoleAccess::isAdminOrStaff();
     }
 
-    public static function getNavigationGroup(): ?string
+    // Subjects (patient records) are reached through a case, not browsed directly — hide
+    // from the sidebar. (Also removes the now-empty Dispatch group.) Routes stay live.
+    public static function shouldRegisterNavigation(): bool
     {
-        return __('Dispatch');
+        return false;
     }
 
     public static function getModelLabel(): string
