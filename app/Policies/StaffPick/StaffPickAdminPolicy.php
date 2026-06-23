@@ -2,11 +2,8 @@
 
 namespace App\Policies\StaffPick;
 
-use App\Constants\TenancyPermissionConstants;
-use App\Models\Tenant;
+use App\Filament\Dashboard\Support\SpRoleAccess;
 use App\Models\User;
-use App\Services\TenantPermissionService;
-use Filament\Facades\Filament;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -26,12 +23,15 @@ class StaffPickAdminPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $this->isTenantAdmin($user);
+        // Read access for admins AND staff (schedulers). Mirrors the resource
+        // canAccess() gate (SpRoleAccess::isAdminOrStaff) so staff who can reach the
+        // resource can also open its records. Write operations stay admin-only below.
+        return SpRoleAccess::isAdminOrStaff();
     }
 
     public function view(User $user, Model $record): bool
     {
-        return $this->isTenantAdmin($user);
+        return SpRoleAccess::isAdminOrStaff();
     }
 
     public function create(User $user): bool
@@ -81,16 +81,9 @@ class StaffPickAdminPolicy
 
     private function isTenantAdmin(User $user): bool
     {
-        $tenant = Filament::getTenant();
-
-        if (! $tenant instanceof Tenant) {
-            return false;
-        }
-
-        return in_array(
-            TenancyPermissionConstants::ROLE_ADMIN,
-            app(TenantPermissionService::class)->getTenantUserRoles($tenant, $user),
-            true,
-        );
+        // SP-role aware (sp_admin + super-admin bypass). Previously this checked the
+        // legacy 'admin' tenant role, which the RBAC overhaul no longer assigns — so
+        // every write op on these PHI models was failing for real sp_admins.
+        return SpRoleAccess::isAdmin();
     }
 }
