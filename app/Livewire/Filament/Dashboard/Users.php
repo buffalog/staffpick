@@ -117,8 +117,12 @@ class Users extends Component implements HasActions, HasForms, HasTable
                             'name' => $data['name'],
                             'email' => $data['email'],
                             'password' => bcrypt($data['password']),
-                            'email_verified_at' => now(),
                         ]);
+
+                        // email_verified_at is not fillable — set it explicitly so the
+                        // user can sign in immediately with the temp password instead of
+                        // being blocked by email verification.
+                        $user->forceFill(['email_verified_at' => now()])->save();
 
                         // Reuse the existing attach path (seat checks + default tenant).
                         if (! $tenantService->addUserToTenant($tenant, $user)) {
