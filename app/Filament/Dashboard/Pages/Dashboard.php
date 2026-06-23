@@ -181,6 +181,16 @@ class Dashboard extends BaseDashboard
         return ProviderResource::getUrl('create');
     }
 
+    /** Public self-serve application link for this tenant (for the "copy link" action). */
+    public function applicationLinkUrl(): string
+    {
+        $tenant = Filament::getTenant();
+
+        return $tenant instanceof Tenant
+            ? route('staffpick.application.show', ['tenantSlug' => $tenant->uuid])
+            : '';
+    }
+
     public function sourceCount(): int
     {
         return ReferralSource::query()->where('tenant_id', $this->tenantId())->count();
