@@ -5,6 +5,7 @@ namespace App\Providers\Filament;
 use App\Filament\Dashboard\Pages\MyOffers;
 use App\Filament\Dashboard\Pages\ProviderProfile;
 use App\Filament\Provider\Pages\MyCases;
+use App\Filament\Provider\Pages\ProviderHome;
 use App\Http\Middleware\UpdateUserLastSeenAt;
 use App\Models\Tenant;
 use Filament\Actions\Action;
@@ -12,7 +13,6 @@ use Filament\Facades\Filament;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
-use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
@@ -52,7 +52,7 @@ class ProviderPanelProvider extends PanelProvider
             ->discoverResources(in: app_path('Filament/Provider/Resources'), for: 'App\\Filament\\Provider\\Resources')
             ->discoverPages(in: app_path('Filament/Provider/Pages'), for: 'App\\Filament\\Provider\\Pages')
             ->pages([
-                Dashboard::class,
+                ProviderHome::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Provider/Widgets'), for: 'App\\Filament\\Provider\\Widgets')
             ->favicon(asset('images/favicon.ico'))
