@@ -2,6 +2,9 @@
 
 namespace App\Filament\Dashboard\Resources\IntakeRequests;
 
+use App\Filament\Dashboard\Resources\IntakeRequests\Pages\AllCases;
+use App\Filament\Dashboard\Resources\IntakeRequests\Pages\Cases;
+use App\Filament\Dashboard\Resources\IntakeRequests\Pages\CompletedCases;
 use App\Filament\Dashboard\Resources\IntakeRequests\Pages\CreateIntakeRequest;
 use App\Filament\Dashboard\Resources\IntakeRequests\Pages\EditIntakeRequest;
 use App\Filament\Dashboard\Resources\IntakeRequests\Pages\ListIntakeRequests;
@@ -13,6 +16,7 @@ use App\Filament\Dashboard\Support\SpRoleAccess;
 use App\Models\StaffPick\IntakeRequest;
 use App\Models\StaffPick\TenantConfig;
 use BackedEnum;
+use Filament\Navigation\NavigationItem;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -42,7 +46,7 @@ class IntakeRequestResource extends Resource
             'no_clinicians_available' => __('No clinicians available'),
             'assigned_pending' => __('Assigned (Pending)'),
             'active' => __('Active'),
-            'on_hold' => __('On hold'),
+            'on_hold' => __('On Hold'),
             'completed' => __('Completed'),
             'finished' => __('Finished'),
             'cancelled' => __('Cancelled'),
@@ -97,10 +101,37 @@ class IntakeRequestResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => ListIntakeRequests::route('/'),
+            'index' => ListIntakeRequests::route('/'),       // Pending Cases (dispatch queue)
+            'cases' => Cases::route('/cases'),               // active
+            'completed-cases' => CompletedCases::route('/completed-cases'),
+            'all-cases' => AllCases::route('/all-cases'),
             'create' => CreateIntakeRequest::route('/create'),
             'view' => ViewIntakeRequest::route('/{record}'),
             'edit' => EditIntakeRequest::route('/{record}/edit'),
+        ];
+    }
+
+    /**
+     * Four scoped sidebar entries instead of the resource's single default item.
+     *
+     * @return array<NavigationItem>
+     */
+    public static function getNavigationItems(): array
+    {
+        $group = static::getNavigationGroup();
+
+        $item = fn (string $label, string $page, int $sort): NavigationItem => NavigationItem::make($label)
+            ->group($group)
+            ->icon(static::getNavigationIcon())
+            ->sort($sort)
+            ->url(static::getUrl($page))
+            ->isActiveWhen(fn (): bool => request()->routeIs(static::getRouteBaseName().'.'.$page));
+
+        return [
+            $item(__('Pending Cases'), 'index', 1),
+            $item(__('Cases'), 'cases', 2),
+            $item(__('Completed Cases'), 'completed-cases', 3),
+            $item(__('All Cases'), 'all-cases', 4),
         ];
     }
 

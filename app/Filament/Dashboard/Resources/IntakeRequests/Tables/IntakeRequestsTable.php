@@ -20,7 +20,13 @@ use Filament\Tables\Table;
 
 class IntakeRequestsTable
 {
-    public static function configure(Table $table): Table
+    /**
+     * @param  bool  $withDispatchActions  Whether to show the dispatch row actions (Find
+     *                                     Matches / Auto Dispatch / Re-trigger). Only the
+     *                                     Pending Cases page enables these; the active /
+     *                                     completed / all views omit them.
+     */
+    public static function configure(Table $table, bool $withDispatchActions = true): Table
     {
         return $table
             ->columns([
@@ -84,9 +90,11 @@ class IntakeRequestsTable
                 TrashedFilter::make(),
             ])
             ->recordActions([
-                FindMatchesAction::make(),
-                DispatchOffersAction::make(),
-                RetriggerMatchingAction::make(),
+                ...($withDispatchActions ? [
+                    FindMatchesAction::make(),
+                    DispatchOffersAction::make(),
+                    RetriggerMatchingAction::make(),
+                ] : []),
                 ViewAction::make(),
                 EditAction::make(),
             ])
