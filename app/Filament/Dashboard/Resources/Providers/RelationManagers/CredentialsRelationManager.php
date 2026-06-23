@@ -2,9 +2,13 @@
 
 namespace App\Filament\Dashboard\Resources\Providers\RelationManagers;
 
+use App\Filament\Dashboard\Credentialing\ManualCredential;
 use App\Filament\Dashboard\Credentialing\VerifyCredentialAction;
 use App\Models\StaffPick\ProviderCredential;
+use Filament\Actions\Action;
+use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -39,6 +43,24 @@ class CredentialsRelationManager extends RelationManager
                     }),
                 TextColumn::make('expires_at')->label(__('Expires'))->date()->placeholder('—'),
                 TextColumn::make('last_verified_at')->label(__('Last verified'))->dateTime()->placeholder('—'),
+            ])
+            ->headerActions([
+                Action::make('addCredential')
+                    ->label(__('Add Credential'))
+                    ->icon(Heroicon::OutlinedPlus)
+                    ->modalHeading(__('Add Credential'))
+                    ->modalSubmitActionLabel(__('Add'))
+                    ->schema(ManualCredential::fields((int) $this->getOwnerRecord()->tenant_id))
+                    ->action(function (array $data): void {
+                        $provider = $this->getOwnerRecord();
+
+                        ManualCredential::create($data, (int) $provider->id, (int) $provider->tenant_id);
+
+                        Notification::make()
+                            ->title(__('Credential added'))
+                            ->success()
+                            ->send();
+                    }),
             ])
             ->recordActions([
                 VerifyCredentialAction::make(),
