@@ -117,22 +117,17 @@ class User extends Authenticatable implements FilamentUser, HasTenants, MustVeri
 
     public function canAccessPanel(Panel $panel): bool
     {
+        // Panel-level access must be tenant-agnostic: Filament checks canAccessPanel()
+        // in the Authenticate middleware, BEFORE the tenant is resolved from the route,
+        // so Filament::getTenant() is null here. Gate on whether the user holds the SP
+        // role in ANY of their tenants; the per-tenant role check lives in
+        // canAccessTenant(), where Filament has resolved the actual tenant.
         if ($panel->getId() === 'provider') {
-            if ($this->is_super_admin) {
-                return true;
-            }
-            $tenant = Filament::getTenant();
-
-            return $tenant !== null && $this->hasSpRole($tenant->id, TenancyPermissionConstants::ROLE_SP_PROVIDER);
+            return $this->is_super_admin || $this->hasSpRoleInAnyTenant(TenancyPermissionConstants::ROLE_SP_PROVIDER);
         }
 
         if ($panel->getId() === 'referrer') {
-            if ($this->is_super_admin) {
-                return true;
-            }
-            $tenant = Filament::getTenant();
-
-            return $tenant !== null && $this->hasSpRole($tenant->id, TenancyPermissionConstants::ROLE_SP_REFERRER);
+            return $this->is_super_admin || $this->hasSpRoleInAnyTenant(TenancyPermissionConstants::ROLE_SP_REFERRER);
         }
 
         // The global super-admin panel is gated strictly to super admins.
@@ -262,6 +257,21 @@ class User extends Authenticatable implements FilamentUser, HasTenants, MustVeri
         return $pivot->roles->pluck('name')->toArray();
     }
 
+    /**
+     * Whether the user holds the given SP role in any tenant they belong to. Used for
+     * tenant-agnostic panel access (canAccessPanel runs before the tenant is resolved).
+     */
+    public function hasSpRoleInAnyTenant(string $role): bool
+    {
+        foreach ($this->tenants()->get() as $tenant) {
+            if ($this->hasSpRole($tenant->id, $role)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function defaultSpPanel(int $tenantId): string
     {
         $roles = $this->spRolesForTenant($tenantId);
@@ -293,7 +303,17 @@ class User extends Authenticatable implements FilamentUser, HasTenants, MustVeri
             return true;
         }
 
-        return $this->tenants()->whereKey($tenant)->exists();
+        if (! $this->tenants()->whereKey($tenant)->exists()) {
+            return false;
+        }
+
+        // canAccessPanel is tenant-agnostic, so enforce the panel's required SP role
+        // for THIS tenant here, where Filament has resolved both the panel and tenant.
+        return match (Filament::getCurrentPanel()?->getId()) {
+            'provider' => $this->hasSpRole((int) $tenant->getKey(), TenancyPermissionConstants::ROLE_SP_PROVIDER),
+            'referrer' => $this->hasSpRole((int) $tenant->getKey(), TenancyPermissionConstants::ROLE_SP_REFERRER),
+            default => true,
+        };
     }
 
     public function referralCode(): HasOne
