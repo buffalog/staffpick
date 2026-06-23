@@ -2,6 +2,7 @@
 
 namespace App\Filament\Provider\Widgets;
 
+use App\Filament\Dashboard\Pages\ProviderProfile;
 use App\Models\StaffPick\Assignment;
 use App\Models\StaffPick\IntakeRequest;
 use App\Models\StaffPick\Provider;
@@ -33,6 +34,18 @@ class ProviderStatsWidget extends BaseWidget
         $tierName = $provider->tier?->name;
         $alertCount = $this->credentialAlertCount($provider);
 
+        $credentialAlerts = Stat::make(__('Credential Alerts'), $alertCount)
+            ->description(__('Expiring or Expired'))
+            ->descriptionIcon('heroicon-o-exclamation-triangle')
+            ->color($alertCount > 0 ? 'danger' : 'success');
+
+        // Only make the card actionable when there's something to act on. No dedicated
+        // provider-panel credentials page exists yet, so link to the provider profile
+        // (dashboard panel) where credentials are managed — same target as "My Profile".
+        if ($alertCount > 0) {
+            $credentialAlerts->url(ProviderProfile::getUrl(panel: 'dashboard', tenant: Filament::getTenant()));
+        }
+
         return [
             Stat::make(__('Tier'), $tierName ?? __('No tier assigned'))
                 ->description(__('Provider Tier'))
@@ -47,10 +60,7 @@ class ProviderStatsWidget extends BaseWidget
                 ->description(__('Active Cases'))
                 ->descriptionIcon('heroicon-o-briefcase')
                 ->color('primary'),
-            Stat::make(__('Credential Alerts'), $alertCount)
-                ->description(__('Expiring or Expired'))
-                ->descriptionIcon('heroicon-o-exclamation-triangle')
-                ->color($alertCount > 0 ? 'danger' : 'success'),
+            $credentialAlerts,
         ];
     }
 
