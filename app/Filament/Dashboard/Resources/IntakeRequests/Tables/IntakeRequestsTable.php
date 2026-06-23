@@ -97,6 +97,7 @@ class IntakeRequestsTable
                     RestoreBulkAction::make(),
                 ]),
             ])
+            ->recordUrl(fn ($record): string => IntakeRequestResource::getUrl('view', ['record' => $record]))
             ->defaultSort('created_at', 'desc');
     }
 }
