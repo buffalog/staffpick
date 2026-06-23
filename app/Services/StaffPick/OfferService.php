@@ -75,6 +75,48 @@ class OfferService
     }
 
     /**
+     * Semi-auto dispatch: send a single offer to one specific provider (from the Find
+     * Matches modal), without disturbing the rest of the queue. Idempotent — if the
+     * provider already has a live offer for this case, returns it unchanged. Pulls the
+     * provider's distance/score/language metadata from the engine; reuses sendOffer().
+     */
+    public function dispatchToProvider(IntakeRequest $intake, Provider $provider): AssignmentOffer
+    {
+        $existing = $intake->assignmentOffers()
+            ->where('provider_id', $provider->id)
+            ->where('status', AssignmentOffer::STATUS_PENDING)
+            ->first();
+
+        if ($existing !== null) {
+            return $existing;
+        }
+
+        $result = $this->engine->match($intake)
+            ->first(fn ($r): bool => $r->provider->id === $provider->id);
+
+        $offer = AssignmentOffer::create([
+            'tenant_id' => $intake->tenant_id,
+            'intake_request_id' => $intake->id,
+            'provider_id' => $provider->id,
+            'offer_sequence' => (int) $intake->assignmentOffers()->max('offer_sequence') + 1,
+            'distance_miles' => $result !== null ? round($result->distanceMiles, 2) : null,
+            'match_score' => $result !== null ? round($result->score, 4) : null,
+            'language_warning' => $result?->languageWarning ?? false,
+            'status' => AssignmentOffer::STATUS_PENDING,
+            'delivery_channel' => $provider->preferred_contact_channel ?: Provider::CHANNEL_EMAIL,
+            'token' => Str::random(48),
+        ]);
+
+        if (in_array($intake->status, ['pending', 'matching'], true)) {
+            $intake->update(['status' => 'offered', 'matched_at' => $intake->matched_at ?? now()]);
+        }
+
+        $this->sendOffer($offer);
+
+        return $offer;
+    }
+
+    /**
      * Send the next queued (not-yet-sent) offer for an intake, or flag the case when
      * the queue is exhausted. Returns the offer that was sent, or null.
      */

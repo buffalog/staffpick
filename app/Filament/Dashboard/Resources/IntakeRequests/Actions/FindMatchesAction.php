@@ -2,6 +2,7 @@
 
 namespace App\Filament\Dashboard\Resources\IntakeRequests\Actions;
 
+use App\Models\StaffPick\AssignmentOffer;
 use App\Models\StaffPick\IntakeRequest;
 use App\Services\StaffPick\MatchingEngine;
 use Filament\Actions\Action;
@@ -38,6 +39,12 @@ class FindMatchesAction
             ->modalContent(fn (IntakeRequest $record) => view('staffpick.intake-requests.matches', [
                 'record' => $record,
                 'results' => app(MatchingEngine::class)->match($record),
+                // Providers with a live (pending) offer already — recomputed each render
+                // so a just-dispatched offer immediately shows as "Offer Sent".
+                'alreadyOfferedProviderIds' => $record->assignmentOffers()
+                    ->where('status', AssignmentOffer::STATUS_PENDING)
+                    ->pluck('provider_id')
+                    ->all(),
             ]));
     }
 }
