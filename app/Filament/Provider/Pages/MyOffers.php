@@ -31,6 +31,8 @@ class MyOffers extends Page
 
     protected static ?string $slug = 'my-offers';
 
+    protected static ?int $navigationSort = 3;
+
     protected string $view = 'filament.provider.pages.my-offers';
 
     public function getTitle(): string|Htmlable
@@ -55,7 +57,7 @@ class MyOffers extends Page
 
     public static function shouldRegisterNavigation(): bool
     {
-        return false;
+        return true;
     }
 
     /**
