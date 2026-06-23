@@ -129,7 +129,7 @@ class IntakeRequestResource extends Resource
 
         return [
             $item(__('Pending Cases'), 'index', 1),
-            $item(__('Cases'), 'cases', 2),
+            $item(__('Active Cases'), 'cases', 2),
             $item(__('Completed Cases'), 'completed-cases', 3),
             $item(__('All Cases'), 'all-cases', 4),
         ];
@@ -142,7 +142,7 @@ class IntakeRequestResource extends Resource
 
     public static function getNavigationGroup(): ?string
     {
-        return __('Dispatch');
+        return __('Cases');
     }
 
     public static function getModelLabel(): string

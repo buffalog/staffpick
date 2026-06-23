@@ -40,19 +40,21 @@ class CredentialingQueue extends Page implements HasTable
 
     protected string $view = 'filament.dashboard.pages.credentialing-queue';
 
+    protected static ?int $navigationSort = 2;
+
     public function getTitle(): string|Htmlable
     {
-        return __('Credentialing');
+        return __('Credential Review');
     }
 
     public static function getNavigationLabel(): string
     {
-        return __('Credentialing');
+        return __('Credential Review');
     }
 
     public static function getNavigationGroup(): ?string
     {
-        return __('Credentialing');
+        return __('Our Providers');
     }
 
     public static function canAccess(): bool

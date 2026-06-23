@@ -34,7 +34,7 @@ class SchedulerBoard extends Page
 
     protected static ?string $slug = 'board';
 
-    protected static ?int $navigationSort = -10;
+    protected static ?int $navigationSort = 1;
 
     protected string $view = 'filament.dashboard.pages.scheduler-board';
 
@@ -87,17 +87,17 @@ class SchedulerBoard extends Page
 
     public function getTitle(): string|Htmlable
     {
-        return __('Board');
+        return __('Full Board');
     }
 
     public static function getNavigationLabel(): string
     {
-        return __('Board');
+        return __('Full Board');
     }
 
     public static function getNavigationGroup(): ?string
     {
-        return __('Dispatch');
+        return null;
     }
 
     public static function canAccess(): bool

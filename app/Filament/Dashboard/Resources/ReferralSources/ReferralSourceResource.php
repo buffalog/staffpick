@@ -25,6 +25,8 @@ class ReferralSourceResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'name';
 
+    protected static ?int $navigationSort = 5;
+
     public static function form(Schema $schema): Schema
     {
         return ReferralSourceForm::configure($schema);
@@ -63,7 +65,7 @@ class ReferralSourceResource extends Resource
 
     public static function getNavigationGroup(): ?string
     {
-        return __('Dispatch');
+        return __('Cases');
     }
 
     public static function getModelLabel(): string
