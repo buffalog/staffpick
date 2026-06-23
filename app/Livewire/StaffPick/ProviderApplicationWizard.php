@@ -160,11 +160,25 @@ class ProviderApplicationWizard extends Component
 
     public function nextStep(): void
     {
-        $this->validate($this->rulesForStep($this->step));
+        $this->validateStep($this->step);
         $this->persistStep($this->step);
 
         if ($this->step < self::LAST_STEP) {
             $this->step++;
+        }
+    }
+
+    /**
+     * Validate a step only when it declares rules — Livewire's validate([]) treats an
+     * empty array as "no rules given" and throws MissingRulesException (steps like
+     * Service Zones are optional and have none).
+     */
+    private function validateStep(int $step): void
+    {
+        $rules = $this->rulesForStep($step);
+
+        if ($rules !== []) {
+            $this->validate($rules);
         }
     }
 
@@ -187,7 +201,7 @@ class ProviderApplicationWizard extends Component
 
     public function submit(): void
     {
-        $this->validate($this->rulesForStep(self::LAST_STEP));
+        $this->validateStep(self::LAST_STEP);
 
         $application = $this->application();
         $uploads = $this->storeCredentialUploads($application);
