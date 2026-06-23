@@ -3,10 +3,10 @@
 namespace App\Filament\Provider\Pages;
 
 use App\Filament\Dashboard\Resources\IntakeRequests\IntakeRequestResource;
+use App\Filament\Provider\Widgets\ProviderStatsWidget;
 use App\Models\StaffPick\Assignment;
 use App\Models\StaffPick\IntakeRequest;
 use App\Models\StaffPick\Provider;
-use App\Models\StaffPick\ProviderCredential;
 use App\Models\Tenant;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -21,7 +21,6 @@ use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Carbon;
 
 /**
  * The provider portal landing page: tier, credential alerts, and case counts up top,
@@ -74,99 +73,14 @@ class ProviderHome extends Page implements HasTable
     }
 
     /**
-     * Tier block: name + a colour token for the view.
+     * Inline stat cards (tier, active cases, credential alerts) rendered above the page
+     * content via the page's header-widgets slot. Hidden when no provider is linked.
      *
-     * @return array{name: ?string, color: string}
+     * @return array<int, class-string>
      */
-    public function tierBlock(): array
+    protected function getHeaderWidgets(): array
     {
-        $name = $this->provider()?->tier?->name;
-
-        return [
-            'name' => $name,
-            'color' => match ($name) {
-                'Gold' => 'amber',
-                'Silver' => 'gray',
-                'Platinum' => 'indigo',
-                default => 'neutral',
-            },
-        ];
-    }
-
-    /**
-     * Credentials that are expired or within their type's warning window.
-     *
-     * expires_at is a 'date'-cast column, so it's read via getRawOriginal() (raw
-     * string) and parsed with Carbon — never through the cast — to stay safe on the
-     * dblib toolchain. The per-type window comes from the credential's document type.
-     *
-     * @return array<int, array{type: string, expires: string, expired: bool}>
-     */
-    public function credentialAlerts(): array
-    {
-        $provider = $this->provider();
-
-        if ($provider === null) {
-            return [];
-        }
-
-        $today = now()->startOfDay();
-
-        return ProviderCredential::query()
-            ->where('provider_id', $provider->id)
-            ->whereNotNull('expires_at')
-            ->with('documentType')
-            ->get()
-            ->map(function (ProviderCredential $credential) use ($today): ?array {
-                $raw = $credential->getRawOriginal('expires_at');
-
-                if (blank($raw)) {
-                    return null;
-                }
-
-                $expires = Carbon::parse($raw)->startOfDay();
-                $warningDays = (int) ($credential->documentType?->expiry_warning_days ?? 0);
-                $threshold = $today->copy()->addDays($warningDays);
-
-                // Not yet within the warning window and not expired — no alert.
-                if ($expires->gt($threshold)) {
-                    return null;
-                }
-
-                return [
-                    'type' => $credential->documentType?->name ?? __('Credential'),
-                    'expires' => $expires->format('M j, Y'),
-                    'expired' => $expires->lt($today),
-                ];
-            })
-            ->filter()
-            ->values()
-            ->all();
-    }
-
-    /**
-     * Active vs closed case counts for this provider.
-     *
-     * @return array{active: int, closed: int}
-     */
-    public function caseCounts(): array
-    {
-        $provider = $this->provider();
-
-        if ($provider === null) {
-            return ['active' => 0, 'closed' => 0];
-        }
-
-        $assigned = fn (): Builder => IntakeRequest::query()
-            ->where('tenant_id', Filament::getTenant()?->id)
-            ->whereHas('assignments', fn (Builder $sub): Builder => $sub
-                ->where('provider_id', $provider->id)
-                ->where('status', '!=', Assignment::STATUS_CANCELLED));
-
-        return [
-            'active' => $assigned()->whereNotIn('status', ['completed', 'cancelled'])->count(),
-            'closed' => $assigned()->where('status', 'completed')->count(),
-        ];
+        return $this->provider() === null ? [] : [ProviderStatsWidget::class];
     }
 
     /**
