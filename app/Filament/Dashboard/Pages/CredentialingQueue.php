@@ -84,26 +84,6 @@ class CredentialingQueue extends Page implements HasTable
                 Group::make('provider_id')
                     ->titlePrefixedWithLabel(false)
                     ->getTitleFromRecordUsing(fn (ProviderCredential $record): string => trim("{$record->provider?->first_name} {$record->provider?->last_name}"))
-                    ->getDescriptionFromRecordUsing(function (ProviderCredential $record): string {
-                        $counts = $record->provider?->credentials()
-                            ->whereIn('verification_status', [
-                                ProviderCredential::VERIFICATION_UNVERIFIED,
-                                ProviderCredential::VERIFICATION_FAILED,
-                            ])
-                            ->selectRaw('verification_status, count(*) as total')
-                            ->groupBy('verification_status')
-                            ->pluck('total', 'verification_status');
-
-                        $parts = [];
-                        if ($counts?->get(ProviderCredential::VERIFICATION_FAILED)) {
-                            $parts[] = $counts->get(ProviderCredential::VERIFICATION_FAILED).' failed';
-                        }
-                        if ($counts?->get(ProviderCredential::VERIFICATION_UNVERIFIED)) {
-                            $parts[] = $counts->get(ProviderCredential::VERIFICATION_UNVERIFIED).' unverified';
-                        }
-
-                        return implode(' · ', $parts);
-                    })
                     ->collapsible()
             )
             ->columns([
