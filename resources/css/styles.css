@@ -245,3 +245,14 @@
         }
     }
 }
+
+
+/* ─── Infolist layout: top-align section cards so short cards don't stretch ─── *
+ * Filament's Grid::make(n) outer wrappers use align-items:normal (stretch) by   *
+ * default, forcing short sibling cards to match the tallest one's height.        *
+ * Targeting only the outer grid wrappers (not fi-section-content internal grids) *
+ * gives us the masonry-like composable layout described in piccalil.li/blog/     *
+ * a-simple-masonry-like-composable-layout/                                       */
+.fi-grid.lg\:fi-grid-cols:not(.fi-section-content) {
+    align-items: start;
+}
