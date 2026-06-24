@@ -28,7 +28,7 @@ class ViewProviderApplication extends ViewRecord
                     TextEntry::make('full_name')->label(__('Name'))->state(fn (ProviderApplication $r): string => $r->fullName()),
                     TextEntry::make('email')->label(__('Email'))->copyable(),
                     TextEntry::make('phone')->label(__('Phone'))->placeholder('—'),
-                    TextEntry::make('status')->label(__('Status'))->badge()->formatStateUsing(fn (string $s): string => str($s)->headline()),
+                    TextEntry::make('status')->label(__('Status'))->badge()->formatStateUsing(fn (string $state): string => str($state)->headline()),
                 ]),
                 Section::make(__('Address'))->columns(2)->schema([
                     TextEntry::make('street_address')->label(__('Street'))->placeholder('—')->columnSpanFull(),
