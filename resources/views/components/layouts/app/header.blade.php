@@ -11,7 +11,7 @@
                 </ul>
             </div>
             <a href="/" class="flex justify-center items-center">
-                <img src="{{asset(config('app.logo.dark') )}}" class="h-6 md:h-7 mt-1" alt="Logo" />
+                <span class="text-xl font-bold text-primary-700 tracking-tight">StaffPick</span>
             </a>
         </div>
         <div class="navbar-center hidden lg:flex">
