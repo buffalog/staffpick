@@ -69,9 +69,32 @@ class ProviderApplicationService
 
     /**
      * Submit the application for staff review and notify both sides.
+     *
+     * Collision guard: a non-rejected application for the same tenant+email already
+     * in the pipeline (draft, submitted, or approved) blocks re-submission. Rejected
+     * is the one terminal state where re-applying is intentional and allowed.
+     *
+     * @throws \RuntimeException when a live application already exists for this email.
      */
     public function submit(ProviderApplication $application): ProviderApplication
     {
+        if (filled($application->email)) {
+            $blocking = ProviderApplication::withoutGlobalScopes()
+                ->where('tenant_id', $application->tenant_id)
+                ->where('email', $application->email)
+                ->whereNotIn('status', [
+                    ProviderApplication::STATUS_REJECTED,
+                ])
+                ->whereKeyNot($application->id)
+                ->exists();
+
+            if ($blocking) {
+                throw new \RuntimeException(
+                    'An application for this email address is already in progress or has been approved for this organisation.'
+                );
+            }
+        }
+
         $application->update([
             'status' => ProviderApplication::STATUS_SUBMITTED,
             'submitted_at' => now(),

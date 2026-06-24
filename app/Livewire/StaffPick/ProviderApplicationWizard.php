@@ -213,7 +213,12 @@ class ProviderApplicationWizard extends Component
             $this->data,
         );
 
-        app(ProviderApplicationService::class)->submit($application->refresh());
+        try {
+            app(ProviderApplicationService::class)->submit($application->refresh());
+        } catch (\RuntimeException $e) {
+            $this->addError('email', $e->getMessage());
+            return;
+        }
 
         $this->submitted = true;
     }
