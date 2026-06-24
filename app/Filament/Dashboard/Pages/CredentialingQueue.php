@@ -78,7 +78,6 @@ class CredentialingQueue extends Page implements HasTable
                             ->whereNotNull('expires_at')
                             ->whereBetween('expires_at', [now()->toDateString(), now()->addDays(30)->toDateString()]));
                     })
-                    ->orderBy('provider_id')
             )
             ->defaultGroup(
                 Group::make('provider_id')
