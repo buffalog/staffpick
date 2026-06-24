@@ -99,4 +99,13 @@ class ProviderResource extends Resource
     {
         return __('Provider List');
     }
+
+    public static function getNavigationBadge(): ?string
+    {
+        $count = \App\Models\StaffPick\ProviderApplication::query()
+            ->where('status', \App\Models\StaffPick\ProviderApplication::STATUS_SUBMITTED)
+            ->count();
+
+        return $count > 0 ? (string) $count : null;
+    }
 }

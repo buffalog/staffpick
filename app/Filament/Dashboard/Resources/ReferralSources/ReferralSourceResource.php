@@ -82,4 +82,13 @@ class ReferralSourceResource extends Resource
     {
         return __('Referral Sources');
     }
+
+    public static function getNavigationBadge(): ?string
+    {
+        $count = static::getModel()::query()
+            ->where('status', \App\Models\StaffPick\ReferralSource::STATUS_PENDING)
+            ->count();
+
+        return $count > 0 ? (string) $count : null;
+    }
 }
