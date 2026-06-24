@@ -4,10 +4,12 @@ namespace App\Filament\Dashboard\Resources\ProviderApplications;
 
 use App\Filament\Dashboard\Resources\ProviderApplications\Pages\ListProviderApplications;
 use App\Filament\Dashboard\Resources\ProviderApplications\Pages\ViewProviderApplication;
+use App\Filament\Dashboard\Resources\ProviderApplications\Schemas\ProviderApplicationInfolist;
 use App\Filament\Dashboard\Support\SpRoleAccess;
 use App\Models\StaffPick\ProviderApplication;
 use BackedEnum;
 use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -23,6 +25,11 @@ class ProviderApplicationResource extends Resource
     protected static ?int $navigationSort = 3;
 
     protected static ?string $recordTitleAttribute = 'email';
+
+    public static function infolist(Schema $schema): Schema
+    {
+        return ProviderApplicationInfolist::configure($schema);
+    }
 
     public static function table(Table $table): Table
     {
