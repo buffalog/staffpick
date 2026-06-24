@@ -33,6 +33,7 @@ class ReferralSourceForm
                                 'pending' => __('Pending'),
                                 'inactive' => __('Inactive'),
                                 'delinquent' => __('Delinquent'),
+                                'rejected' => __('Rejected'),
                             ])
                             ->default('active')
                             ->required(),

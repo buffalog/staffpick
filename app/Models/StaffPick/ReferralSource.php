@@ -18,6 +18,8 @@ class ReferralSource extends Model
 
     public const STATUS_PENDING = 'pending';
 
+    public const STATUS_REJECTED = 'rejected';
+
     protected $table = 'sp_referral_sources';
 
     protected $fillable = [
@@ -64,6 +66,24 @@ class ReferralSource extends Model
     public function isActive(): bool
     {
         return $this->status === self::STATUS_ACTIVE;
+    }
+
+    /**
+     * Single source of truth for rejection reasons, shared by the Filament reject
+     * action (Select options) and the rejection email (label lookup).
+     *
+     * @return array<string, string>
+     */
+    public static function rejectionReasonOptions(): array
+    {
+        return [
+            'duplicate' => __('Duplicate — already registered under another record'),
+            'out_of_service_area' => __('Out of service area'),
+            'unable_to_verify' => __('Unable to verify agency'),
+            'incomplete_information' => __('Incomplete information'),
+            'not_accepting' => __('Not accepting new referral sources'),
+            'other' => __('Other'),
+        ];
     }
 
     /**

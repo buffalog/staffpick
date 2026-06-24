@@ -23,6 +23,7 @@ class ReferralSourceInfolist
                             ->color(fn (string $state): string => match ($state) {
                                 'active' => 'success',
                                 'delinquent' => 'danger',
+                                'rejected' => 'danger',
                                 'inactive' => 'gray',
                                 default => 'gray',
                             }),
