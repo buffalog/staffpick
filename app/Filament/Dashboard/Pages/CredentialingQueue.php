@@ -11,6 +11,7 @@ use App\Models\StaffPick\Provider;
 use App\Models\StaffPick\ProviderCredential;
 use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Tables\Grouping\Group;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
@@ -77,11 +78,35 @@ class CredentialingQueue extends Page implements HasTable
                             ->whereNotNull('expires_at')
                             ->whereBetween('expires_at', [now()->toDateString(), now()->addDays(30)->toDateString()]));
                     })
+                    ->orderBy('provider_id')
+            )
+            ->defaultGroup(
+                Group::make('provider_id')
+                    ->titlePrefixedWithLabel(false)
+                    ->getTitleFromRecordUsing(fn (ProviderCredential $record): string => trim("{$record->provider?->first_name} {$record->provider?->last_name}"))
+                    ->getDescriptionFromRecordUsing(function (ProviderCredential $record): string {
+                        $counts = $record->provider?->credentials()
+                            ->whereIn('verification_status', [
+                                ProviderCredential::VERIFICATION_UNVERIFIED,
+                                ProviderCredential::VERIFICATION_FAILED,
+                            ])
+                            ->selectRaw('verification_status, count(*) as total')
+                            ->groupBy('verification_status')
+                            ->pluck('total', 'verification_status');
+
+                        $parts = [];
+                        if ($counts?->get(ProviderCredential::VERIFICATION_FAILED)) {
+                            $parts[] = $counts->get(ProviderCredential::VERIFICATION_FAILED).' failed';
+                        }
+                        if ($counts?->get(ProviderCredential::VERIFICATION_UNVERIFIED)) {
+                            $parts[] = $counts->get(ProviderCredential::VERIFICATION_UNVERIFIED).' unverified';
+                        }
+
+                        return implode(' · ', $parts);
+                    })
+                    ->collapsible()
             )
             ->columns([
-                TextColumn::make('provider_name')
-                    ->label(__('Provider'))
-                    ->state(fn (ProviderCredential $record): string => trim("{$record->provider?->first_name} {$record->provider?->last_name}")),
                 TextColumn::make('documentType.name')->label(__('Credential')),
                 TextColumn::make('license_number')->label(__('License #'))->placeholder('—'),
                 TextColumn::make('verification_status')
