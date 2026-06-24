@@ -183,4 +183,19 @@ class Provider extends Model
     {
         return $this->hasMany(ProviderRatingReview::class);
     }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function rejectionReasonOptions(): array
+    {
+        return [
+            'duplicate'              => __('Duplicate — already registered under another record'),
+            'out_of_service_area'   => __('Out of service area'),
+            'unable_to_verify'      => __('Unable to verify agency'),
+            'incomplete_information' => __('Incomplete information'),
+            'not_accepting'         => __('Not accepting new referral sources'),
+            'other'                 => __('Other'),
+        ];
+    }
 }
