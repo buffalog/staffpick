@@ -16,6 +16,7 @@ class ReferralSourceInfolist
                     ->columns(2)
                     ->schema([
                         TextEntry::make('name')->label(__('Name')),
+                        TextEntry::make('contact_name')->label(__('Contact Name'))->placeholder('—'),
                         TextEntry::make('status')
                             ->label(__('Status'))
                             ->badge()

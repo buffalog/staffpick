@@ -9,6 +9,7 @@ use App\Http\Controllers\ProductCheckoutController;
 use App\Http\Controllers\ProviderApplicationController;
 use App\Http\Controllers\RoadmapController;
 use App\Http\Controllers\SlackWebhookController;
+use App\Http\Controllers\StaffPick\ReferralSourceRegistrationController;
 use App\Http\Controllers\StaffPick\SsoController;
 use App\Http\Controllers\SubscriptionCheckoutController;
 use App\Http\Controllers\SubscriptionController;
@@ -246,6 +247,12 @@ Route::get('/join/{tenantSlug}/resume/{token}', [ProviderApplicationController::
 Route::get('/staff/applications/{application}/credentials/{index}', [ProviderApplicationController::class, 'downloadCredential'])
     ->middleware('auth')
     ->name('staffpick.application.credential');
+
+// StaffPick — public referral-source self-registration (no login). {tenantSlug} is
+// the tenant uuid. Page-load throttled; the Livewire submit is rate-limited in-component.
+Route::get('/register/{tenantSlug}', [ReferralSourceRegistrationController::class, 'show'])
+    ->middleware('throttle:30,1')
+    ->name('staffpick.referral-source.register');
 
 // StaffPick — inbound Slack webhook (signature-verified, no login/CSRF). The token
 // namespaces the tenant; rate-limited to blunt abuse of the public endpoint.

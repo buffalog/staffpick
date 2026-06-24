@@ -22,10 +22,15 @@ class ReferralSourceForm
                             ->required()
                             ->maxLength(255)
                             ->columnSpanFull(),
+                        TextInput::make('contact_name')
+                            ->label(__('Contact Name'))
+                            ->maxLength(255)
+                            ->columnSpanFull(),
                         Select::make('status')
                             ->label(__('Status'))
                             ->options([
                                 'active' => __('Active'),
+                                'pending' => __('Pending'),
                                 'inactive' => __('Inactive'),
                                 'delinquent' => __('Delinquent'),
                             ])

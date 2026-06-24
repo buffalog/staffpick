@@ -16,12 +16,15 @@ class ReferralSource extends Model
 
     public const STATUS_ACTIVE = 'active';
 
+    public const STATUS_PENDING = 'pending';
+
     protected $table = 'sp_referral_sources';
 
     protected $fillable = [
         'tenant_id',
         'user_id',
         'name',
+        'contact_name',
         'address',
         'city',
         'state',
