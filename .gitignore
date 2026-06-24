@@ -24,3 +24,4 @@ yarn-error.log
 .DS_Store
 .next/
 JUDE_CONTEXT.md
+database.sqlite
