@@ -1,6 +1,6 @@
 <x-layouts.app class="relative overflow-hidden">
     <x-slot name="title">
-        {{ __('SaaSykit - Laravel SaaS Starter Kit') }}
+        {{ __('StaffPick - Smarter Agency Staffing') }}
     </x-slot>
 
     <div class="bg-primary-300  w-40 h-40 md:w-96 md:h-96 rounded-3xl absolute opacity-10 -z-10 -right-28 md:-right-48 top-52 md:top-40 rotate-45">
@@ -13,30 +13,30 @@
     <x-section.hero class="w-full">
 
         <div class="mx-auto text-center px-4">
-            <span class="text-primary-500 uppercase font-semibold">{{ __('Launch your Business') }}</span>
+            <span class="text-primary-500 uppercase font-semibold">{{ __('Built for staffing agencies') }}</span>
             <x-heading.h1 class="mt-4 text-primary-800 font-bold flex flex-col items-center justify-center">
                 <span class="flex flex-row items-center justify-center">
                     <span>
-                        {{ __('Build your SaaS') }}
+                        {{ __('The smarter way') }}
                     </span>
                     <span class="text-primary-500 hidden md:block">
                         @svg('diamonds/lightning', 'w-16 h-16')
                     </span>
                 </span>
                 <span>
-                    {{ __('with SaaSykit') }}
+                    {{ __('to staff.') }}
                 </span>
 
             </x-heading.h1>
 
-            <p class="m-3">{{ __('A Laravel-based boilerplate with everything you need to build an awesome SaaS.') }}</p>
+            <p class="m-3">{{ __('StaffPick connects therapy agencies with the right clinicians, fast. Intake, matching, assignments, and dispatch in one place.') }}</p>
 
             <div class="flex flex-wrap gap-4 justify-center md:flex-row mt-6">
-                <x-button-link.primary href="#pricing" class="self-center !py-3" elementType="a">
-                    {{ __('Get SaaSykit') }}
+                <x-button-link.primary href="{{route('login')}}" class="self-center !py-3" elementType="a">
+                    {{ __('Request a Demo') }}
                 </x-button-link.primary>
-                <x-button-link.secondary-outline href="//demo.saasykit.com" class=" self-center !py-3" rel=”nofollow” >
-                    {{ __('Check The Demo') }}
+                <x-button-link.secondary-outline href="#features" class=" self-center !py-3">
+                    {{ __('See How It Works') }}
                 </x-button-link.secondary-outline>
 
             </div>
@@ -50,7 +50,7 @@
                     <x-user-ratings.avatar src="https://unsplash.com/photos/C8Ta0gwPbQg/download?ixid=M3wxMjA3fDB8MXxzZWFyY2h8MTl8fHBlcnNvbnxlbnwwfHx8fDE3MTM2ODQyNTB8MA&force=true&w=640" alt="testimonial 5"/>
                 </x-slot>
 
-                {{ __('Join the best SaaS developers who are using SaaSykit to build their SaaS.') }}
+                {{ __('Trusted by staffing teams placing clinicians every day.') }}
             </x-user-ratings>
 
             <div class="mx-auto md:max-w-3xl lg:max-w-5xl text-center p-4">
@@ -64,19 +64,19 @@
         <x-section.column>
             <div x-intersect="$el.classList.add('slide-in-top')">
                 <x-heading.h6 class="text-primary-500 uppercase!">
-                    {{ __('At your fingertips') }}
+                    {{ __('End-to-end intake') }}
                 </x-heading.h6>
                 <x-heading.h2 class="text-primary-900">
-                    {{ __('Products, Plans & Pricing.') }}
+                    {{ __('Multi-Channel Intake.') }}
                 </x-heading.h2>
             </div>
 
             <p class="mt-4">
-                {{ __('Create and manage your products, plans, and pricing, set features for each plan, mark a plan as featured, and more.') }}
+                {{ __('Capture referrals from any source into a single, structured intake queue. Every request is tracked, timestamped, and ready for your team to act on.') }}
             </p>
 
             <p class="mt-4">
-                {{ __('Rewards your customers with discounts and manage all that from a beautiful admin panel.') }}
+                {{ __('No more spreadsheets, lost emails, or missed referrals. StaffPick keeps every intake organized from the moment it arrives.') }}
             </p>
         </x-section.column>
 
@@ -121,19 +121,19 @@
             <x-section.column>
                 <div x-intersect="$el.classList.add('slide-in-top')">
                     <x-heading.h6 class="text-primary-200 uppercase!">
-                        {{ __('a solid SaaS') }}
+                        {{ __('Stop guessing, start matching') }}
                     </x-heading.h6>
                     <x-heading.h2 class="text-white">
-                        {{ __('Subscriptions & One-time purchases.') }}
+                        {{ __('Intelligent Matching.') }}
                     </x-heading.h2>
                 </div>
 
                 <div class="text-primary-50/75">
                     <p class="mt-4">
-                        {{ __('Easily offer your customers subscription-based & one-time purchase products with SaaSykit. All the webhook handling, subscription management, and billing are already set up for you in a beautiful and easy-to-use admin panel.') }}
+                        {{ __('StaffPick surfaces the right clinicians for each case based on discipline, availability, location, and tier. Your team spends time placing, not searching.') }}
                     </p>
                     <p class="mt-4">
-                        {{ __('Collect payments with Stripe and Paddle, and manage your customers with ease.') }}
+                        {{ __('Matched candidates are surfaced in seconds. Dispatch offers directly from the match results, no extra steps.') }}
                     </p>
                 </div>
             </x-section.column>
@@ -151,20 +151,20 @@
             <x-section.column>
                 <div x-intersect="$el.classList.add('slide-in-top')">
                     <x-heading.h6 class="text-primary-200 uppercase!">
-                        {{ __('Your Brand, Your Colors') }}
+                        {{ __('From offer to placement') }}
                     </x-heading.h6>
                     <x-heading.h2 class="text-white">
-                        {{ __('Customize Everything.') }}
+                        {{ __('Assignment Pipeline.') }}
                     </x-heading.h2>
                 </div>
 
                 <div class="text-primary-50/75">
                     <p class="mt-4">
-                        {{ __('Customize the primary & secondary colors of your website, error pages, email templates, fonts, social sharing cards, favicons, and more.') }}
+                        {{ __('Track every placement through a clear, configurable pipeline. From offer dispatched to clinician accepted to case assigned, nothing falls through the cracks.') }}
                     </p>
 
                     <p class="mt-4">
-                        {{ __('Based on the popular TailwindCSS, you can easily customize the look and feel of your SaaS application.') }}
+                        {{ __('Your team always knows where each case stands. No chasing down status updates.') }}
                     </p>
                 </div>
             </x-section.column>
@@ -176,23 +176,30 @@
 
     <div class="text-center mt-24 mx-4" id="tech-stack">
         <x-heading.h6 class="text-primary-500 uppercase!">
-            {{ __('The best of the best') }}
+            {{ __('Works the way you work') }}
         </x-heading.h6>
         <x-heading.h2 class="text-primary-900">
-            {{ __('A solid tech stack') }}
+            {{ __('Configurable for Your Agency') }}
         </x-heading.h2>
     </div>
 
 
     <div class="text-center p-4 mx-auto">
-        <p >{{ __('Laravel, TailwindCSS, Livewire, AlpineJS & FilamentPhp') }}</p>
+        <p>{{ __('Every agency runs differently. StaffPick is built to flex around your workflows, not the other way around.') }}</p>
 
-        <div class="flex flex-wrap items-center justify-center gap-12 mt-8">
-            <img src="{{URL::asset('/images/diamonds/tech-stack/laravel.svg')}}" class="h-6 md:h-8 hover:cursor-pointer hover:scale-103 hover:opacity-100 transition grayscale hover:grayscale-0 opacity-50" />
-            <img src="{{URL::asset('/images/diamonds/tech-stack/filament.avif')}}" class="h-6 md:h-8 hover:cursor-pointer hover:scale-103 hover:opacity-100 transition grayscale hover:grayscale-0 opacity-50" />
-            <img src="{{URL::asset('/images/diamonds/tech-stack/tailwindcss.svg')}}" class="h-6 md:h-8 hover:cursor-pointer hover:scale-103 hover:opacity-100 transition grayscale hover:grayscale-0 opacity-50" />
-            <img src="{{URL::asset('/images/diamonds/tech-stack/livewire.png')}}" class="h-12 md:h-16 hover:cursor-pointer hover:scale-103 hover:opacity-100 transition grayscale hover:grayscale-0 opacity-50" />
-            <img src="{{URL::asset('/images/diamonds/tech-stack/alpinejs.svg')}}" class="h-8 md:h-10 hover:cursor-pointer hover:scale-103 hover:opacity-100 transition grayscale hover:grayscale-0 opacity-50" />
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-10 text-left max-w-4xl mx-auto">
+            <div class="p-6 rounded-2xl bg-primary-50 border border-primary-100">
+                <p class="font-semibold text-primary-900">{{ __('Multi-tenant by design') }}</p>
+                <p class="mt-2 text-sm text-primary-700">{{ __('Each agency gets its own isolated environment. Your data stays yours.') }}</p>
+            </div>
+            <div class="p-6 rounded-2xl bg-primary-50 border border-primary-100">
+                <p class="font-semibold text-primary-900">{{ __('Discipline-aware') }}</p>
+                <p class="mt-2 text-sm text-primary-700">{{ __('Configure disciplines, tiers, service areas, and intake fields to match exactly how your agency operates.') }}</p>
+            </div>
+            <div class="p-6 rounded-2xl bg-primary-50 border border-primary-100">
+                <p class="font-semibold text-primary-900">{{ __('Role-based access') }}</p>
+                <p class="mt-2 text-sm text-primary-700">{{ __('Staff, coordinators, and admins each see exactly what they need and nothing they don\'t.') }}</p>
+            </div>
         </div>
 
     </div>
@@ -209,16 +216,16 @@
             <x-section.column>
                 <div x-intersect="$el.classList.add('slide-in-top')">
                     <x-heading.h6 class="text-secondary-700 uppercase!">
-                        {{ __('SaaS Stats') }}
+                        {{ __('At a glance, always') }}
                     </x-heading.h6>
                     <x-heading.h2 class="text-primary-950">
-                        {{ __('Know your numbers') }}
+                        {{ __('Dispatch Board.') }}
                     </x-heading.h2>
                 </div>
 
                 <div class="text-primary-950/75">
                     <p class="mt-4">
-                        {{ __('View your MRR (monthly recurring revenue), Churn rates, ARPU (average revenue per user), and other SaaS metrics right inside your admin panel.') }}
+                        {{ __('See every open case, active offer, and pending assignment in one live view. Know exactly what needs attention before it becomes a problem.') }}
                     </p>
                 </div>
             </x-section.column>
@@ -236,10 +243,10 @@
             <x-section.column>
                 <div x-intersect="$el.classList.add('slide-in-top')">
                     <x-heading.h6 class="text-secondary-700 uppercase!">
-                        {{ __('Content is king') }}
+                        {{ __('Stay audit-ready') }}
                     </x-heading.h6>
                     <x-heading.h2 class="text-primary-950">
-                        {{ __('A ready Blog.') }}
+                        {{ __('Credentialing & Compliance.') }}
                     </x-heading.h2>
                 </div>
 
@@ -260,14 +267,14 @@
 
     <div class="text-center mt-24 px-4" x-intersect="$el.classList.add('slide-in-top')">
         <x-heading.h6 class="text-primary-500 uppercase!">
-            {{ __('Can\'t get more beautiful') }}
+            {{ __('Everything in one place') }}
         </x-heading.h6>
         <x-heading.h2 class="text-primary-900">
-            {{ __('A stunning Admin Panel.') }}
+            {{ __('A Purpose-Built Staff Dashboard.') }}
         </x-heading.h2>
     </div>
 
-    <p class="text-center py-4">{{ __('Manage your SaaS application from a beautiful admin panel powered by Filament') }}</p>
+    <p class="text-center py-4">{{ __('Your coordinators get a clean, focused workspace built around how staffing actually works.') }}</p>
 
     <div class="text-center pt-6 mx-auto max-w-5xl ">
         <img src="{{URL::asset('/images/diamonds/features/admin-panel.png')}}" >
@@ -286,18 +293,18 @@
             <x-section.column>
                 <div x-intersect="$el.classList.add('slide-in-top')">
                     <x-heading.h6 class="text-primary-500 uppercase!">
-                        {{ __('Connect with customers') }}
+                        {{ __('Less back-and-forth') }}
                     </x-heading.h6>
                     <x-heading.h2 class="text-primary-900">
-                        {{ __('Send & Customize Emails.') }}
+                        {{ __('Provider Self-Serve Onboarding.') }}
                     </x-heading.h2>
                 </div>
 
                 <p class="mt-4">
-                    {{ __('Choose your preferred email service from options like Mailgun, Postmark, and Amazon SES to communicate with your customers.') }}
+                    {{ __('Providers complete their own intake, upload credentials, and confirm availability without your team chasing them down. StaffPick handles the collection so you can focus on the placement.') }}
                 </p>
                 <p class="mt-4">
-                    {{ __('SaaSykit comes with a beautiful email template out of the box that takes your brand colors into consideration, along with the typical emails for customer registration, verification, resetting password, etc set up for you.') }}
+                    {{ __('Automated notifications keep providers informed at every step, from offer received to assignment confirmed.') }}
                 </p>
             </x-section.column>
 
@@ -316,29 +323,19 @@
             <x-section.column>
                 <div x-intersect="$el.classList.add('slide-in-top')">
                     <x-heading.h6 class="text-primary-500 uppercase!">
-                        {{ __('Modern Authentication') }}
+                        {{ __('Secure from day one') }}
                     </x-heading.h6>
                     <x-heading.h2 class="text-primary-900">
-                        {{ __('Login, Registration & Social login.') }}
+                        {{ __('Secure Multi-Tenant Access.') }}
                     </x-heading.h2>
                 </div>
 
                 <p class="mt-4">
-                    {{ __('SaaSykit includes built-in user authentication, supporting both traditional email/password authentication and social login options such as Google, Facebook, Twitter, Github, LinkedIn, and more.') }}
+                    {{ __('Each agency operates in its own isolated environment. Staff see only their agency\'s data. Providers see only what\'s relevant to them. No data bleeds across tenants.') }}
                 </p>
 
                 <p class="pt-4">
-                    {{ __('Supported login providers:') }}
-                </p>
-                <div class="flex gap-3 pt-1 flex-wrap">
-                    @svg('diamonds/colored/google', 'h-12 w-12 py-2 px-2 border border-primary-50 rounded-lg')
-                    @svg('diamonds/colored/facebook', 'h-12 w-12 py-2 px-2 border border-primary-50 rounded-lg')
-                    @svg('diamonds/colored/twitter-oauth-2', 'h-12 w-12 py-2 px-2 border border-primary-50 rounded-lg')
-                    @svg('diamonds/colored/linkedin', 'h-12 w-12 py-2 px-2 border border-primary-50 rounded-lg')
-                    @svg('diamonds/colored/github', 'h-12 w-12 py-2 px-2 border border-primary-50 rounded-lg')
-                    @svg('diamonds/colored/gitlab', 'h-12 w-12 py-2 px-2 border border-primary-50 rounded-lg')
-                    @svg('diamonds/colored/bitbucket', 'h-12 w-12 py-2 px-2 border border-primary-50 rounded-lg')
-                </div>
+                    {{ __('Built-in role-based access means the right people see the right things, always.') }}
             </x-section.column>
 
         </x-section.columns>
@@ -350,7 +347,7 @@
             {{ __('Oh, we\'re not done yet') }}
         </x-heading.h6>
         <x-heading.h2 class="text-primary-900">
-            {{ __('And a whole lot more') }}
+            {{ __('Everything you need to run placements') }}
         </x-heading.h2>
     </div>
 
@@ -358,25 +355,25 @@
         <x-section.column class="flex flex-col items-center justify-center text-center">
             <x-icon.fancy name="users" class="w-1/4 mx-auto" />
             <x-heading.h3 class="mx-auto pt-2">
-                {{ __('Users & Roles') }}
+                {{ __('Clinician Profiles') }}
             </x-heading.h3>
-            <p class="mt-2">{{ __('Manage your users, create roles and assign permissions to your users.') }}</p>
+            <p class="mt-2">{{ __('Every provider gets a full profile: disciplines, credentials, availability, tier, and placement history in one place.') }}</p>
         </x-section.column>
 
         <x-section.column class="flex flex-col items-center justify-center text-center">
             <x-icon.fancy name="translatable" class="w-1/4 mx-auto" />
             <x-heading.h3 class="mx-auto pt-2">
-                {{ __('Fully translatable') }}
+                {{ __('Offer Tracking') }}
             </x-heading.h3>
-            <p class="mt-2">{{ __('Translate your application to any language you want.') }}</p>
+            <p class="mt-2">{{ __('See exactly where every dispatched offer stands. Accepted, pending, declined, no response — tracked in real time.') }}</p>
         </x-section.column>
 
         <x-section.column class="flex flex-col items-center justify-center text-center">
             <x-icon.fancy name="seo" class="w-1/4 mx-auto" />
             <x-heading.h3 class="mx-auto pt-2">
-                {{ __('Sitemap & SEO') }}
+                {{ __('Case Management') }}
             </x-heading.h3>
-            <p class="mt-2">{{ __('Auto-generated sitemap and SEO optimization out of the box.') }}</p>
+            <p class="mt-2">{{ __('Manage the full lifecycle from referral to active case. Status, notes, and assignment history attached to every record.') }}</p>
         </x-section.column>
 
     </x-section.columns>
@@ -385,25 +382,25 @@
         <x-section.column class="flex flex-col items-center justify-center text-center">
             <x-icon.fancy name="user-dashboard" class="w-1/4 mx-auto" />
             <x-heading.h3 class="mx-auto pt-2">
-                {{ __('User Dashboard') }}
+                {{ __('Provider Portal') }}
             </x-heading.h3>
-            <p class="mt-2">{{ __('Users can manage their subscriptions, change payment method, upgrade plan, cancel subscription alone.') }}</p>
+            <p class="mt-2">{{ __('Providers log in to view offers, confirm availability, and upload documents without ever calling your office.') }}</p>
         </x-section.column>
 
         <x-section.column class="flex flex-col items-center justify-center text-center">
             <x-icon.fancy name="tool" class="w-1/4 mx-auto" />
             <x-heading.h3 class="mx-auto pt-2">
-                {{ __('Highly customizable') }}
+                {{ __('Automated Notifications') }}
             </x-heading.h3>
-            <p class="mt-2">{{ __('Manage your SaaS settings from within the admin panel. No need to redeploy app for simple changes anymore.') }}</p>
+            <p class="mt-2">{{ __('Providers and staff get notified at every key step. No one is left wondering what\'s happening.') }}</p>
         </x-section.column>
 
         <x-section.column class="flex flex-col items-center justify-center text-center">
             <x-icon.fancy name="development" class="w-1/4 mx-auto" />
             <x-heading.h3 class="mx-auto pt-2">
-                {{ __('Developer-friendly') }}
+                {{ __('Audit Trail') }}
             </x-heading.h3>
-            <p class="mt-2">{{ __('Built with developers in mind, uses best coding practices. Offers handlers & events and automated tests covering critical components of the application.') }}</p>
+            <p class="mt-2">{{ __('Every action, status change, and assignment is logged. Always know what happened, when, and who did it.') }}</p>
         </x-section.column>
 
     </x-section.columns>
@@ -411,16 +408,20 @@
 
     <div class="mx-4 mt=16">
         <x-heading.h6 class="text-center mt-24 text-primary-500 uppercase!" id="pricing">
-            {{ __('Launch your SaaS Today') }}
+            {{ __('Ready to modernize your staffing ops?') }}
         </x-heading.h6>
         <x-heading.h2 class="text-primary-900 text-center">
-            {{ __('Ship Your SaaS in Days') }}
+            {{ __('See StaffPick in Action') }}
         </x-heading.h2>
     </div>
 
-    <div class="pricing">
-        <x-plans.all calculate-saving-rates="true" show-default-product="1"/>
-        <x-products.all />
+    <div class="text-center mt-8 mb-16 px-4">
+        <p class="text-primary-700 max-w-xl mx-auto">{{ __('Get a personalized walkthrough with your agency\'s real workflow in mind. No canned demos, no pressure.') }}</p>
+        <div class="mt-8">
+            <x-button-link.primary href="{{route('login')}}" class="!py-3 !px-8">
+                {{ __('Request a Demo') }}
+            </x-button-link.primary>
+        </div>
     </div>
 
     <div class="text-center mt-24 mx-4" id="faq">
@@ -436,134 +437,38 @@
     <div class="max-w-none md:max-w-6xl mx-auto">
         <x-accordion class="mt-4 p-8">
             <x-accordion.item active="true" name="faqs">
-                <x-slot name="title">{{ __('What is SaaSykit?') }}</x-slot>
-
-                <p>
-                    {{ __('SaaSykit is a complete SaaS starter kit that includes everything you need to start your SaaS business. It comes ready with a huge list of reusable components, a complete admin panel, user dashboard, user authentication, user & role management, plans & pricing, subscriptions, payments, emails, and more.') }}
-                </p>
-
+                <x-slot name="title">{{ __('What is StaffPick?') }}</x-slot>
+                <p>{{ __('StaffPick is a multi-tenant staffing platform built for therapy and healthcare agencies. It manages the full placement lifecycle: intake, matching, offers, assignments, and compliance tracking, in one place.') }}</p>
             </x-accordion.item>
 
             <x-accordion.item active="false" name="faqs">
-                <x-slot name="title">{{ __('What features does SaaSykit offer?') }}</x-slot>
-
-                <p class="mt-4">
-                    {{ __('Here are some of the features included in SaaSykit in a nutshell:') }}
-                </p>
-
-                <ul class="mt-4 list-disc ms-4 ps-4">
-                    <li>{{ __('Customize Styles: Customize the styles &amp; colors, error page of your application to fit your brand.') }}</li>
-                    <li>{{ __('Product, Plans &amp; Pricing: Create and manage your products, plans, and pricing from a beautiful and easy-to-use admin panel.') }}</li>
-                    <li>{{ __('Beautiful checkout process: Your customers can subscribe to your plans from a beautiful checkout process.') }}</li>
-                    <li>{{ __('Huge list of ready-to-use components: Plans &amp; Pricing, hero section, features section, testimonials, FAQ, Call to action, tab slider, and much more.') }}</li>
-                    <li>{{ __('User authentication: Comes with user authentication out of the box, whether classic email/password or social login (Google, Facebook, Twitter, Github, LinkedIn, and more).') }}</li>
-                    <li>{{ __('Discounts: Create and manage your discounts and reward your customers.') }}</li>
-                    <li>{{ __('SaaS metric stats: View your MRR, Churn rates, ARPU, and other SaaS metrics.') }}</li>
-                    <li>{{ __('Multiple payment providers: Stripe, Paddle, and more coming soon.') }}</li>
-                    <li>{{ __('Multiple email providers: Mailgun, Postmark, Amazon SES, and more coming soon.') }}</li>
-                    <li>{{ __('Blog: Create and manage your blog posts.') }}</li>
-                    <li>{{ __('User &amp; Role Management: Create and manage your users and roles, and assign permissions to your users.') }}</li>
-                    <li>{{ __('Fully translatable: Translate your application to any language you want.') }}</li>
-                    <li>{{ __('Sitemap &amp; SEO: Sitemap and SEO optimization out of the box.') }}</li>
-                    <li>{{ __('Admin Panel: Manage your SaaS application from a beautiful admin panel powered by ') }} <a href="https://filamentphp.com/" target="_blank" rel="noopener noreferrer">Filament</a>.</li>
-                    <li>{{ __('User Dashboard: Your customers can manage their subscriptions, change payment method, upgrade plan, cancel subscription, and more from a beautiful user dashboard powered by') }} <a href="https://filamentphp.com/" target="_blank" rel="noopener noreferrer">Filament</a>.</li>
-                    <li>{{ __('Automated Tests: Comes with automated tests for critical components of the application.') }}</li>
-                    <li>{{ __('One-line deployment: Provision your server and deploy your application easily with integrated') }} <a href="https://deployer.org/" target="_blank" rel="noopener noreferrer">Deployer</a> {{ __('  support.') }}</li>
-                    <li>{{ __('Developer-friendly: Built with developers in mind, uses best coding practices.') }}</li>
-                    <li>{{ __('And much more...') }}</li>
-                </ul>
-
+                <x-slot name="title">{{ __('Who is StaffPick for?') }}</x-slot>
+                <p>{{ __('StaffPick is built for agencies that place clinicians, including physical therapists, occupational therapists, speech-language pathologists, and other healthcare providers. If your team is managing placements in spreadsheets or an outdated system, StaffPick was built for you.') }}</p>
             </x-accordion.item>
 
             <x-accordion.item active="false" name="faqs">
-                <x-slot name="title">{{ __('Which payment providers are supported?') }}</x-slot>
+                <x-slot name="title">{{ __('How does matching work?') }}</x-slot>
+                <p>{{ __('StaffPick matches open intake requests to available clinicians based on discipline, service area, availability, and tier. Your coordinators get a ranked list of candidates they can review and dispatch offers to directly from the platform.') }}</p>
+            </x-accordion.item>
 
-                <p>
-                    {{ __('SaaSykit supports Stripe and Paddle out of the box. You can easily add more payment providers by extending the code. More payment method will be added in the future as well (e.g. Lemon Squeezy)') }}
-                </p>
+            <x-accordion.item active="false" name="faqs">
+                <x-slot name="title">{{ __('Can providers use StaffPick directly?') }}</x-slot>
+                <p>{{ __('Yes. Providers get their own portal where they can view offers, confirm availability, upload credentials, and track their active cases. They never need to call your office to get basic status updates.') }}</p>
+            </x-accordion.item>
 
+            <x-accordion.item active="false" name="faqs">
+                <x-slot name="title">{{ __('Is my agency\'s data kept separate from other agencies?') }}</x-slot>
+                <p>{{ __('Completely. StaffPick is built multi-tenant from the ground up. Each agency operates in its own isolated environment. Your data never mingles with another agency\'s data.') }}</p>
+            </x-accordion.item>
+
+            <x-accordion.item active="false" name="faqs">
+                <x-slot name="title">{{ __('How do I get started?') }}</x-slot>
+                <p>{{ __('Request a demo and we\'ll walk you through the platform with your agency\'s workflow in mind. We\'ll configure your disciplines, service areas, and intake fields before you go live.') }}</p>
             </x-accordion.item>
 
             <x-accordion.item active="false" name="faqs">
                 <x-slot name="title">{{ __('Do you offer support?') }}</x-slot>
-
-                <p>
-                    {{ __('Of course! we offer email and discord support to help you with any issues you might face or questions you have. Write us an email at') }} <a href="mailto:{{config('app.support_email')}}" class="text-primary-500 hover:underline">{{config('app.support_email')}}</a> {{ __('or join our') }} <a href="{{config('app.social_links.discord')}}">{{ __('discord server')}}</a> {{ __('to get help.')}}
-                </p>
-
-            </x-accordion.item>
-
-            <x-accordion.item active="false" name="faqs">
-                <x-slot name="title">{{'What Tech stack is used?'}}</x-slot>
-
-                <p>
-                    {{ __('SaaSykit is built on top of') }} <a href="https://laravel.com" target="_blank">Laravel</a> {{ __('Laravel, the most popular PHP framework, and') }} <a target="_blank" href="https://filamentphp.com/">Filament</a> {{ __(', a beautiful and powerful admin panel for Laravel. It also uses TailwindCSS, AlpineJS, and Livewire.')}}
-                </p>
-                <p class="mt-4">
-                    {{ __('You can use your favourite database (MySQL, PostgreSQL, SQLite) and your favourite queue driver (Redis, Amazon SQS, etc).')}}
-                </p>
-
-            </x-accordion.item>
-
-            <x-accordion.item active="false" name="faqs">
-                <x-slot name="title">{{'How often is SaaSykit updated?'}}</x-slot>
-
-                <p>
-                    {{ __('SaaSykit is updated regularly to keep up with the latest Laravel and Filament versions, and to add new features and improvements.')}}
-                </p>
-
-            </x-accordion.item>
-
-            <x-accordion.item active="false" name="faqs">
-                <x-slot name="title">{{'Do you offer refunds?'}}</x-slot>
-
-                <p>
-                    {{ __('Yes, we offer a 14-day money-back guarantee. If you are not satisfied with SaaSykit, you can request a refund within 14 days of your purchase. Please write us an email at') }} <a href="mailto:{{config('app.support_email')}}" class="text-primary-500 hover:underline">{{config('app.support_email')}}</a> {{ __('to request a refund.')}}
-                </p>
-
-            </x-accordion.item>
-
-            <x-accordion.item active="false" name="faqs">
-                <x-slot name="title">{{'Where can I host my SaaS application?'}}</x-slot>
-
-                <p>
-                    {{ __('You can host your SaaS application on any server that supports PHP, such as DigitalOcean, AWS, Hetzner, Linode, and more. You can also use a platform like Laravel Forge to manage your server and deploy your application.')}}
-                </p>
-
-            </x-accordion.item>
-
-            <x-accordion.item active="false" name="faqs">
-                <x-slot name="title">{{'Is there a demo available?'}}</x-slot>
-
-                <p>
-                    {{ __('Yes, a demo is available to help you get a feel of SaaSykit. You can find the demo') }} <a href="https://saasykit.com/demo" target="_blank" rel=”nofollow” >here</a>.
-                </p>
-
-            </x-accordion.item>
-
-            <x-accordion.item active="false" name="faqs">
-                <x-slot name="title">{{'Is there documentation available?'}}</x-slot>
-
-                <p>
-                    {{ __('Yes, an extensive documentation is available to help you get started with SaaSykit. You can find the documentation ')}} <a href="https://saasykit.com/docs" target="_blank">here</a>.
-                </p>
-
-            </x-accordion.item>
-
-            <x-accordion.item active="false" name="faqs">
-                <x-slot name="title">{{'How is SaaSykit different from just using Laravel directly?'}}</x-slot>
-
-                <p>
-                    {{__('SaaSykit is built on top of Laravel with the intention to save you time and effort by not having to build everything needed for a modern SaaS from scratch, like payment provider integration, subscription management, user authentication, user & role management, having a beautiful admin panel, a user dashboard to manage their subscriptions/payments, and more.')}}
-                </p>
-                <p class="mt-4">
-                    {{__('You can choose to base your SaaS on vanilla Laravel and build everything from scratch if you prefer and that is totally fine, but you will need a few months to build what SaaSykit offers out of the box, then on top of that, you will need to start to build your actual SaaS application.')}}
-                </p>
-
-                <p class="mt-4">
-                    {{__('SaaSykit is a great starting point for your SaaS application, it is built with best coding practices, and it is developer-friendly. It is also built with the intention to be easily customizable and extendable. Any developer who is familiar with Laravel will feel right at home.')}}
-                </p>
-
+                <p>{{ __('Yes. Reach us at') }} <a href="mailto:{{config('app.support_email')}}" class="text-primary-500 hover:underline">{{config('app.support_email')}}</a>{{ __('. We\'re a small team and we actually respond.') }}</p>
             </x-accordion.item>
         </x-accordion>
 
@@ -571,19 +476,19 @@
         <div class="text-center">
             <x-section.outro>
                 <x-heading.h6 class="text-primary-50">
-                    {{ __('Ship fast & don\'t reinvent the wheel') }}
+                    {{ __('Less chasing. More placing.') }}
                 </x-heading.h6>
                 <x-heading.h2 class="text-primary-50 drop-shadow-4xl">
-                    {{ __('Build your SaaS Today') }}
+                    {{ __('Start Placing Smarter') }}
                 </x-heading.h2>
 
                 <p class="text-primary-100 mt-2">
-                    {{ __('SaaSykit is a SaaS boilerplate that comes packed with all components required to run a modern SaaS software.') }}
+                    {{ __('StaffPick gives your team the tools to move faster, stay organized, and keep clinicians and clients in the loop without the manual grind.') }}
                 </p>
 
                 <div class="mt-12">
-                    <x-button-link.secondary href="/" >
-                        {{ __('Buy SaaSykit Now') }}
+                    <x-button-link.secondary href="{{route('login')}}" >
+                        {{ __('Request a Demo') }}
                     </x-button-link.secondary>
                 </div>
             </x-section.outro>
