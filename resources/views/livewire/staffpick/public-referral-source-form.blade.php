@@ -14,13 +14,6 @@
         </div>
     @else
         <form wire:submit="submit" class="space-y-6">
-            <div>
-                <h1 class="text-2xl font-semibold">{{ __('Register as a referral source') }}</h1>
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    {{ __('Registering with :tenant', ['tenant' => $tenantName]) }}
-                </p>
-            </div>
-
             {{-- Agency --}}
             <div class="{{ $card }} space-y-4">
                 <h2 class="text-base font-semibold">{{ __('Agency Information') }}</h2>
