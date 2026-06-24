@@ -7,17 +7,13 @@ use App\Filament\Dashboard\Resources\IntakeRequests\Tables\IntakeRequestsTable;
 use App\Filament\Dashboard\Support\HelpHeaderAction;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
 
 /**
- * All Cases — the full operational picture minus the dispatch queue. Excludes pending /
- * offered / assigned_pending (those live in Pending Cases). 'finished' = completed.
+ * All Cases — every intake request across all statuses for this tenant.
  */
 class AllCases extends ListRecords
 {
     protected static string $resource = IntakeRequestResource::class;
-
-    public const STATUSES = ['active', 'completed', 'finished', 'cancelled', 'on_hold'];
 
     public function getTitle(): string
     {
@@ -26,8 +22,7 @@ class AllCases extends ListRecords
 
     public function table(Table $table): Table
     {
-        return IntakeRequestsTable::configure($table, withDispatchActions: false)
-            ->modifyQueryUsing(fn (Builder $query): Builder => $query->whereIn('status', self::STATUSES));
+        return IntakeRequestsTable::configure($table, withDispatchActions: false);
     }
 
     protected function getHeaderActions(): array
