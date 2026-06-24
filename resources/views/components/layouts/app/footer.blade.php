@@ -12,29 +12,24 @@
 
         </aside>
         <nav>
-            <h6 class="footer-title">Discover</h6>
-            <a href="https://saasykit.com/docs" class="text-primary-900 hover:text-primary-400">{{ __('Documentation') }}</a>
-            <a href="//demo.saasykit.com" class="text-primary-900 hover:text-primary-400" rel=”nofollow”>{{ __('Check SaaSykit Demo') }}</a>
-            <a href="//tenancy-demo.saasykit.com" class="text-primary-900 hover:text-primary-400" rel=”nofollow”>{{ __('Check SaaSykit Tenancy Demo') }}</a>
+            <h6 class="footer-title">Platform</h6>
             @guest
-                <a href="{{route('login')}}" class="text-primary-900 hover:text-primary-400">{{ __('Your Account') }}</a>
+                <a href="{{route('login')}}" class="text-primary-900 hover:text-primary-400">{{ __('Sign In') }}</a>
             @endguest
-            <a href="{{route('blog')}}" class="text-primary-900 hover:text-primary-400">{{ __('Blog') }}</a>
-            <a href="/blog/saasykit-vs-laravel-spark-which-starter-kit-should-you-choose" class="text-primary-900 hover:text-primary-400">{{ __('SaaSykit vs. Laravel Spark') }}</a>
+            <a href="/#features" class="text-primary-900 hover:text-primary-400">{{ __('Features') }}</a>
+            <a href="/#faq" class="text-primary-900 hover:text-primary-400">{{ __('FAQ') }}</a>
+            <a href="{{route('roadmap')}}" class="text-primary-900 hover:text-primary-400">{{ __('Roadmap') }}</a>
         </nav>
         <nav>
-            <h6 class="footer-title">Collaboration</h6>
-            <a href="https://saasykit.lemonsqueezy.com/affiliates" class="text-primary-900 hover:text-primary-400" rel=”nofollow”>{{ __('Affiliates') }}</a>
-            <a href="{{route('roadmap')}}" class="text-primary-900 hover:text-primary-400">{{ __('Roadmap') }}</a>
+            <h6 class="footer-title">Contact</h6>
+            <a href="mailto:{{config('app.support_email')}}" class="text-primary-900 hover:text-primary-400">{{ __('Get Support') }}</a>
         </nav>
         <nav>
             <h6 class="footer-title">Legal</h6>
             <a href="{{route('privacy-policy')}}" class="text-primary-900 hover:text-primary-400">{{ __('Privacy Policy') }}</a>
             <a href="{{route('terms-of-service')}}" class="text-primary-900 hover:text-primary-400">{{ __('Terms of Service') }}</a>
 
-            <h6 class="footer-title mt-6">Partners</h6>
-            <a href="https://microlaunch.net/?ref=saasykit" class="text-primary-900 hover:text-primary-400">{{ __('MicroLaunch') }}</a>
-            <a href="https://indievoice.app/?ref=saasykit" class="text-primary-900 hover:text-primary-400">{{ __('IndieVoice') }}</a>
+            
         </nav>
         <nav>
             <h6 class="footer-title">Get in touch</h6>
