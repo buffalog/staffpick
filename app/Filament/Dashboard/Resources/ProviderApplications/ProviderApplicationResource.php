@@ -104,4 +104,9 @@ class ProviderApplicationResource extends Resource
 
         return $count > 0 ? (string) $count : null;
     }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
 }
