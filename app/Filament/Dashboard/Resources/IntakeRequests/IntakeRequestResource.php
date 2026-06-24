@@ -128,10 +128,10 @@ class IntakeRequestResource extends Resource
             ->isActiveWhen(fn (): bool => request()->routeIs(static::getRouteBaseName().'.'.$page));
 
         return [
-            $item(__('Pending Cases'), 'index', 1),
+            $item(__('All Cases'), 'all-cases', 1),
             $item(__('Active Cases'), 'cases', 2),
-            $item(__('Completed Cases'), 'completed-cases', 3),
-            $item(__('All Cases'), 'all-cases', 4),
+            $item(__('Pending Cases'), 'index', 3),
+            $item(__('Discharged Cases'), 'completed-cases', 4),
         ];
     }
 

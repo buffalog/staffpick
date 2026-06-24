@@ -10,7 +10,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Completed Cases — read-only history. 'finished' is treated as completed.
+ * Discharged Cases — read-only history. 'finished' is treated as discharged.
  */
 class CompletedCases extends ListRecords
 {
@@ -20,7 +20,7 @@ class CompletedCases extends ListRecords
 
     public function getTitle(): string
     {
-        return __('Completed Cases');
+        return __('Discharged Cases');
     }
 
     public function table(Table $table): Table
