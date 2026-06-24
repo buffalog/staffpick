@@ -77,6 +77,7 @@ class ReferralSourcesTable
                     ->label(__('Intake link'))
                     ->icon(Heroicon::OutlinedLink)
                     ->color('gray')
+                    ->visible(fn (ReferralSource $record): bool => $record->status === ReferralSource::STATUS_ACTIVE)
                     ->fillForm(fn (ReferralSource $record): array => ['intake_url' => $record->getIntakeUrl()])
                     ->schema([
                         TextInput::make('intake_url')
