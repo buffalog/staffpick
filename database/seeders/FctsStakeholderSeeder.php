@@ -35,7 +35,14 @@ class FctsStakeholderSeeder extends Seeder
     {
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
-        $tenant = Tenant::findOrFail(self::TENANT_ID);
+        // Runs from a migration (migrate:fresh too), where the target tenant may not
+        // exist yet — e.g. fresh test DBs. No tenant → nothing to seed against; bail
+        // rather than hard-fail the whole migration run. On Railway tenant 1 persists.
+        $tenant = Tenant::find(self::TENANT_ID);
+
+        if ($tenant === null) {
+            return;
+        }
 
         foreach ($this->stakeholders as $data) {
             $user = User::firstOrCreate(

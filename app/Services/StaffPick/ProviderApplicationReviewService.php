@@ -30,6 +30,27 @@ class ProviderApplicationReviewService
 
     public function approve(ProviderApplication $application, User $reviewer): Provider
     {
+        // Duplicate guard: a provider with this tenant+email already exists. Reject the
+        // application and bail. This runs BEFORE the transaction so the rejection update
+        // commits — throwing inside DB::transaction would roll it back along with everything
+        // else. Mirrors the sp_providers_tenant_email_unique DB index (the final arbiter).
+        $existing = Provider::withoutGlobalScopes()
+            ->where('tenant_id', $application->tenant_id)
+            ->where('email', $application->email)
+            ->whereNull('deleted_at')
+            ->first();
+
+        if (filled($application->email) && $existing !== null) {
+            $application->update([
+                'status' => ProviderApplication::STATUS_REJECTED,
+                'rejection_reason' => 'Duplicate — provider with this email already exists.',
+                'reviewed_by' => $reviewer->id,
+                'reviewed_at' => now(),
+            ]);
+
+            throw new \RuntimeException("Provider with email {$application->email} already exists in this tenant.");
+        }
+
         $invitation = null;
 
         $provider = DB::transaction(function () use ($application, $reviewer, &$invitation): Provider {
@@ -163,13 +184,17 @@ class ProviderApplicationReviewService
                 Storage::move($sourcePath, $destPath);
             }
 
-            ProviderCredential::create([
-                'provider_id' => $provider->id,
-                'document_type_id' => $upload['document_type_id'] ?? null,
-                'file_path' => $destPath,
-                'status' => 'pending_review',
-                'verification_status' => ProviderCredential::VERIFICATION_UNVERIFIED,
-            ]);
+            ProviderCredential::firstOrCreate(
+                [
+                    'provider_id' => $provider->id,
+                    'document_type_id' => $upload['document_type_id'] ?? null,
+                ],
+                [
+                    'file_path' => $destPath,
+                    'status' => 'pending_review',
+                    'verification_status' => ProviderCredential::VERIFICATION_UNVERIFIED,
+                ]
+            );
         }
     }
 

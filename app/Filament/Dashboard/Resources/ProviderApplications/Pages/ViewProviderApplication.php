@@ -26,7 +26,16 @@ class ViewProviderApplication extends ViewRecord
                 ->requiresConfirmation()
                 ->modalHeading(__('Approve this provider application?'))
                 ->action(function (ProviderApplication $record): void {
-                    app(ProviderApplicationReviewService::class)->approve($record, auth()->user());
+                    try {
+                        app(ProviderApplicationReviewService::class)->approve($record, auth()->user());
+                    } catch (\RuntimeException $e) {
+                        Notification::make()
+                            ->title($e->getMessage())
+                            ->danger()
+                            ->send();
+
+                        return;
+                    }
 
                     Notification::make()
                         ->title(__('Application approved. Invitation sent to :email.', ['email' => $record->email]))

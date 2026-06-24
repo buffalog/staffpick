@@ -83,18 +83,22 @@ class ManualCredential
             $notes = 'Type: '.$data['custom_type_name']."\n".($notes ?? '');
         }
 
-        ProviderCredential::create([
-            'provider_id' => $providerId,
-            'document_type_id' => $documentTypeId,
-            'document_number' => $data['document_number'] ?? null,
-            'issued_at' => $data['issued_at'] ?? null,
-            'expires_at' => $data['expires_at'] ?? null,
-            'notes' => filled($notes) ? rtrim($notes) : null,
-            'file_path' => $data['file_path'] ?? null,
-            'status' => 'valid',
-            'verification_status' => ProviderCredential::VERIFICATION_UNVERIFIED,
-            'verification_source' => ProviderCredential::SOURCE_MANUAL,
-        ]);
+        ProviderCredential::firstOrCreate(
+            [
+                'provider_id' => $providerId,
+                'document_type_id' => $documentTypeId,
+            ],
+            [
+                'document_number' => $data['document_number'] ?? null,
+                'issued_at' => $data['issued_at'] ?? null,
+                'expires_at' => $data['expires_at'] ?? null,
+                'notes' => filled($notes) ? rtrim($notes) : null,
+                'file_path' => $data['file_path'] ?? null,
+                'status' => 'valid',
+                'verification_status' => ProviderCredential::VERIFICATION_UNVERIFIED,
+                'verification_source' => ProviderCredential::SOURCE_MANUAL,
+            ]
+        );
     }
 
     /**
