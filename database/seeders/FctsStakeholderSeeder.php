@@ -59,7 +59,7 @@ class FctsStakeholderSeeder extends Seeder
                 TenancyPermissionConstants::SP_TENANT_ROLES,
             );
 
-            $this->command->info("Seeded: {$data['name']} <{$data['email']}>");
+            // $this->command->info() is null when run via migration context
         }
     }
 }
