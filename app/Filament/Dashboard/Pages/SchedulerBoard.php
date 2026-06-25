@@ -100,6 +100,17 @@ class SchedulerBoard extends Page
         return null;
     }
 
+    /**
+     * Replaced by the ServiceCalendar page. Hidden from navigation but still reachable
+     * by direct URL (/board) during the transition.
+     * TODO: remove the SchedulerBoard page + scheduler-board view once we've confirmed
+     * nothing else links to /board and the Service Calendar fully covers the workflow.
+     */
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
+
     public static function canAccess(): bool
     {
         return SpRoleAccess::isAdminOrStaff();
