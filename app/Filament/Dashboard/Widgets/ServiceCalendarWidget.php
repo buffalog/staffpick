@@ -5,7 +5,6 @@ namespace App\Filament\Dashboard\Widgets;
 use App\Filament\Dashboard\Resources\IntakeRequests\IntakeRequestResource;
 use App\Filament\Dashboard\Support\SpRoleAccess;
 use App\Models\StaffPick\IntakeRequest;
-use App\Models\StaffPick\Provider;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Infolists\Components\TextEntry;
@@ -14,23 +13,22 @@ use Guava\Calendar\Contracts\HasCalendar;
 use Guava\Calendar\Enums\CalendarViewType;
 use Guava\Calendar\Filament\CalendarWidget;
 use Guava\Calendar\ValueObjects\CalendarEvent;
-use Guava\Calendar\ValueObjects\CalendarResource;
 use Guava\Calendar\ValueObjects\FetchInfo;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Service Calendar — a provider-row timeline (Gantt) of active cases with a scheduled
- * evaluation date. Each provider (lead clinician) is a resource row; each active case
- * is an all-day bar on its evaluation_date. Clicking a case opens a read-only summary
- * modal with a link to the full case. Replaces the dispatch board.
+ * Service Calendar — a month/week grid of active cases on their scheduled evaluation
+ * date. Each active case is an event (color-coded by its assigned clinician when one is
+ * set); clicking it opens a read-only summary modal with a link to the full case.
+ * Replaces the dispatch board. (The provider-row / workload timeline lives on a future
+ * Workload page.)
  *
- * Built on guava/calendar (vkurko EventCalendar) — its resource timeline views are free,
- * no FullCalendar Premium license. Tenant-scoped and gated to admin/staff (PHI), same as
- * the IntakeRequest resource.
+ * Built on guava/calendar (vkurko EventCalendar). Tenant-scoped and gated to admin/staff
+ * (PHI), same as the IntakeRequest resource.
  */
 class ServiceCalendarWidget extends CalendarWidget
 {
-    protected CalendarViewType $calendarView = CalendarViewType::ResourceTimelineMonth;
+    protected CalendarViewType $calendarView = CalendarViewType::DayGridMonth;
 
     protected bool $eventClickEnabled = true;
 
@@ -43,11 +41,11 @@ class ServiceCalendarWidget extends CalendarWidget
         'headerToolbar' => [
             'start' => 'prev,next today',
             'center' => 'title',
-            'end' => 'resourceTimelineMonth,resourceTimelineWeek',
+            'end' => 'dayGridMonth,dayGridWeek',
         ],
     ];
 
-    /** Distinct, stable colors so each provider row reads as its own lane. */
+    /** Distinct, stable colors so cases group visually by assigned clinician. */
     private const PALETTE = [
         '#2563eb', '#16a34a', '#db2777', '#d97706',
         '#7c3aed', '#0891b2', '#dc2626', '#4f46e5',
@@ -76,37 +74,9 @@ class ServiceCalendarWidget extends CalendarWidget
                 ->start($case->evaluation_date)
                 ->end($case->evaluation_date)
                 ->allDay()
-                ->resourceId((string) $case->lead_clinician_id)
-                ->backgroundColor($this->colorForProvider((int) $case->lead_clinician_id))
+                ->backgroundColor($this->colorForCase($case))
                 ->textColor('#ffffff')
                 ->action('viewCase'))
-            ->all();
-    }
-
-    /**
-     * One row per provider who has at least one active, scheduled case — no empty lanes.
-     *
-     * @return array<int, CalendarResource>
-     */
-    public function getResources(): array
-    {
-        $providerIds = $this->activeScheduledCases()
-            ->whereNotNull('lead_clinician_id')
-            ->distinct()
-            ->pluck('lead_clinician_id')
-            ->all();
-
-        if ($providerIds === []) {
-            return [];
-        }
-
-        return Provider::query()
-            ->whereIn('id', $providerIds)
-            ->orderBy('last_name')
-            ->get()
-            ->map(fn (Provider $provider): CalendarResource => CalendarResource::make((string) $provider->id)
-                ->title(trim("{$provider->first_name} {$provider->last_name}") ?: __('Provider'))
-                ->eventBackgroundColor($this->colorForProvider((int) $provider->id)))
             ->all();
     }
 
@@ -150,8 +120,7 @@ class ServiceCalendarWidget extends CalendarWidget
         return IntakeRequest::query()
             ->where('tenant_id', Filament::getTenant()?->id)
             ->where('status', 'active')
-            ->whereNotNull('evaluation_date')
-            ->whereNotNull('lead_clinician_id');
+            ->whereNotNull('evaluation_date');
     }
 
     private function caseTitle(IntakeRequest $case): string
@@ -160,8 +129,13 @@ class ServiceCalendarWidget extends CalendarWidget
             ?: ($case->reference_number ?? __('Case'));
     }
 
-    private function colorForProvider(int $providerId): string
+    /** Color by assigned clinician when set; neutral slate for unassigned cases. */
+    private function colorForCase(IntakeRequest $case): string
     {
-        return self::PALETTE[$providerId % count(self::PALETTE)];
+        if ($case->lead_clinician_id === null) {
+            return '#64748b';
+        }
+
+        return self::PALETTE[(int) $case->lead_clinician_id % count(self::PALETTE)];
     }
 }
