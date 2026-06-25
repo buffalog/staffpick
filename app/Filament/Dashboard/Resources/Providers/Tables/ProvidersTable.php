@@ -15,6 +15,7 @@ use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Columns\ColorColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -27,6 +28,8 @@ class ProvidersTable
     {
         return $table
             ->columns([
+                ColorColumn::make('color')
+                    ->label(__('Color')),
                 TextColumn::make('full_name')
                     ->label(__('Name'))
                     ->state(fn (Provider $record): string => trim("{$record->first_name} {$record->last_name}"))

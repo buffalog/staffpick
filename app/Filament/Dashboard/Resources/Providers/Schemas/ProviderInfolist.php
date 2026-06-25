@@ -4,6 +4,7 @@ namespace App\Filament\Dashboard\Resources\Providers\Schemas;
 
 use App\Models\StaffPick\Provider;
 use App\Models\StaffPick\TenantConfig;
+use Filament\Infolists\Components\ColorEntry;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Grid;
@@ -34,6 +35,9 @@ class ProviderInfolist
                             ->placeholder('—'),
                         TextEntry::make('phone_alt')
                             ->label(__('Alternate Phone'))
+                            ->placeholder('—'),
+                        ColorEntry::make('color')
+                            ->label(__('Identity Color'))
                             ->placeholder('—'),
                     ]),
 
