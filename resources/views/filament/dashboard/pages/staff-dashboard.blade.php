@@ -1,9 +1,6 @@
 <x-filament-panels::page>
     @php
         $oldest = $this->oldestPending();
-        $pendingCols = $this->boardColumn(\App\Filament\Dashboard\Pages\Dashboard::PENDING);
-        $activeCols = $this->boardColumn(\App\Filament\Dashboard\Pages\Dashboard::ACTIVE);
-        $completedCols = $this->boardColumn(\App\Filament\Dashboard\Pages\Dashboard::COMPLETED);
         $lastSourceDays = $this->lastSourceAddedDaysAgo();
     @endphp
 
@@ -36,44 +33,7 @@
     {{-- Section 2: stat cards --}}
     @livewire(\App\Filament\Dashboard\Widgets\StaffDashboardStats::class)
 
-    {{-- Section 3: condensed dispatch board --}}
-    <x-filament::section>
-        <x-slot name="heading">{{ __('Dispatch Board') }}</x-slot>
-
-        <div class="grid gap-4 md:grid-cols-3">
-            @foreach (['Pending' => $pendingCols, 'Active' => $activeCols, 'Completed' => $completedCols] as $heading => $cards)
-                <div>
-                    <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                        {{ __($heading) }} ({{ $cards->count() }})
-                    </h3>
-                    <div class="space-y-2">
-                        @forelse ($cards as $card)
-                            <a href="{{ $this->caseUrl($card) }}"
-                               class="block rounded-lg border border-gray-200 bg-white p-3 text-sm shadow-sm transition hover:border-primary-400 dark:border-gray-700 dark:bg-gray-900">
-                                <div class="flex items-center justify-between gap-2">
-                                    <span class="font-medium text-gray-900 dark:text-white">{{ $card->reference_number ?: "#{$card->id}" }}</span>
-                                    <x-filament::badge :color="$this->statusColor($card->status)">
-                                        {{ $this->statusLabel($card->status) }}
-                                    </x-filament::badge>
-                                </div>
-                                <div class="mt-1 text-gray-600 dark:text-gray-300">{{ $this->subjectName($card) }}</div>
-                            </a>
-                        @empty
-                            <p class="rounded-lg border border-dashed border-gray-200 p-3 text-xs text-gray-400 dark:border-gray-700">{{ __('No cases') }}</p>
-                        @endforelse
-                    </div>
-                </div>
-            @endforeach
-        </div>
-
-        <div class="mt-4 text-right">
-            <a href="{{ $this->fullBoardUrl() }}" class="text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400">
-                {{ __('View Full Board →') }}
-            </a>
-        </div>
-    </x-filament::section>
-
-    {{-- Section 4: quick-action cards --}}
+    {{-- Section 3: quick-action cards --}}
     <div class="grid gap-4 md:grid-cols-2">
         {{-- Providers --}}
         <x-filament::section>

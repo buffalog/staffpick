@@ -17,9 +17,8 @@ use Illuminate\Support\Collection;
 
 /**
  * Purpose-built staff operations landing page. Replaces Filament's default dashboard
- * (and the AccountWidget) with an ops view: oldest-pending alert, stat cards, a
- * condensed dispatch board, and quick-action cards. All data is scoped to the current
- * tenant.
+ * (and the AccountWidget) with an ops view: oldest-pending alert, stat cards, and
+ * quick-action cards. All data is scoped to the current tenant.
  */
 class Dashboard extends BaseDashboard
 {
@@ -98,47 +97,7 @@ class Dashboard extends BaseDashboard
         return $this->scoped(self::COMPLETED)->count();
     }
 
-    // ---- Section 3: condensed board (top 5 per column) -----------------------
-
-    /**
-     * @param  array<int, string>  $statuses
-     * @return Collection<int, IntakeRequest>
-     */
-    public function boardColumn(array $statuses): Collection
-    {
-        return $this->scoped($statuses)
-            ->with(['subject'])
-            ->orderByDesc('updated_at')
-            ->limit(5)
-            ->get();
-    }
-
-    public function fullBoardUrl(): string
-    {
-        return SchedulerBoard::getUrl();
-    }
-
-    public function statusLabel(string $state): string
-    {
-        return IntakeRequestResource::statusOptions()[$state] ?? str($state)->headline()->toString();
-    }
-
-    public function statusColor(string $state): string
-    {
-        return IntakeRequestResource::statusColor($state);
-    }
-
-    public function caseUrl(IntakeRequest $intake): string
-    {
-        return IntakeRequestResource::getUrl('view', ['record' => $intake]);
-    }
-
-    public function subjectName(?IntakeRequest $intake): string
-    {
-        return trim("{$intake?->subject?->first_name} {$intake?->subject?->last_name}") ?: __('—');
-    }
-
-    // ---- Section 4: quick-action cards ---------------------------------------
+    // ---- Section 3: quick-action cards ---------------------------------------
 
     public function activeProviderCount(): int
     {
