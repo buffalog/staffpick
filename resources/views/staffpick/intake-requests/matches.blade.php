@@ -99,7 +99,7 @@
                                 <div class="flex items-center justify-end gap-2">
                                     @if (in_array($provider->id, $offeredIds))
                                         <span class="inline-flex items-center gap-1 rounded-md bg-green-100 px-3 py-1 text-xs font-medium text-green-700 dark:bg-green-400/10 dark:text-green-400">
-                                            &checkmark; {{ __('Offer Sent') }}
+                                            &checkmark; {{ __('Match Sent') }}
                                         </span>
                                     @else
                                         <button

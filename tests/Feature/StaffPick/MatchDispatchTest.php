@@ -12,9 +12,10 @@ use App\Models\Tenant;
 use App\Services\StaffPick\MatchDispatchService;
 use App\Services\StaffPick\MatchingEngine;
 use App\Services\StaffPick\MatchingResult;
+use App\Services\StaffPick\MatchNotificationService;
 use App\Services\StaffPick\PlaceholderScorer;
-use App\Services\StaffPick\SchedulerNotificationService;
 use App\Services\StaffPick\SmsService;
+use Illuminate\Support\Facades\Mail;
 use Mockery;
 use Tests\Feature\FeatureTest;
 
@@ -83,7 +84,7 @@ class MatchDispatchTest extends FeatureTest
         return new MatchDispatchService(
             $engine,
             new PlaceholderScorer,
-            app(SchedulerNotificationService::class),
+            app(MatchNotificationService::class),
             app(SmsService::class),
         );
     }
@@ -162,6 +163,28 @@ class MatchDispatchTest extends FeatureTest
         $case->refresh();
         $this->assertSame(IntakeRequest::STATUS_ESCALATED, $case->status);
         $this->assertNotNull($case->escalated_at);
+    }
+
+    public function test_notification_gate_suppresses_a_disabled_channel(): void
+    {
+        Mail::fake();
+
+        $optedOut = $this->createTenantAdmin($this->tenant);
+        $this->tenant->users()->updateExistingPivot($optedOut->id, [
+            'notification_preferences' => json_encode(['match_accepted' => ['in_app' => false]]),
+        ]);
+        $default = $this->createTenantAdmin($this->tenant);
+
+        $platinum = $this->provider($this->platinum);
+        $case = $this->unmatchedCase();
+        $service = $this->service([$platinum]);
+        $service->dispatch($case);
+        $offer = $case->assignmentOffers()->first();
+
+        $service->handleAcceptance($case->refresh(), $offer);
+
+        $this->assertSame(0, $optedOut->notifications()->count(), 'opted-out staff should get no in-app bell');
+        $this->assertGreaterThan(0, $default->notifications()->count(), 'default staff should get the bell');
     }
 
     public function test_acceptance_matches_and_sets_lead_clinician(): void

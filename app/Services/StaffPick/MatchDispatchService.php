@@ -36,7 +36,7 @@ class MatchDispatchService
     public function __construct(
         private MatchingEngine $engine,
         private ProviderScorer $scorer,
-        private SchedulerNotificationService $scheduler,
+        private MatchNotificationService $notifications,
         private SmsService $sms,
     ) {}
 
@@ -103,7 +103,7 @@ class MatchDispatchService
             'status' => IntakeRequest::STATUS_UNMATCHED,
         ]);
 
-        $this->notifyStaff($case, __('Offer timed out'), __('No response from the matched provider — cascading to the next.'));
+        $this->notifyStaff($case, MatchNotificationService::EVENT_TIMEOUT, __('Offer timed out'), __('No response from the matched provider — cascading to the next.'));
 
         $this->dispatch($case);
     }
@@ -133,7 +133,7 @@ class MatchDispatchService
         ]);
         $case->update(['status' => IntakeRequest::STATUS_UNMATCHED]);
 
-        $this->notifyStaff($case, __('Offer declined'), __('The matched provider declined — cascading to the next.'));
+        $this->notifyStaff($case, MatchNotificationService::EVENT_REJECTED, __('Offer declined'), __('The matched provider declined — cascading to the next.'));
 
         $this->dispatch($case);
     }
@@ -182,7 +182,7 @@ class MatchDispatchService
             ]);
         });
 
-        $this->notifyStaff($case, __('Match accepted'), __('A provider accepted and is now the lead clinician.'));
+        $this->notifyStaff($case, MatchNotificationService::EVENT_ACCEPTED, __('Match accepted'), __('A provider accepted and is now the lead clinician.'));
     }
 
     /**
@@ -249,7 +249,7 @@ class MatchDispatchService
             'current_match_provider_id' => null,
         ]);
 
-        $this->notifyStaff($case, __('Case escalated'), __('Provider pool exhausted — manual intervention required.'));
+        $this->notifyStaff($case, MatchNotificationService::EVENT_ESCALATED, __('Case escalated'), __('Provider pool exhausted — manual intervention required.'));
     }
 
     private function openOffer(IntakeRequest $case): ?AssignmentOffer
@@ -298,15 +298,9 @@ class MatchDispatchService
         };
     }
 
-    /**
-     * Staff alert for cascade events. Reuses the existing scheduler notifier (bell +
-     * queued email + Slack to tenant admins/staff).
-     *
-     * // TODO (commit 5): replace with the dedicated MatchNotification per event, gated
-     * // by the tenant_user.notification_preferences JSON (default-true).
-     */
-    private function notifyStaff(IntakeRequest $case, string $heading, string $body): void
+    /** Staff alert for a cascade event — per-channel/per-user gated by MatchNotificationService. */
+    private function notifyStaff(IntakeRequest $case, string $event, string $heading, string $body): void
     {
-        $this->scheduler->notifyCaseEvent($case, $heading, $body);
+        $this->notifications->notify($case, $event, $heading, $body);
     }
 }

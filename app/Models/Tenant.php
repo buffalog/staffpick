@@ -29,7 +29,7 @@ class Tenant extends Model
 
     public function users(): BelongsToMany
     {
-        return $this->belongsToMany(User::class)->using(TenantUser::class)->withPivot('id')->withTimestamps();
+        return $this->belongsToMany(User::class)->using(TenantUser::class)->withPivot('id', 'notification_preferences')->withTimestamps();
     }
 
     public function subscriptions(): HasMany

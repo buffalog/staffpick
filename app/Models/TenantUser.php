@@ -14,6 +14,10 @@ class TenantUser extends Pivot
 
     protected string $guard_name = 'web';
 
+    protected $casts = [
+        'notification_preferences' => 'array',
+    ];
+
     public function teams(): BelongsToMany
     {
         return $this->belongsToMany(Team::class, 'team_tenant_user', 'tenant_user_id', 'team_id')->withPivot('id')->withTimestamps();
