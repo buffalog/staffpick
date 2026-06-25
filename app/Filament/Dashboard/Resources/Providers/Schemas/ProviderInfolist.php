@@ -119,6 +119,21 @@ class ProviderInfolist
                             ]),
                     ]),
 
+                Section::make(__('Calendar Feed'))
+                    ->columns(2)
+                    ->schema([
+                        TextEntry::make('calendar_feed_url')
+                            ->label(__('Feed URL'))
+                            ->state(fn (Provider $record): ?string => $record->calendarFeedUrl())
+                            ->placeholder(__('Not generated — the provider creates this from their profile.'))
+                            ->copyable()
+                            ->columnSpanFull(),
+                        TextEntry::make('calendar_token_generated_at')
+                            ->label(__('Generated'))
+                            ->dateTime(config('app.datetime_format'))
+                            ->placeholder('—'),
+                    ]),
+
                 Section::make(__('Notes'))
                     ->schema([
                         TextEntry::make('notes')

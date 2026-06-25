@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class Provider extends Model
 {
@@ -74,6 +75,8 @@ class Provider extends Model
         'submitted_at',
         'onboarding_step',
         'preferred_contact_channel',
+        'calendar_token',
+        'calendar_token_generated_at',
     ];
 
     protected function casts(): array
@@ -95,7 +98,51 @@ class Provider extends Model
             'years_experience' => 'integer',
             'submitted_at' => 'datetime',
             'onboarding_step' => 'integer',
+            'calendar_token_generated_at' => 'datetime',
         ];
+    }
+
+    /** Display name — "First Last", trimmed. Backs $provider->full_name everywhere. */
+    protected function fullName(): Attribute
+    {
+        return Attribute::get(fn (): string => trim("{$this->first_name} {$this->last_name}"));
+    }
+
+    /**
+     * Issue (or re-issue) the provider's iCal feed token and return it. Any previously
+     * issued token stops working immediately.
+     */
+    public function generateCalendarToken(): string
+    {
+        $token = Str::random(48);
+
+        $this->update([
+            'calendar_token' => $token,
+            'calendar_token_generated_at' => now(),
+        ]);
+
+        return $token;
+    }
+
+    public function revokeCalendarToken(): void
+    {
+        $this->update([
+            'calendar_token' => null,
+            'calendar_token_generated_at' => null,
+        ]);
+    }
+
+    /** Absolute URL of this provider's public iCal feed, or null when no token is set. */
+    public function calendarFeedUrl(): ?string
+    {
+        if ($this->calendar_token === null) {
+            return null;
+        }
+
+        return route('staffpick.calendar.feed', [
+            'tenantIdentifier' => $this->tenant?->uuid,
+            'token' => $this->calendar_token,
+        ]);
     }
 
     /**
@@ -190,12 +237,12 @@ class Provider extends Model
     public static function rejectionReasonOptions(): array
     {
         return [
-            'duplicate'              => __('Duplicate — already registered under another record'),
-            'out_of_service_area'   => __('Out of service area'),
-            'unable_to_verify'      => __('Unable to verify agency'),
+            'duplicate' => __('Duplicate — already registered under another record'),
+            'out_of_service_area' => __('Out of service area'),
+            'unable_to_verify' => __('Unable to verify agency'),
             'incomplete_information' => __('Incomplete information'),
-            'not_accepting'         => __('Not accepting new referral sources'),
-            'other'                 => __('Other'),
+            'not_accepting' => __('Not accepting new referral sources'),
+            'other' => __('Other'),
         ];
     }
 }

@@ -7,6 +7,7 @@ use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PaymentProviders\PaddleController;
 use App\Http\Controllers\ProductCheckoutController;
 use App\Http\Controllers\ProviderApplicationController;
+use App\Http\Controllers\ProviderCalendarController;
 use App\Http\Controllers\RoadmapController;
 use App\Http\Controllers\SlackWebhookController;
 use App\Http\Controllers\StaffPick\ReferralSourceRegistrationController;
@@ -265,6 +266,14 @@ Route::post('/webhooks/slack/{token}', SlackWebhookController::class)
 Route::get('/offers/{token}', ProviderOfferResponse::class)
     ->middleware('auth')
     ->name('staffpick.offer.respond');
+
+// StaffPick — public provider iCal calendar feed (no login). The token authenticates
+// the provider and is scoped to {tenantIdentifier} (the tenant uuid). GET-only, so no
+// CSRF applies; page-load throttled. Token constrained so the literal .ics suffix parses.
+Route::get('/calendar/{tenantIdentifier}/{token}.ics', [ProviderCalendarController::class, 'feed'])
+    ->middleware('throttle:60,1')
+    ->where('token', '[A-Za-z0-9]+')
+    ->name('staffpick.calendar.feed');
 
 // StaffPick — dead-end for a signed-in user who belongs to no workspace yet (e.g. a
 // brand-new social-login user). A safe place to land with a contact path, not a wizard.

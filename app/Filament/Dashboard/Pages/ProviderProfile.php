@@ -27,6 +27,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\ViewField;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Actions;
@@ -580,6 +581,77 @@ class ProviderProfile extends Page
      */
     protected function getHeaderActions(): array
     {
-        return [HelpHeaderAction::make('clinician/completing-your-profile')];
+        return [
+            HelpHeaderAction::make('clinician/completing-your-profile'),
+            $this->generateCalendarLinkAction(),
+            $this->calendarSubscriptionAction(),
+            $this->revokeCalendarLinkAction(),
+        ];
+    }
+
+    /** Visible before a token exists: issue one for the logged-in provider. */
+    private function generateCalendarLinkAction(): Action
+    {
+        return Action::make('generateCalendarLink')
+            ->label(__('Generate calendar link'))
+            ->icon(Heroicon::OutlinedCalendarDays)
+            ->color('gray')
+            ->visible(fn (): bool => ($p = $this->currentProvider()) !== null && $p->calendar_token === null)
+            ->action(function (): void {
+                $this->currentProvider()?->generateCalendarToken();
+
+                Notification::make()
+                    ->title(__('Calendar link generated'))
+                    ->body(__('Subscribe to it in your calendar app to see your scheduled cases.'))
+                    ->success()
+                    ->send();
+            });
+    }
+
+    /** Visible once a token exists: show the read-only, copyable feed URL. */
+    private function calendarSubscriptionAction(): Action
+    {
+        return Action::make('calendarSubscription')
+            ->label(__('Calendar subscription'))
+            ->icon(Heroicon::OutlinedCalendarDays)
+            ->color('gray')
+            ->visible(fn (): bool => ($p = $this->currentProvider()) !== null && $p->calendar_token !== null)
+            ->modalHeading(__('Calendar subscription'))
+            ->modalSubmitAction(false)
+            ->modalCancelActionLabel(__('Close'))
+            ->infolist([
+                TextEntry::make('calendar_url')
+                    ->label(__('Feed URL'))
+                    ->state(fn (): ?string => $this->currentProvider()?->calendarFeedUrl())
+                    ->copyable()
+                    ->helperText(__('Add this as a subscribed calendar in Google Calendar, Apple Calendar, or Outlook.')),
+                TextEntry::make('calendar_generated')
+                    ->label(__('Generated'))
+                    ->state(fn (): ?string => $this->currentProvider()?->calendar_token_generated_at?->diffForHumans())
+                    ->placeholder('—'),
+            ]);
+    }
+
+    /** Visible once a token exists: invalidate the old link and issue a fresh one. */
+    private function revokeCalendarLinkAction(): Action
+    {
+        return Action::make('revokeCalendarLink')
+            ->label(__('Revoke & regenerate'))
+            ->icon(Heroicon::OutlinedArrowPath)
+            ->color('danger')
+            ->visible(fn (): bool => ($p = $this->currentProvider()) !== null && $p->calendar_token !== null)
+            ->requiresConfirmation()
+            ->modalDescription(__('The current link stops working immediately and a new one is issued. Anyone using the old URL will need the new one.'))
+            ->action(function (): void {
+                $provider = $this->currentProvider();
+                $provider?->revokeCalendarToken();
+                $provider?->generateCalendarToken();
+
+                Notification::make()
+                    ->title(__('Calendar link regenerated'))
+                    ->body(__('The old link no longer works — re-subscribe with the new URL.'))
+                    ->success()
+                    ->send();
+            });
     }
 }
