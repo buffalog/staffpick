@@ -129,6 +129,22 @@ class SchedulerNotificationService
     }
 
     /**
+     * Generic staff alert for a match-cascade event (timeout, decline, acceptance,
+     * escalation): bell + queued email to tenant admins, plus Slack.
+     *
+     * // TODO (commit 5): superseded by the dedicated MatchNotification per event,
+     * // gated by tenant_user.notification_preferences (default-true).
+     */
+    public function notifyCaseEvent(IntakeRequest $intake, string $heading, string $body): void
+    {
+        $tenant = Tenant::find($intake->tenant_id);
+
+        $this->toAdmins($tenant, $heading, $body, $this->intakeUrl($intake));
+
+        $this->slack->notifyCaseEvent($intake, $heading, $body);
+    }
+
+    /**
      * Send a bell notification (with an optional deep link) and a queued email to
      * every admin of the tenant.
      */

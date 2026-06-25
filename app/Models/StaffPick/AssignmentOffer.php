@@ -39,6 +39,9 @@ class AssignmentOffer extends Model
         'status',
         'delivery_channel',
         'token',
+        'tier_at_offer',
+        'response_window_minutes',
+        'expired_at',
     ];
 
     protected function casts(): array
@@ -51,6 +54,8 @@ class AssignmentOffer extends Model
             'offered_at' => 'datetime',
             'expires_at' => 'datetime',
             'responded_at' => 'datetime',
+            'response_window_minutes' => 'integer',
+            'expired_at' => 'datetime',
         ];
     }
 

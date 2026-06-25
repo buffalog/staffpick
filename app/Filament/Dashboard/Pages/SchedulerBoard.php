@@ -4,15 +4,14 @@ namespace App\Filament\Dashboard\Pages;
 
 use App\Filament\Dashboard\Support\HelpHeaderAction;
 use App\Filament\Dashboard\Support\SpRoleAccess;
-use App\Jobs\StaffPick\DispatchOffers;
 use App\Models\StaffPick\IntakeRequest;
 use App\Models\StaffPick\OnHoldReason;
+use App\Services\StaffPick\MatchDispatchService;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
@@ -311,16 +310,9 @@ class SchedulerBoard extends Page
             ->modalHeading(__('Re-trigger matching'))
             ->icon(Heroicon::OutlinedArrowPath)
             ->color('warning')
-            ->schema([
-                TextInput::make('radius_override')
-                    ->label(__('Expanded radius (miles)'))
-                    ->numeric()
-                    ->minValue(1)
-                    ->maxValue(500)
-                    ->required()
-                    ->helperText(__('One-time for this case only — does not change tenant defaults or provider preferences.')),
-            ])
-            ->action(function (array $arguments, array $data): void {
+            ->requiresConfirmation()
+            ->modalDescription(__('Re-runs matching with relaxed criteria to reach providers outside the normal eligible pool.'))
+            ->action(function (array $arguments): void {
                 abort_unless(static::canAccess(), 403);
 
                 $intake = $this->findIntake((int) ($arguments['intakeId'] ?? 0));
@@ -329,11 +321,11 @@ class SchedulerBoard extends Page
                     return;
                 }
 
-                DispatchOffers::dispatch($intake->id, (float) $data['radius_override']);
+                app(MatchDispatchService::class)->dispatch($intake, forceMatch: true);
 
                 Notification::make()
-                    ->title(__('Matching re-triggered'))
-                    ->body(__('Re-running with an expanded radius of :miles miles.', ['miles' => (int) $data['radius_override']]))
+                    ->title(__('Force match re-triggered'))
+                    ->body(__('Re-running with relaxed eligibility.'))
                     ->success()
                     ->send();
             });

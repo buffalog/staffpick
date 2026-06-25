@@ -13,8 +13,9 @@ class AssignmentService
     ) {}
 
     /**
-     * Offer an intake request to a provider: supersede any current assignment,
-     * create a new (manual) offer, and move the case to assigned_pending.
+     * Manually assign an intake request to a provider: supersede any current assignment,
+     * create a new (manual) assignment, and move the case to matched with this provider
+     * as lead clinician. A direct staff override that skips the offer cascade.
      */
     public function assign(IntakeRequest $intakeRequest, Provider $provider): Assignment
     {
@@ -33,7 +34,8 @@ class AssignmentService
         ]);
 
         $intakeRequest->update([
-            'status' => 'assigned_pending',
+            'status' => IntakeRequest::STATUS_MATCHED,
+            'lead_clinician_id' => $provider->id,
             'assigned_at' => now(),
         ]);
 

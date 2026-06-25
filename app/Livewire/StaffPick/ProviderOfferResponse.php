@@ -6,7 +6,7 @@ use App\Models\StaffPick\AssignmentOffer;
 use App\Models\StaffPick\DeclineReason;
 use App\Models\StaffPick\Provider;
 use App\Models\Tenant;
-use App\Services\StaffPick\OfferService;
+use App\Services\StaffPick\MatchDispatchService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
@@ -17,7 +17,7 @@ use Livewire\Component;
  * Authenticated provider offer-response page (/offers/{token}). The token resolves
  * the offer; the page only loads if it belongs to the signed-in user's provider
  * record. Shows the full case (PHI) and accept/decline controls. Thin UI over
- * {@see OfferService}.
+ * {@see MatchDispatchService}.
  */
 #[Layout('components.layouts.intake')]
 class ProviderOfferResponse extends Component
@@ -92,7 +92,7 @@ class ProviderOfferResponse extends Component
             return;
         }
 
-        app(OfferService::class)->acceptOffer($offer, auth()->user());
+        app(MatchDispatchService::class)->handleAcceptance($offer->intakeRequest, $offer, auth()->user());
 
         $this->responded = true;
         $this->outcome = 'accepted';
@@ -117,7 +117,7 @@ class ProviderOfferResponse extends Component
             return;
         }
 
-        app(OfferService::class)->declineOffer($offer, (int) $this->declineReasonId);
+        app(MatchDispatchService::class)->handleRejection($offer->intakeRequest, $offer, (int) $this->declineReasonId);
 
         $this->responded = true;
         $this->outcome = 'declined';

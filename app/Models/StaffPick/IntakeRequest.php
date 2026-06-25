@@ -80,6 +80,10 @@ class IntakeRequest extends Model
         'matched_at',
         'assigned_at',
         'closed_at',
+        'current_match_provider_id',
+        'cascade_attempt',
+        'escalated_at',
+        'last_match_sent_at',
     ];
 
     protected function casts(): array
@@ -100,6 +104,10 @@ class IntakeRequest extends Model
             'matched_at' => 'datetime',
             'assigned_at' => 'datetime',
             'closed_at' => 'datetime',
+            'current_match_provider_id' => 'integer',
+            'cascade_attempt' => 'integer',
+            'escalated_at' => 'datetime',
+            'last_match_sent_at' => 'datetime',
         ];
     }
 

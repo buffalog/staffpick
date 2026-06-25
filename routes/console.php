@@ -1,7 +1,7 @@
 <?php
 
 use App\Jobs\StaffPick\AggregateProviderRatings;
-use App\Jobs\StaffPick\CheckOfferExpiry;
+use App\Jobs\StaffPick\ProcessMatchTimeouts;
 use Illuminate\Support\Facades\Schedule;
 
 /*
@@ -37,8 +37,8 @@ Schedule::command('staffpick:check-credential-expiry')
     ->name('staffpick-check-credential-expiry')
     ->withoutOverlapping();
 
-// StaffPick: expire timed-out assignment offers and advance the queue.
-Schedule::job(new CheckOfferExpiry)
-    ->everyMinute()
-    ->name('staffpick-check-offer-expiry')
+// StaffPick: expire timed-out match offers and cascade to the next provider.
+Schedule::job(new ProcessMatchTimeouts)
+    ->everyFiveMinutes()
+    ->name('staffpick-process-match-timeouts')
     ->withoutOverlapping();

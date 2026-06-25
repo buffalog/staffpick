@@ -7,7 +7,7 @@ use App\Models\StaffPick\AssignmentOffer;
 use App\Models\StaffPick\DeclineReason;
 use App\Models\StaffPick\Provider;
 use App\Models\Tenant;
-use App\Services\StaffPick\OfferService;
+use App\Services\StaffPick\MatchDispatchService;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
@@ -143,7 +143,7 @@ class MyOffers extends Page
             return;
         }
 
-        app(OfferService::class)->acceptOffer($offer, auth()->user());
+        app(MatchDispatchService::class)->handleAcceptance($offer->intakeRequest, $offer, auth()->user());
 
         $this->redirect(route('staffpick.offer.respond', ['token' => $offer->token]));
     }
@@ -158,7 +158,7 @@ class MyOffers extends Page
             return;
         }
 
-        app(OfferService::class)->declineOffer($offer, $declineReasonId);
+        app(MatchDispatchService::class)->handleRejection($offer->intakeRequest, $offer, $declineReasonId);
 
         Notification::make()->title(__('Offer declined'))->success()->send();
     }

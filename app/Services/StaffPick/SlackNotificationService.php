@@ -92,6 +92,25 @@ class SlackNotificationService
     }
 
     /**
+     * Generic case-event alert for the match cascade (timeout, decline, acceptance,
+     * escalation). // TODO (commit 5): folded into the dedicated MatchNotification.
+     */
+    public function notifyCaseEvent(IntakeRequest $intake, string $heading, string $body): void
+    {
+        $intake->loadMissing(['discipline', 'referralSource']);
+
+        $this->dispatch($intake->tenant_id, $heading, [
+            $this->header($heading),
+            $this->fields([
+                __('Reference') => $intake->reference_number ?? '—',
+                __('Discipline') => $intake->discipline?->name ?? __('Unspecified'),
+                __('Detail') => $body,
+            ]),
+            ...$this->linkButton(__('Open in dashboard'), $this->intakeUrl($intake)),
+        ]);
+    }
+
+    /**
      * Event (c): a clinician submitted their profile for review.
      */
     public function notifyProviderProfileSubmitted(Provider $provider): void

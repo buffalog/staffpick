@@ -6,7 +6,7 @@ use App\Filament\Dashboard\Support\SpRoleAccess;
 use App\Models\StaffPick\IntakeRequest;
 use App\Models\StaffPick\Provider;
 use App\Services\StaffPick\AssignmentService;
-use App\Services\StaffPick\OfferService;
+use App\Services\StaffPick\MatchDispatchService;
 use Filament\Notifications\Notification;
 
 /**
@@ -40,7 +40,7 @@ trait AssignsMatchedProviders
 
         abort_unless(SpRoleAccess::isAdminOrStaff(), 403);
 
-        app(OfferService::class)->dispatchToProvider($intakeRequest, $provider);
+        app(MatchDispatchService::class)->offerTo($intakeRequest, $provider);
 
         if (! in_array($providerId, $this->offeredProviderIds, true)) {
             $this->offeredProviderIds[] = $providerId;

@@ -2,46 +2,38 @@
 
 namespace App\Filament\Dashboard\Resources\IntakeRequests\Actions;
 
-use App\Jobs\StaffPick\DispatchOffers;
 use App\Models\StaffPick\IntakeRequest;
+use App\Services\StaffPick\MatchDispatchService;
 use Filament\Actions\Action;
-use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Facades\Gate;
 
 /**
- * "Re-trigger Matching" — shown once an intake's queue is exhausted
- * (no_clinicians_available). Re-runs the engine with a one-time expanded radius for
- * this intake only (no change to tenant defaults or provider preferences) and
- * rebuilds the offer queue.
+ * "Force Match" — shown on an ESCALATED case (provider pool exhausted). Re-runs the
+ * cascade with relaxed eligibility ($forceMatch) to reach providers outside the normal
+ * pool. The relaxation is currently a geo-only stub; full criteria-relaxation rules
+ * (which must never silently drop clinical-safety filters) come in a later spec.
  */
 class RetriggerMatchingAction
 {
     public static function make(): Action
     {
         return Action::make('retriggerMatching')
-            ->label(__('Re-trigger Matching'))
+            ->label(__('Force Match'))
             ->icon(Heroicon::OutlinedArrowPath)
             ->color('warning')
             ->visible(fn (IntakeRequest $record): bool => $record->status === 'escalated')
-            ->schema([
-                TextInput::make('radius_override')
-                    ->label(__('Expanded radius (miles)'))
-                    ->numeric()
-                    ->minValue(1)
-                    ->maxValue(500)
-                    ->required()
-                    ->helperText(__('One-time for this intake only — does not change tenant defaults or provider preferences.')),
-            ])
-            ->action(function (array $data, IntakeRequest $record): void {
+            ->requiresConfirmation()
+            ->modalDescription(__('Re-runs matching with relaxed criteria to reach providers outside the normal eligible pool.'))
+            ->action(function (IntakeRequest $record): void {
                 abort_unless(Gate::allows('update', $record), 403);
 
-                DispatchOffers::dispatch($record->id, (float) $data['radius_override']);
+                app(MatchDispatchService::class)->dispatch($record, forceMatch: true);
 
                 Notification::make()
-                    ->title(__('Matching re-triggered'))
-                    ->body(__('Re-running with an expanded radius of :miles miles.', ['miles' => (int) $data['radius_override']]))
+                    ->title(__('Force match re-triggered'))
+                    ->body(__('Re-running with relaxed eligibility.'))
                     ->success()
                     ->send();
             });
