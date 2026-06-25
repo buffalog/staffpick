@@ -116,7 +116,7 @@ class SchedulerBoard extends Page
         $grouped = IntakeRequest::query()
             ->where('tenant_id', Filament::getTenant()?->id)
             ->whereIn('status', array_keys(self::COLUMNS))
-            ->with(['subject', 'referralSource', 'discipline'])
+            ->with(['subject', 'referralSource', 'discipline', 'leadClinician'])
             // withCount (a scalar count subquery), not withExists — SQL Server rejects a
             // bare `exists(...)` in the SELECT list, so we count flagged offers and treat
             // any positive count as a warning.
@@ -146,7 +146,7 @@ class SchedulerBoard extends Page
         $load = fn (string $status): Collection => IntakeRequest::query()
             ->where('tenant_id', Filament::getTenant()?->id)
             ->where('status', $status)
-            ->with(['subject', 'referralSource', 'discipline'])
+            ->with(['subject', 'referralSource', 'discipline', 'leadClinician'])
             ->orderByDesc('updated_at')
             ->get();
 

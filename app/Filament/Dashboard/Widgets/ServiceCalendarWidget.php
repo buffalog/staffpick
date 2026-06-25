@@ -45,12 +45,6 @@ class ServiceCalendarWidget extends CalendarWidget
         ],
     ];
 
-    /** Distinct, stable colors so cases group visually by assigned clinician. */
-    private const PALETTE = [
-        '#2563eb', '#16a34a', '#db2777', '#d97706',
-        '#7c3aed', '#0891b2', '#dc2626', '#4f46e5',
-    ];
-
     public static function canView(): bool
     {
         return SpRoleAccess::isAdminOrStaff();
@@ -74,7 +68,7 @@ class ServiceCalendarWidget extends CalendarWidget
                 ->start($case->evaluation_date)
                 ->end($case->evaluation_date)
                 ->allDay()
-                ->backgroundColor($this->colorForCase($case))
+                ->backgroundColor($case->leadClinician?->color ?? '#64748b')
                 ->textColor('#ffffff')
                 ->action('viewCase'))
             ->all();
@@ -127,15 +121,5 @@ class ServiceCalendarWidget extends CalendarWidget
     {
         return trim("{$case->subject?->first_name} {$case->subject?->last_name}")
             ?: ($case->reference_number ?? __('Case'));
-    }
-
-    /** Color by assigned clinician when set; neutral slate for unassigned cases. */
-    private function colorForCase(IntakeRequest $case): string
-    {
-        if ($case->lead_clinician_id === null) {
-            return '#64748b';
-        }
-
-        return self::PALETTE[(int) $case->lead_clinician_id % count(self::PALETTE)];
     }
 }

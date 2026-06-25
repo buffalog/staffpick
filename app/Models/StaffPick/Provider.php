@@ -77,6 +77,7 @@ class Provider extends Model
         'preferred_contact_channel',
         'calendar_token',
         'calendar_token_generated_at',
+        'color',
     ];
 
     protected function casts(): array
@@ -100,6 +101,88 @@ class Provider extends Model
             'onboarding_step' => 'integer',
             'calendar_token_generated_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        // Auto-assign an identity color on creation (any path: Filament, services,
+        // factory) unless one was set explicitly. Registered after BelongsToTenant's
+        // creating hook, so tenant_id is already populated here.
+        static::creating(function (Provider $provider): void {
+            if ($provider->color === null) {
+                $provider->color = static::nextIdentityColor($provider->tenant_id);
+            }
+        });
+    }
+
+    /**
+     * Next golden-angle identity color for a tenant — evenly spaced hues that don't
+     * cluster, indexed by the tenant's current provider count.
+     *
+     * ponytail: index is a live count, so concurrent creates or later deletes can
+     * repeat a hue. Cosmetic only (colors aren't unique); staff can override.
+     */
+    private static function nextIdentityColor(?int $tenantId): string
+    {
+        $index = $tenantId === null
+            ? 0
+            : static::withoutGlobalScopes()->where('tenant_id', $tenantId)->count();
+
+        return static::hslToHex(fmod($index * 137.508, 360), 65, 48);
+    }
+
+    /**
+     * Convert HSL (h 0–360, s/l 0–100) to a #RRGGBB hex string.
+     */
+    public static function hslToHex(float $h, float $s, float $l): string
+    {
+        $s /= 100;
+        $l /= 100;
+
+        $c = (1 - abs(2 * $l - 1)) * $s;
+        $x = $c * (1 - abs(fmod($h / 60, 2) - 1));
+        $m = $l - $c / 2;
+
+        [$r, $g, $b] = match (true) {
+            $h < 60 => [$c, $x, 0],
+            $h < 120 => [$x, $c, 0],
+            $h < 180 => [0, $c, $x],
+            $h < 240 => [0, $x, $c],
+            $h < 300 => [$x, 0, $c],
+            default => [$c, 0, $x],
+        };
+
+        return sprintf(
+            '#%02X%02X%02X',
+            (int) round(($r + $m) * 255),
+            (int) round(($g + $m) * 255),
+            (int) round(($b + $m) * 255),
+        );
+    }
+
+    /**
+     * Convert a #RRGGBB (or #RGB) hex string to an `rgba(r, g, b, opacity)` CSS value
+     * for inline background tints. Falls back to a neutral slate on malformed input.
+     */
+    public static function hexToRgba(string $hex, float $opacity = 1.0): string
+    {
+        $hex = ltrim($hex, '#');
+
+        if (strlen($hex) === 3) {
+            $hex = $hex[0].$hex[0].$hex[1].$hex[1].$hex[2].$hex[2];
+        }
+
+        if (strlen($hex) !== 6 || ! ctype_xdigit($hex)) {
+            return "rgba(100, 116, 139, {$opacity})";
+        }
+
+        return sprintf(
+            'rgba(%d, %d, %d, %s)',
+            hexdec(substr($hex, 0, 2)),
+            hexdec(substr($hex, 2, 2)),
+            hexdec(substr($hex, 4, 2)),
+            $opacity,
+        );
     }
 
     /** Display name — "First Last", trimmed. Backs $provider->full_name everywhere. */

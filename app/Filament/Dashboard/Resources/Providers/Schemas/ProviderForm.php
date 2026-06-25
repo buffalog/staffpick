@@ -6,6 +6,7 @@ use App\Constants\UsStates;
 use App\Models\StaffPick\Specialty;
 use App\Models\StaffPick\TenantConfig;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -50,6 +51,9 @@ class ProviderForm
                             ->label(__('Alternate Phone'))
                             ->tel()
                             ->maxLength(30),
+                        ColorPicker::make('color')
+                            ->label(__('Identity Color'))
+                            ->helperText(__('Colors this provider across the board and calendar. Auto-assigned on creation — override here.')),
                     ]),
 
                 Section::make(__('Address'))

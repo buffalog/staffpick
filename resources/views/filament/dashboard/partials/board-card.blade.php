@@ -29,14 +29,27 @@
     $hasLanguageWarning = (int) ($card->language_warning_count ?? 0) > 0;
 
     $viewUrl = \App\Filament\Dashboard\Resources\IntakeRequests\IntakeRequestResource::getUrl('view', ['record' => $card->getKey()]);
+
+    // Assigned-clinician identity color: 4px left border + 25% tint. on_hold red takes
+    // precedence (urgency signal); unassigned cards fall back to white.
+    $providerColor = $card->leadClinician?->color;
+    $useProviderColor = ! $onHold && filled($providerColor);
 @endphp
 
 <div
     wire:key="board-card-{{ $card->getKey() }}"
     @if ($draggable) data-intake-id="{{ $card->getKey() }}" @endif
-    class="relative rounded-lg border-t-4 {{ $disc['strip'] }} p-3 shadow-sm transition hover:shadow-md
-        {{ $onHold ? 'border-l-4 border-l-red-500 bg-red-50' : 'bg-white' }}
-        {{ $draggable ? 'cursor-grab active:cursor-grabbing' : '' }}"
+    @class([
+        'relative rounded-lg border-t-4 p-3 shadow-sm transition hover:shadow-md',
+        $disc['strip'],
+        'border-l-4 border-l-red-500 bg-red-50' => $onHold,
+        'bg-white' => ! $onHold && ! $useProviderColor,
+        'border-l-4' => $useProviderColor,
+        'cursor-grab active:cursor-grabbing' => $draggable,
+    ])
+    @if ($useProviderColor)
+        style="border-left-color: {{ $providerColor }}; background-color: {{ \App\Models\StaffPick\Provider::hexToRgba($providerColor, 0.25) }};"
+    @endif
 >
     {{-- Stretched link: clicking the card opens the case (interactive bits opt back in below). --}}
     <a href="{{ $viewUrl }}" class="absolute inset-0 z-0" aria-label="{{ __('Open case :ref', ['ref' => $card->reference_number]) }}"></a>
