@@ -39,33 +39,31 @@ class SchedulerBoard extends Page
     protected string $view = 'filament.dashboard.pages.scheduler-board';
 
     /**
-     * Board columns, left to right. Cancelled / no_clinicians_available are
-     * deliberately excluded — they live in the "Needs Attention" section.
+     * Board columns, left to right. Cancelled / escalated are deliberately excluded —
+     * they live in the "Needs Attention" section.
      *
      * @var array<string, string>
      */
     public const COLUMNS = [
-        'pending' => 'Pending',
-        'matching' => 'Matching',
-        'offered' => 'Offered',
-        'assigned_pending' => 'Assigned Pending',
-        'active' => 'Active',
+        'unmatched' => 'Unmatched',
+        'match_sent' => 'Match Sent',
+        'matched' => 'Matched',
         'on_hold' => 'On Hold',
         'completed' => 'Completed',
     ];
 
     /**
      * Scheduler-owned transitions: from => [to => requiresHoldReason]. Anything not
-     * listed is rejected (engine-only or a backwards move).
+     * listed is rejected (engine-only — e.g. match_sent → matched is acceptance-driven —
+     * or a backwards move).
      *
      * @var array<string, array<string, bool>>
      */
     private const TRANSITIONS = [
-        'pending' => ['on_hold' => true],
-        'on_hold' => ['pending' => false],
-        'offered' => ['on_hold' => true],
-        'assigned_pending' => ['active' => false],
-        'active' => ['completed' => false, 'on_hold' => true],
+        'unmatched' => ['on_hold' => true],
+        'on_hold' => ['unmatched' => false],
+        'match_sent' => ['on_hold' => true],
+        'matched' => ['completed' => false, 'on_hold' => true],
     ];
 
     /**
@@ -75,7 +73,7 @@ class SchedulerBoard extends Page
      *
      * @var array<int, string>
      */
-    private const PIPELINE = ['pending', 'matching', 'offered', 'assigned_pending', 'active', 'completed'];
+    private const PIPELINE = ['unmatched', 'match_sent', 'matched', 'completed'];
 
     /** ISO-8601 timestamp of the last board build, for the "updated X seconds ago" indicator. */
     public ?string $lastUpdatedAt = null;
@@ -139,7 +137,7 @@ class SchedulerBoard extends Page
     /**
      * The two "Needs Attention" lists shown below the board.
      *
-     * @return array{no_clinicians_available: Collection<int, IntakeRequest>, cancelled: Collection<int, IntakeRequest>}
+     * @return array{escalated: Collection<int, IntakeRequest>, cancelled: Collection<int, IntakeRequest>}
      */
     public function getNeedsAttention(): array
     {
@@ -151,7 +149,7 @@ class SchedulerBoard extends Page
             ->get();
 
         return [
-            'no_clinicians_available' => $load('no_clinicians_available'),
+            'escalated' => $load('escalated'),
             'cancelled' => $load('cancelled'),
         ];
     }
@@ -180,7 +178,7 @@ class SchedulerBoard extends Page
      * derived from the already-loaded board/needs collections (no extra queries).
      *
      * @param  array<string, Collection<int, IntakeRequest>>  $board
-     * @param  array{no_clinicians_available: Collection<int, IntakeRequest>, cancelled: Collection<int, IntakeRequest>}  $needs
+     * @param  array{escalated: Collection<int, IntakeRequest>, cancelled: Collection<int, IntakeRequest>}  $needs
      * @return array{total_active: int, offered: int, needs_attention: int, by_discipline: array<string, int>}
      */
     public function boardStats(array $board, array $needs): array
@@ -198,9 +196,9 @@ class SchedulerBoard extends Page
         }
 
         return [
-            'total_active' => $board['active']->count(),
-            'offered' => $board['offered']->count(),
-            'needs_attention' => $needs['no_clinicians_available']->count() + $needs['cancelled']->count(),
+            'total_active' => $board['matched']->count(),
+            'offered' => $board['match_sent']->count(),
+            'needs_attention' => $needs['escalated']->count() + $needs['cancelled']->count(),
             'by_discipline' => $byDiscipline,
         ];
     }
@@ -303,7 +301,7 @@ class SchedulerBoard extends Page
     }
 
     /**
-     * Re-trigger matching for an exhausted (no_clinicians_available) case with a
+     * Re-trigger matching for an exhausted (escalated) case with a
      * one-time expanded radius. Mounted from the Needs Attention section.
      */
     public function retriggerAction(): Action
@@ -327,7 +325,7 @@ class SchedulerBoard extends Page
 
                 $intake = $this->findIntake((int) ($arguments['intakeId'] ?? 0));
 
-                if ($intake === null || $intake->status !== 'no_clinicians_available') {
+                if ($intake === null || $intake->status !== 'escalated') {
                     return;
                 }
 
@@ -349,7 +347,7 @@ class SchedulerBoard extends Page
             $attributes['closed_at'] = now();
         }
 
-        if ($toStatus === 'pending') {
+        if ($toStatus === 'unmatched') {
             // Resuming from hold — clear the hold reason.
             $attributes['on_hold_reason_id'] = null;
         }
@@ -364,11 +362,11 @@ class SchedulerBoard extends Page
      */
     private function blockedTransitionMessage(string $fromStatus, string $toStatus): string
     {
-        if ($toStatus === 'matching') {
-            return __("Run 'Find Matches' from the Intake Request to start matching.");
+        if ($toStatus === 'matched') {
+            return __('Cases become Matched automatically when a provider accepts an offer.');
         }
 
-        if ($toStatus === 'offered') {
+        if ($toStatus === 'match_sent') {
             return __('Offers are dispatched automatically by the matching engine.');
         }
 

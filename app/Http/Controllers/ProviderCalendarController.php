@@ -29,7 +29,7 @@ class ProviderCalendarController extends Controller
         $cases = IntakeRequest::withoutGlobalScopes()
             ->where('tenant_id', $tenant->id)
             ->where('lead_clinician_id', $provider->id)
-            ->where('status', 'active')
+            ->where('status', 'matched')
             ->whereNotNull('evaluation_date')
             ->with('subject')
             ->get();

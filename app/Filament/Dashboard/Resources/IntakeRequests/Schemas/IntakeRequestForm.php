@@ -81,7 +81,7 @@ class IntakeRequestForm
                         Select::make('status')
                             ->label(__('Status'))
                             ->options(IntakeRequestResource::statusOptions())
-                            ->default('pending')
+                            ->default('unmatched')
                             ->required()
                             ->live(),
                         Select::make('on_hold_reason_id')

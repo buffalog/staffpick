@@ -24,7 +24,7 @@ class RetriggerMatchingAction
             ->label(__('Re-trigger Matching'))
             ->icon(Heroicon::OutlinedArrowPath)
             ->color('warning')
-            ->visible(fn (IntakeRequest $record): bool => $record->status === 'no_clinicians_available')
+            ->visible(fn (IntakeRequest $record): bool => $record->status === 'escalated')
             ->schema([
                 TextInput::make('radius_override')
                     ->label(__('Expanded radius (miles)'))

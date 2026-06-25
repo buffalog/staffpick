@@ -134,7 +134,7 @@ class DemoDataSeeder extends Seeder
                 [
                     'subject_id' => $subject->id,
                     'discipline_id' => $disciplines->get($disciplineCycle[$i])?->id,
-                    'status' => 'matching',
+                    'status' => 'unmatched',
                 ],
             );
         }

@@ -22,7 +22,7 @@ class DispatchOffersAction
             ->label(__('Auto Dispatch'))
             ->icon(Heroicon::OutlinedPaperAirplane)
             ->color('primary')
-            ->visible(fn (IntakeRequest $record): bool => in_array($record->status, ['pending', 'matching'], true))
+            ->visible(fn (IntakeRequest $record): bool => $record->status === 'unmatched')
             ->action(function (IntakeRequest $record): void {
                 abort_unless(SpRoleAccess::isAdminOrStaff(), 403);
 

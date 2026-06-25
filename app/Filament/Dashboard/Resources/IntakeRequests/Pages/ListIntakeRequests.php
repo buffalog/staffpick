@@ -21,8 +21,8 @@ class ListIntakeRequests extends ListRecords
 
     protected static string $resource = IntakeRequestResource::class;
 
-    /** Statuses shown in the dispatch queue (includes matching + no_clinicians_available). */
-    public const STATUSES = ['pending', 'matching', 'offered', 'no_clinicians_available', 'assigned_pending'];
+    /** In-flight statuses shown in the dispatch queue (pre-matched). */
+    public const STATUSES = ['unmatched', 'match_sent', 'escalated'];
 
     public function getTitle(): string
     {

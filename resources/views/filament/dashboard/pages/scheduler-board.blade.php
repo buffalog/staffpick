@@ -3,18 +3,16 @@
         $board = $this->getBoard();
         $labels = $this->columnLabels();
         $needs = $this->getNeedsAttention();
-        $needsCount = $needs['no_clinicians_available']->count() + $needs['cancelled']->count();
+        $needsCount = $needs['escalated']->count() + $needs['cancelled']->count();
         $stats = $this->boardStats($board, $needs);
         $createUrl = \App\Filament\Dashboard\Resources\IntakeRequests\IntakeRequestResource::getUrl('create');
         $tenantName = \Filament\Facades\Filament::getTenant()?->name;
 
         // Per-status accent: header left-border, count badge, and a low-opacity header tint.
         $colColors = [
-            'pending' => ['accent' => 'border-l-slate-400', 'badge' => 'bg-slate-200 text-slate-700', 'tint' => 'bg-slate-50'],
-            'matching' => ['accent' => 'border-l-blue-500', 'badge' => 'bg-blue-100 text-blue-700', 'tint' => 'bg-blue-50'],
-            'offered' => ['accent' => 'border-l-amber-500', 'badge' => 'bg-amber-100 text-amber-700', 'tint' => 'bg-amber-50'],
-            'assigned_pending' => ['accent' => 'border-l-violet-500', 'badge' => 'bg-violet-100 text-violet-700', 'tint' => 'bg-violet-50'],
-            'active' => ['accent' => 'border-l-green-500', 'badge' => 'bg-green-100 text-green-700', 'tint' => 'bg-green-50'],
+            'unmatched' => ['accent' => 'border-l-slate-400', 'badge' => 'bg-slate-200 text-slate-700', 'tint' => 'bg-slate-50'],
+            'match_sent' => ['accent' => 'border-l-amber-500', 'badge' => 'bg-amber-100 text-amber-700', 'tint' => 'bg-amber-50'],
+            'matched' => ['accent' => 'border-l-green-500', 'badge' => 'bg-green-100 text-green-700', 'tint' => 'bg-green-50'],
             'on_hold' => ['accent' => 'border-l-red-500', 'badge' => 'bg-red-100 text-red-700', 'tint' => 'bg-red-50'],
             'completed' => ['accent' => 'border-l-emerald-500', 'badge' => 'bg-emerald-100 text-emerald-700', 'tint' => 'bg-emerald-50'],
         ];
@@ -88,7 +86,7 @@
             <div class="min-w-0 flex-1 overflow-x-auto pb-2">
                 <div class="flex gap-4" :class="isFull ? 'min-h-[calc(100vh-9rem)]' : ''">
                     @foreach ($board as $status => $cards)
-                        @php $c = $colColors[$status] ?? $colColors['pending']; @endphp
+                        @php $c = $colColors[$status] ?? $colColors['unmatched']; @endphp
                         <div wire:key="board-col-{{ $status }}" class="flex w-[280px] shrink-0 flex-col rounded-xl bg-gray-100">
                             {{-- Column header --}}
                             <div class="rounded-t-xl border-l-4 {{ $c['accent'] }} {{ $c['tint'] }} px-3 py-2">
@@ -162,9 +160,9 @@
 
             <div x-show="open" x-collapse class="grid gap-4 px-4 pb-4 md:grid-cols-2">
                 <div>
-                    <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-700">{{ __('No Clinicians Available') }}</h3>
+                    <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-700">{{ __('Escalated') }}</h3>
                     <div class="flex flex-col gap-2">
-                        @forelse ($needs['no_clinicians_available'] as $card)
+                        @forelse ($needs['escalated'] as $card)
                             @include('filament.dashboard.partials.board-card', ['card' => $card, 'retrigger' => true])
                         @empty
                             <div class="text-xs text-amber-700/70">{{ __('Nothing here.') }}</div>

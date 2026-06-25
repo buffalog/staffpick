@@ -16,7 +16,7 @@ class Cases extends ListRecords
 {
     protected static string $resource = IntakeRequestResource::class;
 
-    public const STATUSES = ['active'];
+    public const STATUSES = ['matched'];
 
     public function getTitle(): string
     {

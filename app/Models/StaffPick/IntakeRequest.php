@@ -18,6 +18,31 @@ class IntakeRequest extends Model
 
     protected $table = 'sp_intake_requests';
 
+    // Match/dispatch status vocabulary (lowercase-snake). MATCH_MADE / MATCH_ACCEPTED /
+    // MATCH_REJECTED are transient — set and immediately advanced within a single
+    // MatchDispatchService call, never persisted to a resting state.
+    public const STATUS_DRAFT = 'draft';
+
+    public const STATUS_UNMATCHED = 'unmatched';
+
+    public const STATUS_MATCH_MADE = 'match_made';
+
+    public const STATUS_MATCH_SENT = 'match_sent';
+
+    public const STATUS_MATCH_ACCEPTED = 'match_accepted';
+
+    public const STATUS_MATCHED = 'matched';
+
+    public const STATUS_MATCH_REJECTED = 'match_rejected';
+
+    public const STATUS_ESCALATED = 'escalated';
+
+    public const STATUS_ON_HOLD = 'on_hold';
+
+    public const STATUS_COMPLETED = 'completed';
+
+    public const STATUS_CANCELLED = 'cancelled';
+
     protected $fillable = [
         'tenant_id',
         'reference_number',

@@ -23,9 +23,9 @@ use Illuminate\Support\Collection;
 class Dashboard extends BaseDashboard
 {
     /** Dispatch-queue statuses (per the dashboard spec). */
-    public const PENDING = ['pending', 'offered', 'assigned_pending'];
+    public const PENDING = ['unmatched', 'match_sent', 'escalated'];
 
-    public const ACTIVE = ['active'];
+    public const ACTIVE = ['matched'];
 
     public const COMPLETED = ['completed', 'cancelled', 'on_hold'];
 
