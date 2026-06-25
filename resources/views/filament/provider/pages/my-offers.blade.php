@@ -40,12 +40,25 @@
                         <span style="{{ $metaLabel }}">{{ __('Offered') }}</span>
                         <span>{{ $offer->offered_at?->diffForHumans() ?? __('—') }}</span>
 
-                        <span style="{{ $metaLabel }}">{{ __('Expires') }}</span>
+                        <span style="{{ $metaLabel }}">{{ __('Time Remaining') }}</span>
                         <span>
                             @if ($isExpired)
                                 <x-filament::badge color="danger">{{ __('Expired') }}</x-filament::badge>
                             @elseif ($offer->expires_at)
-                                {{ $offer->expires_at->diffForHumans() }}
+                                <span x-data="{
+                                    label: '',
+                                    init() {
+                                        const expires = {{ $offer->expires_at->timestamp }} * 1000;
+                                        const update = () => {
+                                            const ms = expires - Date.now();
+                                            if (ms <= 0) { this.label = '{{ __('Expired') }}'; return; }
+                                            const tm = Math.floor(ms / 60000), s = Math.floor((ms % 60000) / 1000), h = Math.floor(tm / 60), m = tm % 60;
+                                            this.label = h > 0 ? (h + 'h ' + m + 'm') : (m + 'm ' + s + 's');
+                                        };
+                                        update();
+                                        setInterval(update, 1000);
+                                    }
+                                }" x-text="label" style="font-variant-numeric:tabular-nums; font-weight:600;"></span>
                             @else
                                 {{ __('—') }}
                             @endif
