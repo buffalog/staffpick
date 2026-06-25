@@ -306,8 +306,8 @@ class SchedulerBoard extends Page
     public function retriggerAction(): Action
     {
         return Action::make('retrigger')
-            ->label(__('Re-trigger Matching'))
-            ->modalHeading(__('Re-trigger matching'))
+            ->label(__('Force Match'))
+            ->modalHeading(__('Force match'))
             ->icon(Heroicon::OutlinedArrowPath)
             ->color('warning')
             ->requiresConfirmation()

@@ -101,11 +101,11 @@
             <div class="pointer-events-auto relative z-20 pt-1">
                 <x-filament::button
                     size="xs"
-                    color="warning"
-                    icon="heroicon-o-arrow-path"
+                    color="danger"
+                    icon="heroicon-o-bolt"
                     wire:click="mountAction('retrigger', { intakeId: {{ $card->getKey() }} })"
                 >
-                    {{ __('Re-trigger') }}
+                    {{ __('Force Match') }}
                 </x-filament::button>
             </div>
         @endif

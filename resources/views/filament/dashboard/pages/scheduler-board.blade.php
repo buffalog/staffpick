@@ -160,7 +160,9 @@
 
             <div x-show="open" x-collapse class="grid gap-4 px-4 pb-4 md:grid-cols-2">
                 <div>
-                    <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-700">{{ __('Escalated') }}</h3>
+                    <h3 class="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-red-700">
+                        <x-filament::icon icon="heroicon-s-flag" class="h-3.5 w-3.5" />{{ __('Escalated') }}
+                    </h3>
                     <div class="flex flex-col gap-2">
                         @forelse ($needs['escalated'] as $card)
                             @include('filament.dashboard.partials.board-card', ['card' => $card, 'retrigger' => true])
