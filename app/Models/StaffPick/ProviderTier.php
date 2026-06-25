@@ -19,6 +19,7 @@ class ProviderTier extends Model
         'priority',
         'color',
         'is_active',
+        'response_window_minutes',
     ];
 
     protected function casts(): array
@@ -26,6 +27,7 @@ class ProviderTier extends Model
         return [
             'priority' => 'integer',
             'is_active' => 'boolean',
+            'response_window_minutes' => 'integer',
         ];
     }
 

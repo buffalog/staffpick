@@ -37,12 +37,16 @@ class TenantTaxonomySeeder extends Seeder
     ];
 
     /**
-     * @var list<array{name: string, priority: int, color: string}>
+     * Priority 1 = best tier (longest response window, highest matching rank). Windows
+     * map to priority, not name, so scoring derives tier_rank from priority alone.
+     *
+     * @var list<array{name: string, priority: int, color: string, response_window_minutes: int}>
      */
     private const PROVIDER_TIERS = [
-        ['name' => 'Gold', 'priority' => 1, 'color' => '#D4AF37'],
-        ['name' => 'Silver', 'priority' => 2, 'color' => '#C0C0C0'],
-        ['name' => 'Platinum', 'priority' => 3, 'color' => '#E5E4E2'],
+        ['name' => 'Platinum', 'priority' => 1, 'color' => '#E5E4E2', 'response_window_minutes' => 120],
+        ['name' => 'Gold', 'priority' => 2, 'color' => '#D4AF37', 'response_window_minutes' => 60],
+        ['name' => 'Silver', 'priority' => 3, 'color' => '#C0C0C0', 'response_window_minutes' => 45],
+        ['name' => 'Bronze', 'priority' => 4, 'color' => '#CD7F32', 'response_window_minutes' => 30],
     ];
 
     /**
@@ -204,6 +208,7 @@ class TenantTaxonomySeeder extends Seeder
                 [
                     'priority' => $tier['priority'],
                     'color' => $tier['color'],
+                    'response_window_minutes' => $tier['response_window_minutes'],
                     'is_active' => true,
                 ],
             );
