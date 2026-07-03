@@ -84,6 +84,58 @@ class SubjectGeocodingTest extends TestCase
         $this->assertSame(-80.9048, (float) $subject->longitude);
     }
 
+    public function test_it_regeocodes_when_only_the_state_field_changes(): void
+    {
+        // Proves the address-change check covers all four fields, not just street:
+        // a state-only edit on an existing geocoded record still re-geocodes.
+        $this->fakeNominatim();
+
+        $subject = new Subject([
+            'address' => '108 North Peninsula',
+            'city' => 'New Smyrna Beach',
+            'state' => 'GA',
+            'zip' => '32169',
+            'latitude' => 10.0,
+            'longitude' => 20.0,
+        ]);
+        $subject->exists = true;
+        $subject->syncOriginal();
+
+        $subject->state = 'FL';
+
+        $subject->geocodeAddressIfNeeded();
+
+        $this->assertSame(29.025, (float) $subject->latitude);
+        $this->assertSame(-80.9048, (float) $subject->longitude);
+    }
+
+    public function test_it_does_not_regeocode_when_only_an_unrelated_field_changes(): void
+    {
+        // A phone/contact edit on an already-geocoded record must NOT re-geocode:
+        // no wasted Nominatim call, and the coordinates stay put.
+        $this->fakeNominatim();
+
+        $subject = new Subject([
+            'address' => '108 North Peninsula',
+            'city' => 'New Smyrna Beach',
+            'state' => 'FL',
+            'zip' => '32169',
+            'latitude' => 29.025,
+            'longitude' => -80.9048,
+            'phone' => '5550000000',
+        ]);
+        $subject->exists = true;
+        $subject->syncOriginal();
+
+        $subject->phone = '5551234567';
+
+        $subject->geocodeAddressIfNeeded();
+
+        Http::assertNothingSent();
+        $this->assertSame(29.025, (float) $subject->latitude);
+        $this->assertSame(-80.9048, (float) $subject->longitude);
+    }
+
     public function test_it_does_nothing_without_an_address(): void
     {
         $this->fakeNominatim();

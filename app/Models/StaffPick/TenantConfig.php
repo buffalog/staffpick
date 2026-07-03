@@ -5,6 +5,7 @@ namespace App\Models\StaffPick;
 use App\Models\StaffPick\Concerns\BelongsToTenant;
 use App\Models\Tenant;
 use Filament\Facades\Filament;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -77,7 +78,22 @@ class TenantConfig extends Model
     /** Per-tenant signing secret, falling back to the global app-level secret. */
     public function slackSigningSecret(): ?string
     {
-        return $this->slack_signing_secret ?: config('services.slack.signing_secret');
+        return $this->safeEncrypted('slack_signing_secret') ?: config('services.slack.signing_secret');
+    }
+
+    /**
+     * Read an `encrypted`-cast attribute without letting an undecryptable value throw
+     * into a request path. A rotated APP_KEY — or legacy plaintext not yet migrated —
+     * would otherwise 500 every caller (this is what broke the inbound Slack webhook).
+     * Returns null on failure so the caller falls back to its config-level default.
+     */
+    private function safeEncrypted(string $key): ?string
+    {
+        try {
+            return $this->getAttribute($key);
+        } catch (DecryptException) {
+            return null;
+        }
     }
 
     /** Resolved outbound webhook URL: tenant override, else the global default. */
