@@ -9,6 +9,7 @@ use App\Services\StaffPick\SlackNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Throwable;
 
 /**
  * Public inbound Slack webhook: POST /webhooks/slack/{token}. The token resolves the
@@ -57,33 +58,43 @@ class SlackWebhookController extends Controller
             return response('', 200);
         }
 
-        $log = SlackWebhookLog::create([
-            'tenant_id' => $config->tenant_id,
-            'event_type' => $payload['type'] ?? ($payload['event']['type'] ?? null),
-            'signature_valid' => true,
-            'payload' => $body,
-        ]);
+        // Everything past the signature check runs inside a guard: a processing
+        // failure must NEVER 500 back to Slack. The Events API retries non-2xx
+        // deliveries and DISABLES the subscription after repeated failures, so an
+        // unhandled exception here would silently break inbound Slack for the tenant.
+        // We ack with 200 and report() the error; the raw payload is captured on the
+        // audit row below for root-causing.
+        try {
+            $log = SlackWebhookLog::create([
+                'tenant_id' => $config->tenant_id,
+                'event_type' => $payload['type'] ?? ($payload['event']['type'] ?? null),
+                'signature_valid' => true,
+                'payload' => $body,
+            ]);
 
-        // Slack's one-time endpoint verification handshake.
-        if (($payload['type'] ?? null) === 'url_verification') {
-            return response()->json(['challenge' => $payload['challenge'] ?? null]);
-        }
-
-        if (($payload['type'] ?? null) === 'event_callback') {
-            $event = $payload['event'] ?? [];
-            $text = (string) ($event['text'] ?? '');
-            $channel = $event['channel'] ?? null;
-
-            $intake = $inbound->createDraftFromMessage($config, $text, $channel);
-
-            if ($intake !== null) {
-                $log->update(['intake_request_id' => $intake->id]);
-
-                $slack->notifyText(
-                    $config->tenant_id,
-                    __('Draft intake :reference created from this message.', ['reference' => $intake->reference_number]),
-                );
+            // Slack's one-time endpoint verification handshake.
+            if (($payload['type'] ?? null) === 'url_verification') {
+                return response()->json(['challenge' => $payload['challenge'] ?? null]);
             }
+
+            if (($payload['type'] ?? null) === 'event_callback') {
+                $event = $payload['event'] ?? [];
+                $text = (string) ($event['text'] ?? '');
+                $channel = $event['channel'] ?? null;
+
+                $intake = $inbound->createDraftFromMessage($config, $text, $channel);
+
+                if ($intake !== null) {
+                    $log->update(['intake_request_id' => $intake->id]);
+
+                    $slack->notifyText(
+                        $config->tenant_id,
+                        __('Draft intake :reference created from this message.', ['reference' => $intake->reference_number]),
+                    );
+                }
+            }
+        } catch (Throwable $e) {
+            report($e);
         }
 
         return response('', 200);

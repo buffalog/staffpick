@@ -79,10 +79,15 @@ class Subject extends Model
     }
 
     /**
-     * Populate latitude/longitude from the address when they are missing, or when
-     * the address changed and no coordinates were supplied this save. Supplied
-     * coordinates (manual entry / pin-drop) always win — mirrors
-     * IntakeSubmissionService::resolveCoordinates.
+     * Populate latitude/longitude from the address when coordinates are missing, or
+     * re-geocode when an EXISTING record's address fields change — so matching never
+     * silently runs against a stale location after a scheduler fixes an address.
+     *
+     * On create, supplied coordinates (public-intake pin-drop) are kept as-is: every
+     * attribute reads dirty on a new model, so the address-change refresh is gated on
+     * $this->exists to avoid clobbering them. Do NOT gate on isDirty(latitude/longitude)
+     * — the decimal:7 cast makes the Filament form's echoed lat/long read as dirty even
+     * when untouched, which previously suppressed the re-geocode on address edits.
      *
      * ponytail: synchronous Nominatim call on save (matches the other on-save
      * geocoders). Move to a queued job if subject write volume ever spikes.
@@ -98,10 +103,13 @@ class Subject extends Model
         }
 
         $coordsProvided = filled($this->latitude) && filled($this->longitude);
-        $coordsEditedThisSave = $this->isDirty(['latitude', 'longitude']);
         $addressChanged = $this->isDirty(['address', 'city', 'state', 'zip']);
 
-        if ($coordsProvided && ($coordsEditedThisSave || ! $addressChanged)) {
+        $shouldGeocode = $coordsProvided
+            ? ($this->exists && $addressChanged)
+            : true;
+
+        if (! $shouldGeocode) {
             return;
         }
 
