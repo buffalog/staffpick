@@ -14,6 +14,17 @@ use Illuminate\Database\Seeder;
  * no coordinates. Columns are latitude/longitude (not lat/lng).
  *
  * Idempotent: re-running just re-applies the same values. Tenant 1 (FCTS).
+ *
+ * WARNING — DEMO ONLY. Do NOT run this against real case data.
+ * 1. The sweep (bottom of run()) stamps EVERY tenant-1 subject that lacks
+ *    coordinates with the Orlando fallback (28.5383, -81.3792). For a real
+ *    patient that can be ~50 miles off their actual address, which silently
+ *    corrupts matching (wrong distances, wrong "in range" set).
+ * 2. It writes via query-builder update(), so Subject::saving does NOT fire —
+ *    the real geocoding hook is bypassed and no address is resolved.
+ * To geocode a real subject's true address, re-save it through the dashboard
+ * (the Subject edit page / the case → subject link) so the model hook runs.
+ * This seeder is intentionally excluded from DatabaseSeeder (boot seeding).
  */
 class GeocoordinateSeeder extends Seeder
 {

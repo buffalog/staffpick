@@ -3,6 +3,7 @@
 namespace App\Filament\Dashboard\Resources\IntakeRequests\Schemas;
 
 use App\Filament\Dashboard\Resources\IntakeRequests\IntakeRequestResource;
+use App\Filament\Dashboard\Resources\Subjects\SubjectResource;
 use App\Models\StaffPick\IntakeRequest;
 use App\Models\StaffPick\TenantConfig;
 use Filament\Infolists\Components\IconEntry;
@@ -10,6 +11,7 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
 
 class IntakeRequestInfolist
 {
@@ -34,7 +36,14 @@ class IntakeRequestInfolist
                                     ->state(fn (IntakeRequest $record): ?string => $record->subject
                                         ? trim("{$record->subject->first_name} {$record->subject->last_name}")
                                         : null)
-                                    ->placeholder('—'),
+                                    ->placeholder('—')
+                                    // One-click case → patient: jump to the full subject record
+                                    // to review or complete contacts, insurance, diagnosis, etc.
+                                    ->url(fn (IntakeRequest $record): ?string => $record->subject_id
+                                        ? SubjectResource::getUrl('edit', ['record' => $record->subject_id])
+                                        : null)
+                                    ->color('primary')
+                                    ->icon(Heroicon::OutlinedUser),
                                 TextEntry::make('referralSource.name')->label(__('Referral Source'))->placeholder('—'),
                                 TextEntry::make('referring_clinician_name')->label(__('Referring clinician'))->placeholder('—'),
                                 TextEntry::make('referring_clinician_phone')->label(__('Referring clinician phone'))->placeholder('—'),

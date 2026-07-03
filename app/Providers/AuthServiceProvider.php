@@ -10,6 +10,7 @@ use App\Models\StaffPick\Subject;
 use App\Models\User;
 use App\Policies\RolePolicy;
 use App\Policies\StaffPick\StaffPickAdminPolicy;
+use App\Policies\StaffPick\StaffPickPipelinePolicy;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
@@ -24,9 +25,10 @@ class AuthServiceProvider extends ServiceProvider
      */
     protected $policies = [
         Role::class => RolePolicy::class,
-        // StaffPick PHI models — restricted to tenant admins (see StaffPickAdminPolicy).
-        IntakeRequest::class => StaffPickAdminPolicy::class,
-        Subject::class => StaffPickAdminPolicy::class,
+        // StaffPick PHI models. Cases + subjects are the scheduler-owned pipeline
+        // (create/update open to staff); providers + referral sources stay admin-only.
+        IntakeRequest::class => StaffPickPipelinePolicy::class,
+        Subject::class => StaffPickPipelinePolicy::class,
         Provider::class => StaffPickAdminPolicy::class,
         ReferralSource::class => StaffPickAdminPolicy::class,
     ];

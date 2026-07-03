@@ -3,6 +3,7 @@
 namespace App\Filament\Dashboard\Resources\IntakeRequests\Schemas;
 
 use App\Filament\Dashboard\Resources\IntakeRequests\IntakeRequestResource;
+use App\Filament\Dashboard\Resources\Subjects\Schemas\SubjectForm;
 use App\Models\StaffPick\Provider;
 use App\Models\StaffPick\Subject;
 use App\Models\StaffPick\TenantConfig;
@@ -37,7 +38,11 @@ class IntakeRequestForm
                             ->getOptionLabelFromRecordUsing(fn (Subject $record): string => trim("{$record->first_name} {$record->last_name}"))
                             ->searchable(['first_name', 'last_name'])
                             ->preload()
-                            ->required(),
+                            ->required()
+                            // Capture or complete the full patient record (contacts, insurance,
+                            // etc.) without leaving the intake — the subject drives matching.
+                            ->createOptionForm(SubjectForm::components())
+                            ->editOptionForm(SubjectForm::components()),
                         Select::make('referral_source_id')
                             ->label(__('Referral Source'))
                             ->relationship('referralSource', 'name')
