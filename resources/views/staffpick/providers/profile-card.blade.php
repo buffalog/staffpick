@@ -2,6 +2,11 @@
     /** @var \App\Models\StaffPick\Provider $provider */
     $provider = $getRecord();
 
+    // Header band is keyed to the PRIMARY discipline pointer (discipline_id) only — a
+    // dual-discipline provider gets their primary's color, not a blend. The body chips
+    // below remain the full source of truth for every discipline held.
+    $headerPalette = \App\Filament\Dashboard\Support\DisciplinePalette::forAbbreviation($provider->discipline?->abbreviation);
+
     // Primary discipline first, then the rest.
     $disciplines = $provider->disciplines
         ->sortByDesc(fn ($discipline): bool => (bool) $discipline->pivot?->is_primary)
@@ -16,9 +21,9 @@
 @endphp
 
 <div class="fi-sp-provider-card flex h-full flex-col overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
-    {{-- Header: provider name only --}}
-    <div class="px-4 pt-3 pb-2">
-        <div class="truncate text-base font-semibold text-gray-900 dark:text-white">{{ $provider->full_name }}</div>
+    {{-- Header: provider name only, in a band tinted to the primary discipline --}}
+    <div class="px-4 pt-3 pb-2" style="background-color: {{ $headerPalette['bg'] }}; color: {{ $headerPalette['text'] }};">
+        <div class="truncate text-base font-semibold">{{ $provider->full_name }}</div>
     </div>
 
     {{-- Photo block --}}
