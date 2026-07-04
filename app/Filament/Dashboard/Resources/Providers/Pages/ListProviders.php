@@ -22,6 +22,15 @@ class ListProviders extends ListRecords
      */
     public string $viewLayout = 'grid';
 
+    /**
+     * The tier-offer note, shown once under the page heading rather than repeated in
+     * every card footer.
+     */
+    public function getSubheading(): ?string
+    {
+        return __('Cases are offered by tier, Platinum first. Each provider holds the offer for their tier\'s response window before it passes to the next.');
+    }
+
     protected function getHeaderActions(): array
     {
         return [

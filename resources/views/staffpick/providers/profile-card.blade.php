@@ -73,9 +73,4 @@
             <dd class="text-right font-medium text-gray-900 dark:text-white">{{ filled($languages) ? $languages : '—' }}</dd>
         </div>
     </dl>
-
-    {{-- Footer: the real tier-cascade mechanic (Platinum is priority 1, offered first) --}}
-    <div class="mt-3 border-t border-gray-100 px-4 py-2 text-[11px] leading-snug text-gray-400 dark:border-white/5 dark:text-gray-500">
-        {{ __('Cases are offered by tier, Platinum first. Each provider holds the offer for their tier\'s response window before it passes to the next.') }}
-    </div>
 </div>
