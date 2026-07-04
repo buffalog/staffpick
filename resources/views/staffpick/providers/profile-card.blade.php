@@ -18,7 +18,6 @@
 <div class="fi-sp-provider-card flex h-full flex-col overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
     {{-- Header: provider name only --}}
     <div class="px-4 pt-3 pb-2">
-        <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-400">{{ __('Provider profile') }}</div>
         <div class="truncate text-base font-semibold text-gray-900 dark:text-white">{{ $provider->full_name }}</div>
     </div>
 
