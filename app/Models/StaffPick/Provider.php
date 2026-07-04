@@ -4,6 +4,7 @@ namespace App\Models\StaffPick;
 
 use App\Models\StaffPick\Concerns\BelongsToTenant;
 use App\Models\User;
+use App\Services\StaffPick\GeocodingService;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -101,6 +102,77 @@ class Provider extends Model
             'onboarding_step' => 'integer',
             'calendar_token_generated_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        // Geocode a provider's address on save so matching always has coordinates.
+        // Mirrors the Subject hook: only on an interactive web save (dashboard form /
+        // wizard), never in console — imports and seeders supply coordinates directly
+        // and must not fire a Nominatim call per row.
+        static::saving(function (Provider $provider): void {
+            if (app()->runningInConsole()) {
+                return;
+            }
+
+            $provider->geocodeAddressIfNeeded();
+        });
+    }
+
+    /**
+     * Backend-geocode the address ONLY on a staff-admin edit that changed the address
+     * without supplying coordinates. If a lat/long came with this same save — a manual
+     * entry or a wizard pin-drop — it wins and geocoding is skipped; a human-placed pin
+     * is never overwritten.
+     */
+    public function geocodeAddressIfNeeded(): void
+    {
+        // Trigger only when an address field actually changed.
+        if (! $this->isDirty(['address', 'city', 'state', 'zip'])) {
+            return;
+        }
+
+        // Coordinates supplied in this same save win — skip geocoding entirely.
+        if ($this->coordinatesSuppliedThisSave()) {
+            return;
+        }
+
+        $address = collect([$this->address, $this->city, $this->state, $this->zip])
+            ->filter()
+            ->implode(', ');
+
+        if ($address === '') {
+            return;
+        }
+
+        $result = app(GeocodingService::class)->geocode($address);
+
+        if ($result !== null) {
+            $this->latitude = $result['lat'];
+            $this->longitude = $result['lng'];
+        }
+    }
+
+    /**
+     * Whether latitude/longitude were deliberately provided in the current save — a new
+     * record that arrived with coordinates, or an existing one whose coordinates changed.
+     * Compared numerically on purpose: the decimal:7 cast makes a Filament form echoing
+     * the stored value read as dirty, so isDirty() here would false-positive and suppress
+     * a legitimate staff address re-geocode (the exact bug seen on Subject).
+     */
+    private function coordinatesSuppliedThisSave(): bool
+    {
+        if (blank($this->latitude) || blank($this->longitude)) {
+            return false;
+        }
+
+        if (! $this->exists) {
+            return true;
+        }
+
+        $moved = fn (string $column): bool => abs((float) $this->{$column} - (float) $this->getOriginal($column)) > 1e-7;
+
+        return $moved('latitude') || $moved('longitude');
     }
 
     /** Display name — "First Last", trimmed. Backs $provider->full_name everywhere. */
