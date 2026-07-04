@@ -20,7 +20,7 @@
     $editUrl = \App\Filament\Dashboard\Resources\Providers\ProviderResource::getUrl('edit', ['record' => $provider]);
 @endphp
 
-<div class="fi-sp-provider-card flex h-full flex-col overflow-hidden rounded-xl border-2 bg-white shadow-sm dark:bg-gray-900"
+<div class="fi-sp-provider-card flex h-full flex-col overflow-hidden rounded-xl border-2 bg-white pb-4 shadow-sm dark:bg-gray-900"
      style="border-color: {{ $headerPalette['text'] }};">
     {{-- Header: provider name only, in a band tinted to the primary discipline. No radius
          here — overflow-hidden on the card clips it to the shared rounded corners. Filament
