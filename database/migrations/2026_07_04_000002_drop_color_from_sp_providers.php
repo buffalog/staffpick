@@ -5,24 +5,23 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Per-provider identity color (#RRGGBB hex). Historical migration — the color feature
- * was later retired (see 2026_07_04_000002_drop_color_from_sp_providers). Kept as a
- * no-op-ish column add so the migration history still replays cleanly on a fresh DB;
- * the backfill (which depended on Provider::hslToHex, since removed) is gone.
+ * Retire the per-provider identity color. It was dropped as a product decision — the
+ * board card and Service Calendar no longer tint by assigned clinician. The column has
+ * no default/index, so a plain dropColumn is safe on SQL Server.
  */
 return new class extends Migration
 {
     public function up(): void
     {
         Schema::table('sp_providers', function (Blueprint $table): void {
-            $table->string('color', 7)->nullable();
+            $table->dropColumn('color');
         });
     }
 
     public function down(): void
     {
         Schema::table('sp_providers', function (Blueprint $table): void {
-            $table->dropColumn('color');
+            $table->string('color', 7)->nullable();
         });
     }
 };

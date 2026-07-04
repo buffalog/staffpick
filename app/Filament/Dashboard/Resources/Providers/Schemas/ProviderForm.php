@@ -6,7 +6,6 @@ use App\Constants\UsStates;
 use App\Models\StaffPick\Specialty;
 use App\Models\StaffPick\TenantConfig;
 use Filament\Facades\Filament;
-use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
@@ -52,9 +51,6 @@ class ProviderForm
                             ->label(__('Alternate Phone'))
                             ->tel()
                             ->maxLength(30),
-                        ColorPicker::make('color')
-                            ->label(__('Identity Color'))
-                            ->helperText(__('Colors this provider across the board and calendar. Auto-assigned on creation — override here.')),
                         FileUpload::make('photo')
                             ->label(__('Profile Photo'))
                             ->helperText(__('Optional. Uploaded by the provider or by staff on their behalf.'))

@@ -18,8 +18,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Service Calendar — a month/week grid of active cases on their scheduled evaluation
- * date. Each active case is an event (color-coded by its assigned clinician when one is
- * set); clicking it opens a read-only summary modal with a link to the full case.
+ * date. Each active case is an event; clicking it opens a read-only summary modal with a
+ * link to the full case.
  * Replaces the dispatch board. (The provider-row / workload timeline lives on a future
  * Workload page.)
  *
@@ -68,7 +68,7 @@ class ServiceCalendarWidget extends CalendarWidget
                 ->start($case->evaluation_date)
                 ->end($case->evaluation_date)
                 ->allDay()
-                ->backgroundColor($case->leadClinician?->color ?? '#64748b')
+                ->backgroundColor('#64748b')
                 ->textColor('#ffffff')
                 ->action('viewCase'))
             ->all();
