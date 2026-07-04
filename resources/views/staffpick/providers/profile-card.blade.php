@@ -20,8 +20,10 @@
     $editUrl = \App\Filament\Dashboard\Resources\Providers\ProviderResource::getUrl('edit', ['record' => $provider]);
 @endphp
 
-<div class="fi-sp-provider-card flex h-full flex-col overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
-    {{-- Header: provider name only, in a band tinted to the primary discipline --}}
+<div class="fi-sp-provider-card flex h-full flex-col overflow-hidden rounded-xl border-2 bg-white shadow-sm dark:bg-gray-900"
+     style="border-color: {{ $headerPalette['text'] }};">
+    {{-- Header: provider name only, in a band tinted to the primary discipline. No radius
+         here — overflow-hidden on the card clips it to the shared rounded corners. --}}
     <div class="px-4 pt-3 pb-2" style="background-color: {{ $headerPalette['bg'] }}; color: {{ $headerPalette['text'] }};">
         <div class="truncate text-base font-semibold">{{ $provider->full_name }}</div>
     </div>
