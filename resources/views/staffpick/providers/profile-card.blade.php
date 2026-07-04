@@ -45,14 +45,8 @@
         </a>
     @endif
 
-    {{-- Badge chips: tier + one per discipline (same pill pattern) --}}
+    {{-- Discipline chip(s): one per discipline held, on the top row --}}
     <div class="flex flex-wrap items-center gap-1.5 px-4 pt-3">
-        @if ($tier)
-            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ring-gray-950/10"
-                  style="background-color: {{ $tier->color }}; color: #1f2937;">
-                {{ $tier->name }}
-            </span>
-        @endif
         @foreach ($disciplines as $discipline)
             @php $chip = \App\Filament\Dashboard\Support\DisciplinePalette::forAbbreviation($discipline->abbreviation); @endphp
             <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ring-gray-950/10"
@@ -62,6 +56,16 @@
             </span>
         @endforeach
     </div>
+
+    {{-- Tier badge on its own line, directly below the discipline chips --}}
+    @if ($tier)
+        <div class="px-4 pt-2">
+            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ring-gray-950/10"
+                  style="background-color: {{ $tier->color }}; color: #1f2937;">
+                {{ $tier->name }}
+            </span>
+        </div>
+    @endif
 
     {{-- Stat rows --}}
     <dl class="mt-3 flex-1 space-y-1.5 px-4 text-sm">
