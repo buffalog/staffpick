@@ -3,6 +3,7 @@
 namespace App\Services\StaffPick;
 
 use App\Constants\TenancyPermissionConstants;
+use App\Models\StaffPick\Discipline;
 use App\Models\StaffPick\Language;
 use App\Models\StaffPick\Provider;
 use App\Models\StaffPick\ProviderCredential;
@@ -57,7 +58,7 @@ class ProviderProfileService
                     'zip' => $data['zip'] ?? null,
                     'latitude' => $latitude,
                     'longitude' => $longitude,
-                    'discipline_id' => $data['discipline_id'] ?? null,
+                    'discipline_id' => $this->primaryDisciplineIdFromData($data),
                     'years_experience' => $data['years_experience'] ?? null,
                     'radius_preferred_miles' => $data['radius_preferred_miles'] ?? 15,
                     'radius_max_miles' => $data['radius_max_miles'] ?? 25,
@@ -67,6 +68,7 @@ class ProviderProfileService
                 ],
             );
 
+            $this->syncDisciplines($provider, $data);
             $this->syncSpecialties($provider, $data);
             $this->syncLanguages($provider, $data);
 
@@ -115,7 +117,7 @@ class ProviderProfileService
                 'zip' => $data['zip'] ?? null,
                 'latitude' => filled($data['latitude'] ?? null) ? (float) $data['latitude'] : null,
                 'longitude' => filled($data['longitude'] ?? null) ? (float) $data['longitude'] : null,
-                'discipline_id' => filled($data['discipline_id'] ?? null) ? (int) $data['discipline_id'] : null,
+                'discipline_id' => $this->primaryDisciplineIdFromData($data),
                 'years_experience' => filled($data['years_experience'] ?? null) ? (int) $data['years_experience'] : null,
                 'radius_preferred_miles' => filled($data['radius_preferred_miles'] ?? null) ? (int) $data['radius_preferred_miles'] : 15,
                 'radius_max_miles' => filled($data['radius_max_miles'] ?? null) ? (int) $data['radius_max_miles'] : 25,
@@ -127,6 +129,7 @@ class ProviderProfileService
 
             $provider->save();
 
+            $this->syncDisciplines($provider, $data);
             $this->syncSpecialties($provider, $data);
             $this->syncLanguages($provider, $data);
 
@@ -136,6 +139,53 @@ class ProviderProfileService
 
             return $provider;
         });
+    }
+
+    /**
+     * Sync the provider's disciplines, then reconcile the primary. Accepts either the
+     * multi-select discipline_ids[] or a legacy single discipline_id. IDs are validated
+     * against the tenant's disciplines — the pivot has no FK and the payload is a
+     * forgeable Livewire submission.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function syncDisciplines(Provider $provider, array $data): void
+    {
+        $ids = Discipline::query()
+            ->where('tenant_id', $provider->tenant_id)
+            ->whereIn('id', $this->disciplineIdsFromData($data))
+            ->pluck('id')
+            ->all();
+
+        $provider->disciplines()->sync($ids);
+        $provider->assignPrimaryDiscipline();
+    }
+
+    /**
+     * Normalize a discipline selection to a de-duped list of ints, accepting the new
+     * discipline_ids[] or a legacy single discipline_id.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<int, int>
+     */
+    private function disciplineIdsFromData(array $data): array
+    {
+        $ids = $data['discipline_ids'] ?? (filled($data['discipline_id'] ?? null) ? [$data['discipline_id']] : []);
+
+        return collect((array) $ids)
+            ->filter()
+            ->map(fn ($id): int => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function primaryDisciplineIdFromData(array $data): ?int
+    {
+        return $this->disciplineIdsFromData($data)[0] ?? null;
     }
 
     /**

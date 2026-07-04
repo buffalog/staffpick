@@ -36,9 +36,9 @@ class ProvidersTable
                     ->description(fn (Provider $record): ?string => $record->business_name)
                     ->searchable(['first_name', 'last_name', 'business_name'])
                     ->sortable(['last_name']),
-                TextColumn::make('discipline.name')
+                TextColumn::make('disciplines.name')
                     ->label(TenantConfig::entityLabel('discipline', __('Discipline')))
-                    ->sortable()
+                    ->badge()
                     ->toggleable(),
                 TextColumn::make('tier.name')
                     ->label(__('Tier'))
@@ -71,9 +71,9 @@ class ProvidersTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                SelectFilter::make('discipline')
+                SelectFilter::make('disciplines')
                     ->label(TenantConfig::entityLabel('discipline', __('Discipline')))
-                    ->relationship('discipline', 'name')
+                    ->relationship('disciplines', 'name')
                     ->searchable()
                     ->preload(),
                 SelectFilter::make('tier')

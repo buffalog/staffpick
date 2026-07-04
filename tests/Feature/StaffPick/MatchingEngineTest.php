@@ -126,6 +126,29 @@ class MatchingEngineTest extends FeatureTest
         $this->assertSame([$match->id], $this->ids($this->engine()->match($intake)));
     }
 
+    public function test_multi_discipline_provider_matches_cases_in_any_held_discipline(): void
+    {
+        $tenant = $this->createTenant();
+        $pt = $this->discipline($tenant, 'Physical Therapy');
+        $ot = $this->discipline($tenant, 'Occupational Therapy');
+        $tier = $this->tier($tenant, 'Gold', 1);
+
+        // Dual-licensed provider: listed with PT as primary (discipline_id), OT added to
+        // the set. This is the Petros case — previously invisible as an OT candidate.
+        $dual = $this->provider($tenant, $pt, $tier, 5);
+        $dual->disciplines()->attach($ot->id);
+
+        $ptOnly = $this->provider($tenant, $pt, $tier, 20);
+
+        // Eligible for a PT case, alongside the PT-only provider.
+        $ptIntake = $this->intake($tenant, $this->subject($tenant), $pt);
+        $this->assertEqualsCanonicalizing([$dual->id, $ptOnly->id], $this->ids($this->engine()->match($ptIntake)));
+
+        // Eligible for an OT case, where the PT-only provider is not.
+        $otIntake = $this->intake($tenant, $this->subject($tenant), $ot);
+        $this->assertSame([$dual->id], $this->ids($this->engine()->match($otIntake)));
+    }
+
     public function test_excludes_inactive_providers(): void
     {
         $tenant = $this->createTenant();

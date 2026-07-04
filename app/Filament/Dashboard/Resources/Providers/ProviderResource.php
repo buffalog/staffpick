@@ -53,7 +53,7 @@ class ProviderResource extends Resource
         return parent::getEloquentQuery()
             // Eager-load the relationships the list/card views render (discipline, tier,
             // languages) to avoid an N+1 across the rows.
-            ->with(['discipline', 'tier', 'languages'])
+            ->with(['discipline', 'disciplines', 'tier', 'languages'])
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
             ]);

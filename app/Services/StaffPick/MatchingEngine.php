@@ -5,6 +5,7 @@ namespace App\Services\StaffPick;
 use App\Models\StaffPick\IntakeRequest;
 use App\Models\StaffPick\Provider;
 use App\Models\StaffPick\TenantConfig;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 class MatchingEngine
@@ -74,7 +75,11 @@ class MatchingEngine
 
         $providers = Provider::query()
             ->where('tenant_id', $intakeRequest->tenant_id)
-            ->where('discipline_id', $intakeRequest->discipline_id)
+            // A provider is eligible for the case's discipline if they hold it in their
+            // set — multi-discipline providers match cases in ANY discipline they hold.
+            // Scoring is unchanged: they score exactly as a single-discipline provider
+            // would for this discipline (no bonus or penalty for holding several).
+            ->whereHas('disciplines', fn (Builder $query): Builder => $query->whereKey($intakeRequest->discipline_id))
             ->where('is_active', true)
             ->where('status', 'active')
             ->whereNotNull('latitude')

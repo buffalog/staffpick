@@ -8,8 +8,8 @@ namespace App\Filament\Dashboard\Support;
  * their lead discipline's color (PTA→PT, OTA→OT). Anything unmapped falls back to a
  * neutral slate so a tenant's custom discipline still renders a readable header.
  *
- * Single-discipline today (Provider->discipline_id is a plain BelongsTo), so a card
- * has exactly one header color. Multi-discipline chip-splitting is a separate spec.
+ * Providers can hold multiple disciplines; the card header renders one colored
+ * segment per discipline, each resolved through this palette.
  */
 class DisciplinePalette
 {

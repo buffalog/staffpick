@@ -2,7 +2,10 @@
     /** @var \App\Models\StaffPick\Provider $provider */
     $provider = $getRecord();
 
-    $palette = \App\Filament\Dashboard\Support\DisciplinePalette::forAbbreviation($provider->discipline?->abbreviation);
+    // Primary discipline first, then the rest — drives strip order.
+    $disciplines = $provider->disciplines
+        ->sortByDesc(fn ($discipline): bool => (bool) $discipline->pivot?->is_primary)
+        ->values();
     $tier = $provider->tier;
     $window = $tier?->response_window_minutes;
     $languages = $provider->languages->pluck('name')->filter()->implode(', ');
@@ -13,10 +16,35 @@
 @endphp
 
 <div class="fi-sp-provider-card flex h-full flex-col overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
-    {{-- Header, colored by discipline (single-discipline: one color) --}}
-    <div class="px-4 py-3" style="background-color: {{ $palette['bg'] }}; color: {{ $palette['text'] }};">
-        <div class="text-[11px] font-semibold uppercase tracking-wide opacity-70">{{ __('Provider profile') }}</div>
-        <div class="text-sm font-semibold">{{ $provider->discipline?->name ?? __('No discipline set') }}</div>
+    {{-- Header: provider name spanning above a colored strip, one segment per discipline --}}
+    <div>
+        <div class="flex items-start justify-between gap-2 px-4 pt-3 pb-2">
+            <div class="min-w-0">
+                <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-400">{{ __('Provider profile') }}</div>
+                <div class="truncate text-base font-semibold text-gray-900 dark:text-white">{{ $provider->full_name }}</div>
+            </div>
+            @if ($tier)
+                <span class="inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ring-gray-950/10"
+                      style="background-color: {{ $tier->color }}; color: #1f2937;">
+                    {{ $tier->name }}
+                </span>
+            @endif
+        </div>
+
+        <div class="flex">
+            @forelse ($disciplines as $discipline)
+                @php $segment = \App\Filament\Dashboard\Support\DisciplinePalette::forAbbreviation($discipline->abbreviation); @endphp
+                <div class="flex-1 px-2 py-1.5 text-center text-xs font-semibold"
+                     style="background-color: {{ $segment['bg'] }}; color: {{ $segment['text'] }};"
+                     title="{{ $discipline->name }}">
+                    {{ $discipline->abbreviation ?: $discipline->name }}
+                </div>
+            @empty
+                <div class="flex-1 px-2 py-1.5 text-center text-xs font-medium" style="background-color: #F1F5F9; color: #334155;">
+                    {{ __('No discipline set') }}
+                </div>
+            @endforelse
+        </div>
     </div>
 
     {{-- Photo block --}}
@@ -33,19 +61,8 @@
         </a>
     @endif
 
-    {{-- Name + tier badge (existing tier system + its stored color) --}}
-    <div class="flex items-start justify-between gap-2 px-4 pt-3">
-        <div class="text-base font-semibold text-gray-900 dark:text-white">{{ $provider->full_name }}</div>
-        @if ($tier)
-            <span class="inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ring-gray-950/10"
-                  style="background-color: {{ $tier->color }}; color: #1f2937;">
-                {{ $tier->name }}
-            </span>
-        @endif
-    </div>
-
     {{-- Stat rows --}}
-    <dl class="mt-2 flex-1 space-y-1.5 px-4 text-sm">
+    <dl class="mt-3 flex-1 space-y-1.5 px-4 text-sm">
         <div class="flex items-center justify-between gap-3">
             <dt class="text-gray-500 dark:text-gray-400">{{ __('Response window') }}</dt>
             <dd class="font-medium text-gray-900 dark:text-white">{{ $window !== null ? __(':n min', ['n' => $window]) : '—' }}</dd>

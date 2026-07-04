@@ -246,9 +246,57 @@ class Provider extends Model
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * The provider's PRIMARY discipline. Kept for back-compat; mirrors the is_primary
+     * row of {@see disciplines()}. New code that needs the full set should use
+     * disciplines() — a provider can hold more than one (e.g. dual-licensed OT/PT).
+     */
     public function discipline(): BelongsTo
     {
         return $this->belongsTo(Discipline::class);
+    }
+
+    /**
+     * Every discipline the provider holds. Matching filters on this set, so a
+     * multi-discipline provider is eligible for cases in ANY of their disciplines.
+     */
+    public function disciplines(): BelongsToMany
+    {
+        return $this->belongsToMany(Discipline::class, 'sp_provider_disciplines')
+            ->withPivot('is_primary')
+            ->withTimestamps();
+    }
+
+    /**
+     * Reconcile the primary discipline after the disciplines pivot has been synced:
+     * exactly one pivot row is flagged is_primary and the legacy discipline_id column
+     * points at it. Keeps the existing primary when it is still held, otherwise falls
+     * back to the first. Call this from every write path AFTER syncing the pivot.
+     */
+    public function assignPrimaryDiscipline(): void
+    {
+        $ids = $this->disciplines()->pluck('sp_disciplines.id')->map(fn ($id): int => (int) $id)->all();
+
+        $pivot = $this->disciplines()->newPivotStatement()->where('provider_id', $this->getKey());
+
+        if ($ids === []) {
+            $pivot->update(['is_primary' => false]);
+
+            if ($this->discipline_id !== null) {
+                $this->updateQuietly(['discipline_id' => null]);
+            }
+
+            return;
+        }
+
+        $primary = in_array((int) $this->discipline_id, $ids, true) ? (int) $this->discipline_id : $ids[0];
+
+        $pivot->update(['is_primary' => false]);
+        $this->disciplines()->updateExistingPivot($primary, ['is_primary' => true]);
+
+        if ((int) $this->discipline_id !== $primary) {
+            $this->updateQuietly(['discipline_id' => $primary]);
+        }
     }
 
     public function tier(): BelongsTo

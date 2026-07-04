@@ -31,6 +31,20 @@ class ProviderFactory extends Factory
         ];
     }
 
+    /**
+     * Mirror a factory-set discipline_id into the sp_provider_disciplines pivot as the
+     * primary, so factory-built providers satisfy the matching engine's whereHas on the
+     * disciplines set (real providers always have a pivot row; see the backfill migration).
+     */
+    public function configure(): static
+    {
+        return $this->afterCreating(function (Provider $provider): void {
+            if ($provider->discipline_id !== null && $provider->disciplines()->doesntExist()) {
+                $provider->disciplines()->attach($provider->discipline_id, ['is_primary' => true]);
+            }
+        });
+    }
+
     public function inactive(): static
     {
         return $this->state(fn (array $attributes): array => [

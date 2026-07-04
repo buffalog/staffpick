@@ -48,5 +48,8 @@ class EditProvider extends EditRecord
     protected function afterSave(): void
     {
         $this->persistOtherSpecialtyNote();
+        // Runs after the disciplines relationship has synced: flag the primary pivot row
+        // and point the legacy discipline_id column at it.
+        $this->record->assignPrimaryDiscipline();
     }
 }

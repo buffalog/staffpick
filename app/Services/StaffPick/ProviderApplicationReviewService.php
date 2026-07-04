@@ -79,6 +79,11 @@ class ProviderApplicationReviewService
 
             $provider->specialties()->sync(array_values($application->specialties ?? []));
 
+            // Seed the disciplines pivot from the application's single discipline (public
+            // applications capture one). Staff can add more on the provider form later.
+            $provider->disciplines()->sync(array_filter([$provider->discipline_id]));
+            $provider->assignPrimaryDiscipline();
+
             $this->createServiceZone($provider, $application);
             $this->importCredentials($provider, $application);
 

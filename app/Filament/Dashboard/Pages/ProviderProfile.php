@@ -262,13 +262,15 @@ class ProviderProfile extends Page
             ->icon(Heroicon::OutlinedAcademicCap)
             ->schema([
                 Grid::make(2)->schema([
-                    Select::make('discipline_id')
+                    Select::make('discipline_ids')
                         ->label(__('Discipline'))
                         ->options(fn (): array => Discipline::query()->where('is_active', true)->orderBy('sort_order')->pluck('name', 'id')->all())
+                        ->multiple()
                         ->searchable()
                         ->required()
-                        // Specialties are scoped to the discipline; clear the selection
-                        // (and any write-in) when the discipline changes so nothing stale persists.
+                        ->helperText(__('Select every discipline you are licensed in.'))
+                        // Specialties are scoped to the chosen disciplines; clear the selection
+                        // (and any write-in) when they change so nothing stale persists.
                         ->live()
                         ->afterStateUpdated(function (Set $set): void {
                             $set('specialties', []);
@@ -287,15 +289,15 @@ class ProviderProfile extends Page
                 Select::make('specialties')
                     ->label(__('Specialties'))
                     ->multiple()
-                    ->options(fn (Get $get): array => blank($get('discipline_id'))
+                    ->options(fn (Get $get): array => blank($get('discipline_ids'))
                         ? []
                         : Specialty::query()
                             ->where('is_active', true)
-                            ->whereHas('disciplines', fn (Builder $query) => $query->whereKey($get('discipline_id')))
+                            ->whereHas('disciplines', fn (Builder $query) => $query->whereIn('sp_disciplines.id', (array) $get('discipline_ids')))
                             ->orderBy('name')
                             ->pluck('name', 'id')
                             ->all())
-                    ->disabled(fn (Get $get): bool => blank($get('discipline_id')))
+                    ->disabled(fn (Get $get): bool => blank($get('discipline_ids')))
                     ->helperText(__('Select a discipline first to see its specialties.'))
                     ->live()
                     ->searchable(),
@@ -560,7 +562,7 @@ class ProviderProfile extends Page
             'zip' => $provider->zip,
             'latitude' => $provider->latitude,
             'longitude' => $provider->longitude,
-            'discipline_id' => $provider->discipline_id,
+            'discipline_ids' => $provider->disciplines()->pluck('sp_disciplines.id')->all(),
             'years_experience' => $provider->years_experience,
             'radius_preferred_miles' => $provider->radius_preferred_miles,
             'radius_max_miles' => $provider->radius_max_miles,

@@ -102,13 +102,16 @@ class ProviderForm
                 Section::make(__('Classification'))
                     ->columns(2)
                     ->schema([
-                        Select::make('discipline_id')
+                        Select::make('disciplines')
                             ->label(TenantConfig::entityLabel('discipline', __('Discipline')))
-                            ->relationship('discipline', 'name')
+                            ->relationship('disciplines', 'name')
+                            ->multiple()
+                            ->required()
                             ->searchable()
                             ->preload()
-                            // Specialties are scoped to the discipline; clear them (and any
-                            // write-in) on change.
+                            ->helperText(__('A provider may hold more than one; the first is treated as primary.'))
+                            // Specialties are scoped to the chosen disciplines; clear them
+                            // (and any write-in) on change so nothing stale persists.
                             ->live()
                             ->afterStateUpdated(function (Set $set): void {
                                 $set('specialties', []);
@@ -137,15 +140,15 @@ class ProviderForm
                             ->relationship(
                                 'specialties',
                                 'name',
-                                fn (Builder $query, Get $get): Builder => filled($get('discipline_id'))
-                                    ? $query->whereHas('disciplines', fn (Builder $disciplineQuery) => $disciplineQuery->whereKey($get('discipline_id')))
+                                fn (Builder $query, Get $get): Builder => filled($get('disciplines'))
+                                    ? $query->whereHas('disciplines', fn (Builder $disciplineQuery) => $disciplineQuery->whereIn('sp_disciplines.id', (array) $get('disciplines')))
                                     : $query->whereRaw('1 = 0'),
                             )
                             ->multiple()
                             ->searchable()
                             ->preload()
                             ->live()
-                            ->disabled(fn (Get $get): bool => blank($get('discipline_id')))
+                            ->disabled(fn (Get $get): bool => blank($get('disciplines')))
                             ->helperText(__('Select a discipline first to see its specialties.'))
                             ->columnSpanFull(),
                         // Persisted to the sp_provider_specialties pivot in the Create/Edit
