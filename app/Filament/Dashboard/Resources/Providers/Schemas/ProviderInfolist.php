@@ -6,6 +6,7 @@ use App\Models\StaffPick\Provider;
 use App\Models\StaffPick\TenantConfig;
 use Filament\Infolists\Components\ColorEntry;
 use Filament\Infolists\Components\IconEntry;
+use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
@@ -38,6 +39,12 @@ class ProviderInfolist
                             ->placeholder('—'),
                         ColorEntry::make('color')
                             ->label(__('Identity Color'))
+                            ->placeholder('—'),
+                        ImageEntry::make('photo')
+                            ->label(__('Profile Photo'))
+                            ->disk('public')
+                            ->visibility('public')
+                            ->circular()
                             ->placeholder('—'),
                     ]),
 

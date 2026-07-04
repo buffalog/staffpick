@@ -78,6 +78,7 @@ class Provider extends Model
         'calendar_token',
         'calendar_token_generated_at',
         'color',
+        'photo',
     ];
 
     protected function casts(): array

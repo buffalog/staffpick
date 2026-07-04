@@ -1,0 +1,28 @@
+<?php
+
+namespace App\Filament\Dashboard\Support;
+
+/**
+ * Header colors for the provider profile card, keyed by discipline abbreviation.
+ * Exact hex values are Jeremy's approved mockup spec. Assistant disciplines share
+ * their lead discipline's color (PTA→PT, OTA→OT). Anything unmapped falls back to a
+ * neutral slate so a tenant's custom discipline still renders a readable header.
+ *
+ * Single-discipline today (Provider->discipline_id is a plain BelongsTo), so a card
+ * has exactly one header color. Multi-discipline chip-splitting is a separate spec.
+ */
+class DisciplinePalette
+{
+    /**
+     * @return array{bg: string, text: string}
+     */
+    public static function forAbbreviation(?string $abbreviation): array
+    {
+        return match (strtoupper(trim((string) $abbreviation))) {
+            'PT', 'PTA' => ['bg' => '#E1F5EE', 'text' => '#085041'],
+            'OT', 'OTA' => ['bg' => '#FAECE7', 'text' => '#4A1B0C'],
+            'SLP' => ['bg' => '#EEEDFE', 'text' => '#26215C'],
+            default => ['bg' => '#F1F5F9', 'text' => '#334155'],
+        };
+    }
+}

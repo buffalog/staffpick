@@ -8,6 +8,7 @@ use App\Models\StaffPick\TenantConfig;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -54,6 +55,17 @@ class ProviderForm
                         ColorPicker::make('color')
                             ->label(__('Identity Color'))
                             ->helperText(__('Colors this provider across the board and calendar. Auto-assigned on creation — override here.')),
+                        FileUpload::make('photo')
+                            ->label(__('Profile Photo'))
+                            ->helperText(__('Optional. Uploaded by the provider or by staff on their behalf.'))
+                            ->image()
+                            ->avatar()
+                            ->imageEditor()
+                            ->disk('public')
+                            ->directory('provider-photos')
+                            ->visibility('public')
+                            ->maxSize(5120)
+                            ->columnSpanFull(),
                     ]),
 
                 Section::make(__('Address'))

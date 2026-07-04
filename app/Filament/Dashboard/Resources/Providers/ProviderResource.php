@@ -12,6 +12,7 @@ use App\Filament\Dashboard\Resources\Providers\Schemas\ProviderInfolist;
 use App\Filament\Dashboard\Resources\Providers\Tables\ProvidersTable;
 use App\Filament\Dashboard\Support\SpRoleAccess;
 use App\Models\StaffPick\Provider;
+use App\Models\StaffPick\ProviderApplication;
 use App\Models\StaffPick\TenantConfig;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -50,9 +51,9 @@ class ProviderResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            // Eager-load the relationships the list table renders (discipline / tier)
-            // to avoid an N+1 across the rows.
-            ->with(['discipline', 'tier'])
+            // Eager-load the relationships the list/card views render (discipline, tier,
+            // languages) to avoid an N+1 across the rows.
+            ->with(['discipline', 'tier', 'languages'])
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
             ]);
@@ -102,8 +103,8 @@ class ProviderResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        $count = \App\Models\StaffPick\ProviderApplication::query()
-            ->where('status', \App\Models\StaffPick\ProviderApplication::STATUS_SUBMITTED)
+        $count = ProviderApplication::query()
+            ->where('status', ProviderApplication::STATUS_SUBMITTED)
             ->count();
 
         return $count > 0 ? (string) $count : null;
