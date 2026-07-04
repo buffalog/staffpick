@@ -2,7 +2,7 @@
     /** @var \App\Models\StaffPick\Provider $provider */
     $provider = $getRecord();
 
-    // Primary discipline first, then the rest — drives strip order.
+    // Primary discipline first, then the rest.
     $disciplines = $provider->disciplines
         ->sortByDesc(fn ($discipline): bool => (bool) $discipline->pivot?->is_primary)
         ->values();
@@ -16,35 +16,10 @@
 @endphp
 
 <div class="fi-sp-provider-card flex h-full flex-col overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
-    {{-- Header: provider name spanning above a colored strip, one segment per discipline --}}
-    <div>
-        <div class="flex items-start justify-between gap-2 px-4 pt-3 pb-2">
-            <div class="min-w-0">
-                <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-400">{{ __('Provider profile') }}</div>
-                <div class="truncate text-base font-semibold text-gray-900 dark:text-white">{{ $provider->full_name }}</div>
-            </div>
-            @if ($tier)
-                <span class="inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ring-gray-950/10"
-                      style="background-color: {{ $tier->color }}; color: #1f2937;">
-                    {{ $tier->name }}
-                </span>
-            @endif
-        </div>
-
-        <div class="flex">
-            @forelse ($disciplines as $discipline)
-                @php $segment = \App\Filament\Dashboard\Support\DisciplinePalette::forAbbreviation($discipline->abbreviation); @endphp
-                <div class="flex-1 px-2 py-1.5 text-center text-xs font-semibold"
-                     style="background-color: {{ $segment['bg'] }}; color: {{ $segment['text'] }};"
-                     title="{{ $discipline->name }}">
-                    {{ $discipline->abbreviation ?: $discipline->name }}
-                </div>
-            @empty
-                <div class="flex-1 px-2 py-1.5 text-center text-xs font-medium" style="background-color: #F1F5F9; color: #334155;">
-                    {{ __('No discipline set') }}
-                </div>
-            @endforelse
-        </div>
+    {{-- Header: provider name only --}}
+    <div class="px-4 pt-3 pb-2">
+        <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-400">{{ __('Provider profile') }}</div>
+        <div class="truncate text-base font-semibold text-gray-900 dark:text-white">{{ $provider->full_name }}</div>
     </div>
 
     {{-- Photo block --}}
@@ -60,6 +35,24 @@
             <span class="text-xs font-medium">{{ __('Upload photo') }}</span>
         </a>
     @endif
+
+    {{-- Badge chips: tier + one per discipline (same pill pattern) --}}
+    <div class="flex flex-wrap items-center gap-1.5 px-4 pt-3">
+        @if ($tier)
+            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ring-gray-950/10"
+                  style="background-color: {{ $tier->color }}; color: #1f2937;">
+                {{ $tier->name }}
+            </span>
+        @endif
+        @foreach ($disciplines as $discipline)
+            @php $chip = \App\Filament\Dashboard\Support\DisciplinePalette::forAbbreviation($discipline->abbreviation); @endphp
+            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ring-gray-950/10"
+                  style="background-color: {{ $chip['bg'] }}; color: {{ $chip['text'] }};"
+                  title="{{ $discipline->name }}">
+                {{ $discipline->abbreviation ?: $discipline->name }}
+            </span>
+        @endforeach
+    </div>
 
     {{-- Stat rows --}}
     <dl class="mt-3 flex-1 space-y-1.5 px-4 text-sm">
