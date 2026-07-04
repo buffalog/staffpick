@@ -23,8 +23,11 @@
 <div class="fi-sp-provider-card flex h-full flex-col overflow-hidden rounded-xl border-2 bg-white shadow-sm dark:bg-gray-900"
      style="border-color: {{ $headerPalette['text'] }};">
     {{-- Header: provider name only, in a band tinted to the primary discipline. No radius
-         here — overflow-hidden on the card clips it to the shared rounded corners. --}}
-    <div class="px-4 pt-3 pb-2" style="background-color: {{ $headerPalette['bg'] }}; color: {{ $headerPalette['text'] }};">
+         here — overflow-hidden on the card clips it to the shared rounded corners. Filament
+         wraps this first child in an <a class="fi-ta-record-content"> with 0 16px padding;
+         -mx-4 cancels that horizontal inset so the band bleeds to the border on all edges,
+         while px-4 keeps the name's own text padding. --}}
+    <div class="-mx-4 px-4 pt-3 pb-2" style="background-color: {{ $headerPalette['bg'] }}; color: {{ $headerPalette['text'] }};">
         <div class="truncate text-base font-semibold">{{ $provider->full_name }}</div>
     </div>
 
