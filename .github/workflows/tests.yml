@@ -49,12 +49,16 @@ jobs:
 
       - name: Wait for SQL Server
         run: |
-          for i in $(seq 1 40); do
-            if php -r 'new PDO("sqlsrv:Server=127.0.0.1,1433;Database=master;TrustServerCertificate=1","sa",getenv("DB_PASSWORD"));' 2>/dev/null; then
+          docker ps -a
+          for i in $(seq 1 60); do
+            if php -r 'new PDO("sqlsrv:Server=127.0.0.1,1433;Database=master;TrustServerCertificate=1","sa",getenv("DB_PASSWORD"));' 2>/tmp/pdoerr; then
               echo "SQL Server ready"; exit 0
             fi
-            echo "waiting for SQL Server ($i)..."; sleep 3
+            echo "attempt $i: $(head -1 /tmp/pdoerr)"
+            sleep 3
           done
+          echo "=== azure-sql-edge container logs ==="
+          docker logs "$(docker ps -aq --filter ancestor=mcr.microsoft.com/azure-sql-edge:latest | head -1)" 2>&1 | tail -50
           echo "SQL Server never became ready"; exit 1
 
       - name: Create isolated test database
