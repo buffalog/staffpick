@@ -1,0 +1,93 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  phpunit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    # Real SQL Server (Azure SQL Edge) — the same engine as Railway/production, so the
+    # sp_* migrations and their SQL-Server-specific DDL are exercised faithfully.
+    services:
+      sqlsrv:
+        image: mcr.microsoft.com/azure-sql-edge:latest
+        env:
+          ACCEPT_EULA: "1"
+          MSSQL_SA_PASSWORD: "StaffPick_CI_2026!"
+          MSSQL_PID: Developer
+        ports:
+          - 1433:1433
+
+    env:
+      DB_PASSWORD: "StaffPick_CI_2026!"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: sqlsrv, pdo_sqlsrv, bcmath, exif, intl, pcntl, sockets, xml, zip, mbstring, gd, dom
+          tools: composer:v2
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Wait for SQL Server
+        run: |
+          for i in $(seq 1 40); do
+            if php -r 'new PDO("sqlsrv:Server=127.0.0.1,1433;Database=master","sa",getenv("DB_PASSWORD"));' 2>/dev/null; then
+              echo "SQL Server ready"; exit 0
+            fi
+            echo "waiting for SQL Server ($i)..."; sleep 3
+          done
+          echo "SQL Server never became ready"; exit 1
+
+      - name: Create isolated test database
+        run: |
+          php <<'PHP'
+          $pdo = new PDO("sqlsrv:Server=127.0.0.1,1433;Database=master", "sa", getenv("DB_PASSWORD"));
+          $pdo->exec("IF DB_ID('staffpick_test') IS NULL CREATE DATABASE [staffpick_test]");
+          echo "test database ready\n";
+          PHP
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          php artisan key:generate --env=testing
+          # Point the testing env at the isolated SQL Server DB (the committed .env.testing
+          # targets a local MySQL; CI runs against real SQL Server instead).
+          sed -i \
+            -e 's#^DB_CONNECTION=.*#DB_CONNECTION=sqlsrv#' \
+            -e 's#^DB_HOST=.*#DB_HOST=127.0.0.1#' \
+            -e 's#^DB_PORT=.*#DB_PORT=1433#' \
+            -e 's#^DB_DATABASE=.*#DB_DATABASE=staffpick_test#' \
+            -e 's#^DB_USERNAME=.*#DB_USERNAME=sa#' \
+            -e 's#^DB_PASSWORD=.*#DB_PASSWORD=StaffPick_CI_2026!#' \
+            .env.testing
+
+      - name: Build front-end assets
+        run: |
+          npm ci
+          npm run build
+
+      - name: Run test suite
+        run: php artisan test --compact
