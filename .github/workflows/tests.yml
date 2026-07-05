@@ -50,7 +50,7 @@ jobs:
       - name: Wait for SQL Server
         run: |
           for i in $(seq 1 40); do
-            if php -r 'new PDO("sqlsrv:Server=127.0.0.1,1433;Database=master","sa",getenv("DB_PASSWORD"));' 2>/dev/null; then
+            if php -r 'new PDO("sqlsrv:Server=127.0.0.1,1433;Database=master;TrustServerCertificate=1","sa",getenv("DB_PASSWORD"));' 2>/dev/null; then
               echo "SQL Server ready"; exit 0
             fi
             echo "waiting for SQL Server ($i)..."; sleep 3
@@ -60,7 +60,7 @@ jobs:
       - name: Create isolated test database
         run: |
           php <<'PHP'
-          $pdo = new PDO("sqlsrv:Server=127.0.0.1,1433;Database=master", "sa", getenv("DB_PASSWORD"));
+          $pdo = new PDO("sqlsrv:Server=127.0.0.1,1433;Database=master;TrustServerCertificate=1", "sa", getenv("DB_PASSWORD"));
           $pdo->exec("IF DB_ID('staffpick_test') IS NULL CREATE DATABASE [staffpick_test]");
           echo "test database ready\n";
           PHP
