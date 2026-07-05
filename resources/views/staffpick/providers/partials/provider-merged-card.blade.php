@@ -26,7 +26,7 @@
     {{-- Colored name band = the header of this card (name left, chips + tier right),
          flush to the top edge; the bg change to the white body reads as the divider. --}}
     <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-4" style="background-color: {{ $palette['bg'] }}; color: {{ $palette['text'] }};">
-        <div class="text-lg font-semibold">{{ $provider->full_name }}</div>
+        <div class="text-2xl font-bold">{{ $provider->full_name }}</div>
         <div class="flex flex-wrap items-center gap-1.5">
             @foreach ($disciplines as $discipline)
                 @include('staffpick.providers.partials.discipline-chip', ['abbreviation' => $discipline->abbreviation, 'name' => $discipline->name])
