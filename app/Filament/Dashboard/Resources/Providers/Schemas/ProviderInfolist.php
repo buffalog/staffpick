@@ -11,11 +11,8 @@ class ProviderInfolist
     {
         return $schema
             ->components([
-                // Colored band header (name + discipline chips + tier) — matches the card grid.
-                View::make('staffpick.providers.partials.provider-view-header')
-                    ->columnSpanFull(),
-
-                // Merged Identity/Address/Status/Payroll card. No latitude/longitude here.
+                // Single unified contact card: the colored name band (name + discipline chips +
+                // tier) is the card header, with Identity/Address/Status/Payroll below it.
                 View::make('staffpick.providers.partials.provider-merged-card')
                     ->columnSpanFull(),
 

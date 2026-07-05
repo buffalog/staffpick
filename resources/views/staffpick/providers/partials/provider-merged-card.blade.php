@@ -2,6 +2,9 @@
     /** @var \App\Models\StaffPick\Provider $provider */
     $provider = $record;
     $palette = \App\Filament\Dashboard\Support\DisciplinePalette::forAbbreviation($provider->discipline?->abbreviation);
+    $disciplines = $provider->disciplines
+        ->sortByDesc(fn ($discipline): bool => (bool) $discipline->pivot?->is_primary)
+        ->values();
 
     $address = collect([$provider->address, $provider->city, $provider->state, $provider->zip])
         ->filter()->implode(', ');
@@ -20,6 +23,18 @@
 @endphp
 
 <div class="overflow-hidden rounded-xl border-2 bg-white shadow-sm dark:bg-gray-900" style="border-color: {{ $palette['text'] }};">
+    {{-- Colored name band = the header of this card (name left, chips + tier right),
+         flush to the top edge; the bg change to the white body reads as the divider. --}}
+    <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-4" style="background-color: {{ $palette['bg'] }}; color: {{ $palette['text'] }};">
+        <div class="text-lg font-semibold">{{ $provider->full_name }}</div>
+        <div class="flex flex-wrap items-center gap-1.5">
+            @foreach ($disciplines as $discipline)
+                @include('staffpick.providers.partials.discipline-chip', ['abbreviation' => $discipline->abbreviation, 'name' => $discipline->name])
+            @endforeach
+            @include('staffpick.providers.partials.tier-badge', ['tier' => $provider->tier])
+        </div>
+    </div>
+
     <div class="p-5">
         {{-- Address (one compact line) + status pill opposite --}}
         <div class="flex items-start justify-between gap-4">
