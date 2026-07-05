@@ -11,7 +11,6 @@ use App\Models\StaffPick\Provider;
 use App\Models\StaffPick\ProviderCredential;
 use BackedEnum;
 use Filament\Actions\Action;
-use Filament\Tables\Grouping\Group;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
@@ -22,6 +21,7 @@ use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
@@ -69,6 +69,7 @@ class CredentialingQueue extends Page implements HasTable
             ->query(
                 ProviderCredential::query()
                     ->with(['provider', 'documentType'])
+                    ->visibleToCurrentUser()
                     ->whereHas('provider', fn (Builder $query) => $query->where('tenant_id', Filament::getTenant()?->id))
                     ->where(function (Builder $query) {
                         $query->whereIn('verification_status', [
