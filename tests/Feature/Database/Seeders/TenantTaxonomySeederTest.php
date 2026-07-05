@@ -22,7 +22,7 @@ class TenantTaxonomySeederTest extends FeatureTest
 
         $this->assertSame(3, Discipline::where('tenant_id', $tenant->id)->count());
         $this->assertSame(3, ProviderTier::where('tenant_id', $tenant->id)->count());
-        $this->assertSame(7, CredentialDocumentType::where('tenant_id', $tenant->id)->count());
+        $this->assertSame(40, CredentialDocumentType::where('tenant_id', $tenant->id)->count());
         $this->assertSame(4, OnHoldReason::where('tenant_id', $tenant->id)->count());
         $this->assertSame(4, CancellationReason::where('tenant_id', $tenant->id)->count());
         $this->assertSame(4, DeclineReason::where('tenant_id', $tenant->id)->count());
@@ -50,10 +50,31 @@ class TenantTaxonomySeederTest extends FeatureTest
         $this->assertTrue($license->has_expiry);
         $this->assertTrue($license->deactivate_on_expiry);
         $this->assertSame(30, $license->expiry_warning_days);
+        $this->assertTrue($license->visible_to_scheduler);
 
         $backgroundCheck = CredentialDocumentType::where('tenant_id', $tenant->id)->where('name', 'Background Check')->first();
         $this->assertNotNull($backgroundCheck);
         $this->assertFalse($backgroundCheck->has_expiry);
+    }
+
+    public function test_credential_types_carry_scheduler_visibility_flags(): void
+    {
+        $tenant = $this->createTenant();
+
+        app(TenantTaxonomySeeder::class)->seedForTenant($tenant);
+
+        // Clinical/licensing types are visible to the Scheduler view (sp_staff)...
+        $this->assertTrue(
+            (bool) CredentialDocumentType::where('tenant_id', $tenant->id)->where('name', 'CPR/BLS')->value('visible_to_scheduler'),
+        );
+        // ...HR-only documents are not.
+        $this->assertFalse(
+            (bool) CredentialDocumentType::where('tenant_id', $tenant->id)->where('name', 'Resume')->value('visible_to_scheduler'),
+        );
+
+        // Folded demo names are gone; the canonical labels are present.
+        $this->assertSame(0, CredentialDocumentType::where('tenant_id', $tenant->id)->where('name', 'CPR Certification')->where('is_active', true)->count());
+        $this->assertSame(1, CredentialDocumentType::where('tenant_id', $tenant->id)->where('name', 'Liability/Malpractice Insurance')->count());
     }
 
     public function test_seeding_is_idempotent_and_refreshes_attributes(): void
@@ -70,7 +91,7 @@ class TenantTaxonomySeederTest extends FeatureTest
         app(TenantTaxonomySeeder::class)->seedForTenant($tenant);
 
         $this->assertSame(3, ProviderTier::where('tenant_id', $tenant->id)->count());
-        $this->assertSame(7, CredentialDocumentType::where('tenant_id', $tenant->id)->count());
+        $this->assertSame(40, CredentialDocumentType::where('tenant_id', $tenant->id)->count());
         $this->assertSame(
             1,
             ProviderTier::where('tenant_id', $tenant->id)->where('name', 'Gold')->value('priority'),
@@ -95,21 +116,35 @@ class TenantTaxonomySeederTest extends FeatureTest
         // The other document types still exist — they're just no longer required to submit.
         $this->assertGreaterThan(1, CredentialDocumentType::where('tenant_id', $tenant->id)->count());
         $this->assertFalse(
-            (bool) CredentialDocumentType::where('tenant_id', $tenant->id)->where('name', 'CPR Certification')->value('is_required'),
+            (bool) CredentialDocumentType::where('tenant_id', $tenant->id)->where('name', 'CPR/BLS')->value('is_required'),
         );
     }
 
-    public function test_seed_for_tenant_keeps_the_global_all_required_default(): void
+    public function test_only_core_credential_types_are_required_by_default(): void
     {
-        // The shared seedForTenant() path (used by staffpick:setup-tenant for real
-        // tenants) must NOT be relaxed — every credential stays required.
+        // seedForTenant() (real tenants via staffpick:setup-tenant) keeps only the
+        // licensing essentials + Background Check + W-9 required; the broader HR/clinical
+        // taxonomy is optional so onboarding isn't walled behind 40 documents.
         $tenant = $this->createTenant();
 
         app(TenantTaxonomySeeder::class)->seedForTenant($tenant);
 
-        $this->assertSame(
-            0,
-            CredentialDocumentType::where('tenant_id', $tenant->id)->where('is_required', false)->count(),
+        $required = CredentialDocumentType::where('tenant_id', $tenant->id)
+            ->where('is_required', true)
+            ->orderBy('name')
+            ->pluck('name')
+            ->all();
+
+        $this->assertSame([
+            'Background Check',
+            'State License (OT)',
+            'State License (PT)',
+            'State License (SLP)',
+            'W-9',
+        ], $required);
+
+        $this->assertFalse(
+            (bool) CredentialDocumentType::where('tenant_id', $tenant->id)->where('name', 'Resume')->value('is_required'),
         );
     }
 
