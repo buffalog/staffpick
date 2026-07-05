@@ -71,6 +71,7 @@ jobs:
       - name: Create isolated test database
         run: |
           php <<'PHP'
+          <?php
           $pdo = new PDO("sqlsrv:Server=127.0.0.1,1433;Database=master;TrustServerCertificate=1", "sa", getenv("DB_PASSWORD"));
           $pdo->exec("IF DB_ID('staffpick_test') IS NULL CREATE DATABASE [staffpick_test]");
           echo "test database ready\n";
