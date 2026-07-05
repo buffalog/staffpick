@@ -12,6 +12,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\HtmlString;
 
 /**
  * Credentials shown on the provider view page, each with its verification status and a
@@ -21,11 +22,16 @@ class CredentialsRelationManager extends RelationManager
 {
     protected static string $relationship = 'credentials';
 
-    protected static ?string $title = 'Credentials';
-
     public function table(Table $table): Table
     {
         return $table
+            // Heading carries a red dot when any credential is expired/expiring soon — the
+            // same threshold as the compliance sweep (Provider::credentialAlertCount()).
+            ->heading(fn (): HtmlString => new HtmlString(
+                e(__('Credentials')).($this->getOwnerRecord()->credentialAlertCount() > 0
+                    ? ' <span class="inline-block h-2.5 w-2.5 rounded-full bg-red-500 align-middle" title="'.e(__('A credential is expired or expiring soon')).'"></span>'
+                    : '')
+            ))
             // Eager-load documentType so the Credential column doesn't N+1 per row.
             ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('documentType'))
             ->columns([

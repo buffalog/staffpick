@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 class Provider extends Model
@@ -320,6 +321,35 @@ class Provider extends Model
     public function credentials(): HasMany
     {
         return $this->hasMany(ProviderCredential::class);
+    }
+
+    /**
+     * Count of credentials that are expired or within their type's own
+     * expiry_warning_days window — the single source of the credential-attention
+     * threshold, shared by the compliance sweep, the stats widget, and the detail-page
+     * dot. expires_at is a date cast, so it's read via getRawOriginal (dblib-safe).
+     */
+    public function credentialAlertCount(): int
+    {
+        $today = now()->startOfDay();
+
+        return $this->credentials()->with('documentType')->get()
+            ->filter(function (ProviderCredential $credential) use ($today): bool {
+                if ($credential->status === 'expired') {
+                    return true;
+                }
+
+                $raw = $credential->getRawOriginal('expires_at');
+
+                if (blank($raw)) {
+                    return false;
+                }
+
+                $warningDays = (int) ($credential->documentType?->expiry_warning_days ?? 0);
+
+                return Carbon::parse($raw)->startOfDay()->lte($today->copy()->addDays($warningDays));
+            })
+            ->count();
     }
 
     public function availability(): HasMany

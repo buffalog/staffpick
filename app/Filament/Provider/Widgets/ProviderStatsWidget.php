@@ -6,7 +6,6 @@ use App\Filament\Dashboard\Pages\ProviderProfile;
 use App\Models\StaffPick\Assignment;
 use App\Models\StaffPick\IntakeRequest;
 use App\Models\StaffPick\Provider;
-use App\Models\StaffPick\ProviderCredential;
 use App\Models\Tenant;
 use Filament\Facades\Filament;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
@@ -99,27 +98,7 @@ class ProviderStatsWidget extends BaseWidget
      */
     private function credentialAlertCount(Provider $provider): int
     {
-        $today = now()->startOfDay();
-
-        return ProviderCredential::query()
-            ->where('provider_id', $provider->id)
-            ->with('documentType')
-            ->get()
-            ->filter(function (ProviderCredential $credential) use ($today): bool {
-                if ($credential->status === 'expired') {
-                    return true;
-                }
-
-                $raw = $credential->getRawOriginal('expires_at');
-
-                if (blank($raw)) {
-                    return false;
-                }
-
-                $warningDays = (int) ($credential->documentType?->expiry_warning_days ?? 0);
-
-                return Carbon::parse($raw)->startOfDay()->lte($today->copy()->addDays($warningDays));
-            })
-            ->count();
+        // Single source of the threshold lives on the model, shared with the detail page.
+        return $provider->credentialAlertCount();
     }
 }
