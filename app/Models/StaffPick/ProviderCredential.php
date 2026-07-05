@@ -2,7 +2,9 @@
 
 namespace App\Models\StaffPick;
 
+use App\Filament\Dashboard\Support\SpRoleAccess;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -74,5 +76,20 @@ class ProviderCredential extends Model
     public function verifiedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'verified_by_user_id');
+    }
+
+    /**
+     * The visibility gate (spec section 2): a credential row is visible if the viewer
+     * may see all credentials (HR/admin/super-admin) OR its type is flagged
+     * visible_to_scheduler. The Scheduler view (sp_staff) never even queries an HR-only
+     * row — it is absent, not redacted. Apply on every list/report query staff can reach.
+     */
+    public function scopeVisibleToCurrentUser(Builder $query): Builder
+    {
+        if (SpRoleAccess::canSeeAllCredentials()) {
+            return $query;
+        }
+
+        return $query->whereHas('documentType', fn (Builder $q): Builder => $q->where('visible_to_scheduler', true));
     }
 }

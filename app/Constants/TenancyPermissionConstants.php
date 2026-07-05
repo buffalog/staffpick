@@ -20,9 +20,12 @@ class TenancyPermissionConstants
 
     public const ROLE_SP_REFERRER = 'sp_referrer';
 
+    public const ROLE_SP_HR = 'sp_hr';
+
     public const SP_TENANT_ROLES = [
         self::ROLE_SP_ADMIN,
         self::ROLE_SP_STAFF,
+        self::ROLE_SP_HR,
         self::ROLE_SP_PROVIDER,
         self::ROLE_SP_REFERRER,
     ];

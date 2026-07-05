@@ -27,8 +27,9 @@ class CredentialsRelationManager extends RelationManager
             // No heading — this table is embedded inside the "Credentials" accordion, whose
             // header (with the alert dot) replaces it.
             ->heading('')
-            // Eager-load documentType so the Credential column doesn't N+1 per row.
-            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('documentType'))
+            // Eager-load documentType so the Credential column doesn't N+1 per row, and
+            // apply the scheduler-visibility gate — sp_staff never fetches HR-only rows.
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('documentType')->visibleToCurrentUser())
             ->columns([
                 TextColumn::make('documentType.name')->label(__('Credential')),
                 TextColumn::make('license_number')->label(__('License #'))->placeholder('—'),

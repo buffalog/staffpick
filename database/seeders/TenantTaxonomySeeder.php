@@ -50,16 +50,15 @@ class TenantTaxonomySeeder extends Seeder
     ];
 
     /**
-     * @var list<array{name: string, is_required: bool, has_expiry: bool, expiry_warning_days: int, deactivate_on_expiry: bool}>
+     * Demo-taxonomy names being folded into their canonical CliniConnects labels. On
+     * re-seed the old type is retired (deactivated) and any credentials on it are moved
+     * to the canonical type. old name => canonical name.
+     *
+     * @var array<string, string>
      */
-    private const CREDENTIAL_DOCUMENT_TYPES = [
-        ['name' => 'State License (PT)', 'is_required' => true, 'has_expiry' => true, 'expiry_warning_days' => 30, 'deactivate_on_expiry' => true, 'verification_method' => 'api', 'api_discipline' => 'PT', 'rapidapi_host' => 'physical-therapy-license-verification.p.rapidapi.com', 'deep_link_url_template' => null],
-        ['name' => 'State License (OT)', 'is_required' => true, 'has_expiry' => true, 'expiry_warning_days' => 30, 'deactivate_on_expiry' => true, 'verification_method' => 'deep_link', 'api_discipline' => 'OT', 'rapidapi_host' => null, 'deep_link_url_template' => 'https://mqa-internet.doh.state.fl.us/MQASearchServices/HealthCareProviders?LicenseNumber={license_number}&BoardCode=OT'],
-        ['name' => 'State License (SLP)', 'is_required' => true, 'has_expiry' => true, 'expiry_warning_days' => 30, 'deactivate_on_expiry' => true, 'verification_method' => 'deep_link', 'api_discipline' => 'SLP', 'rapidapi_host' => null, 'deep_link_url_template' => 'https://mqa-internet.doh.state.fl.us/MQASearchServices/HealthCareProviders?LicenseNumber={license_number}&BoardCode=SLP'],
-        ['name' => 'CPR Certification', 'is_required' => true, 'has_expiry' => true, 'expiry_warning_days' => 30, 'deactivate_on_expiry' => true, 'verification_method' => 'manual', 'api_discipline' => null, 'rapidapi_host' => null, 'deep_link_url_template' => null],
-        ['name' => 'Liability Insurance', 'is_required' => true, 'has_expiry' => true, 'expiry_warning_days' => 30, 'deactivate_on_expiry' => true, 'verification_method' => 'manual', 'api_discipline' => null, 'rapidapi_host' => null, 'deep_link_url_template' => null],
-        ['name' => 'Background Check', 'is_required' => true, 'has_expiry' => false, 'expiry_warning_days' => 60, 'deactivate_on_expiry' => false, 'verification_method' => 'manual', 'api_discipline' => null, 'rapidapi_host' => null, 'deep_link_url_template' => null],
-        ['name' => 'W-9', 'is_required' => true, 'has_expiry' => false, 'expiry_warning_days' => 0, 'deactivate_on_expiry' => false, 'verification_method' => 'manual', 'api_discipline' => null, 'rapidapi_host' => null, 'deep_link_url_template' => null],
+    private const CREDENTIAL_TYPE_FOLDS = [
+        'CPR Certification' => 'CPR/BLS',
+        'Liability Insurance' => 'Liability/Malpractice Insurance',
     ];
 
     /**
@@ -152,17 +151,27 @@ class TenantTaxonomySeeder extends Seeder
 
     public function run(): void
     {
-        $tenant = Tenant::query()->where('uuid', self::DEFAULT_TENANT_UUID)->first();
+        $tenants = Tenant::query()->get();
 
-        if ($tenant === null) {
-            $this->command?->warn("TenantTaxonomySeeder: no tenant with uuid '".self::DEFAULT_TENANT_UUID."' found — skipping.");
+        if ($tenants->isEmpty()) {
+            $this->command?->warn('TenantTaxonomySeeder: no tenants found — skipping.');
 
             return;
         }
 
-        $this->seedForTenant($tenant);
-        $this->relaxDemoCredentialRequirements($tenant->getKey());
-        $this->command?->info("Seeded default taxonomy for tenant '{$tenant->name}'.");
+        // Seed every existing tenant (new tenants are seeded on provision via
+        // SetupTenant::seedForTenant). Idempotent, so safe to re-run on each deploy.
+        foreach ($tenants as $tenant) {
+            $this->seedForTenant($tenant);
+        }
+
+        // Demo convenience applies to the fcts showcase tenant only.
+        $fcts = $tenants->firstWhere('uuid', self::DEFAULT_TENANT_UUID);
+        if ($fcts !== null) {
+            $this->relaxDemoCredentialRequirements($fcts->getKey());
+        }
+
+        $this->command?->info('Seeded default taxonomy for '.$tenants->count().' tenant(s).');
     }
 
     /**
@@ -214,7 +223,7 @@ class TenantTaxonomySeeder extends Seeder
             );
         }
 
-        foreach (self::CREDENTIAL_DOCUMENT_TYPES as $documentType) {
+        foreach ($this->credentialDocumentTypes() as $documentType) {
             CredentialDocumentType::updateOrCreate(
                 ['tenant_id' => $tenantId, 'name' => $documentType['name']],
                 [
@@ -223,6 +232,7 @@ class TenantTaxonomySeeder extends Seeder
                     'expiry_warning_days' => $documentType['expiry_warning_days'],
                     'deactivate_on_expiry' => $documentType['deactivate_on_expiry'],
                     'is_active' => true,
+                    'visible_to_scheduler' => $documentType['visible_to_scheduler'],
                     'verification_method' => $documentType['verification_method'],
                     'api_discipline' => $documentType['api_discipline'],
                     'rapidapi_host' => $documentType['rapidapi_host'],
@@ -234,6 +244,10 @@ class TenantTaxonomySeeder extends Seeder
         // Move any credentials still linked to the pre-split single "State License" type
         // onto the correct per-discipline type before retiring it.
         $this->repointLegacyStateLicenseCredentials($tenantId);
+
+        // Fold the demo-name credential types (CPR Certification, Liability Insurance)
+        // into their canonical CliniConnects labels, moving any linked credentials.
+        $this->foldRenamedCredentialTypes($tenantId);
 
         // Retire the pre-split single "State License" type (replaced by the per-discipline
         // PT/OT/SLP types). Deactivate rather than delete to preserve any linked credentials.
@@ -295,6 +309,126 @@ class TenantTaxonomySeeder extends Seeder
             }
 
             $credential->update(['document_type_id' => $target->getKey()]);
+        }
+    }
+
+    /**
+     * The canonical credential-type taxonomy: the three verification-wired professional
+     * license types (kept — they ARE the per-discipline license concept) plus the
+     * deduplicated CliniConnects HR/clinical document list. visible_to_scheduler=true for
+     * clinical/licensing types (sp_staff sees them); false for HR-only documents.
+     *
+     * has_expiry / expiry_warning_days here are sensible starting points; each type is
+     * editable per-tenant in the Credentialing Policies UI, so no code change is needed
+     * to correct one. OIG Search Results and HIPAA / Confidentiality Training are flagged
+     * HR-only by request but noted as overridable calls.
+     *
+     * @return list<array{name: string, is_required: bool, has_expiry: bool, expiry_warning_days: int, deactivate_on_expiry: bool, visible_to_scheduler: bool, verification_method: string, api_discipline: ?string, rapidapi_host: ?string, deep_link_url_template: ?string}>
+     */
+    private function credentialDocumentTypes(): array
+    {
+        // A plain manual (non-verification) document type. warn only applies when it expires.
+        $manual = fn (string $name, bool $visibleToScheduler, bool $hasExpiry, int $warn = 30): array => [
+            'name' => $name,
+            'is_required' => false,
+            'has_expiry' => $hasExpiry,
+            'expiry_warning_days' => $hasExpiry ? $warn : 0,
+            'deactivate_on_expiry' => false,
+            'visible_to_scheduler' => $visibleToScheduler,
+            'verification_method' => 'manual',
+            'api_discipline' => null,
+            'rapidapi_host' => null,
+            'deep_link_url_template' => null,
+        ];
+
+        return [
+            // Verification-wired per-discipline professional license (clinical => visible).
+            ['name' => 'State License (PT)', 'is_required' => true, 'has_expiry' => true, 'expiry_warning_days' => 30, 'deactivate_on_expiry' => true, 'visible_to_scheduler' => true, 'verification_method' => 'api', 'api_discipline' => 'PT', 'rapidapi_host' => 'physical-therapy-license-verification.p.rapidapi.com', 'deep_link_url_template' => null],
+            ['name' => 'State License (OT)', 'is_required' => true, 'has_expiry' => true, 'expiry_warning_days' => 30, 'deactivate_on_expiry' => true, 'visible_to_scheduler' => true, 'verification_method' => 'deep_link', 'api_discipline' => 'OT', 'rapidapi_host' => null, 'deep_link_url_template' => 'https://mqa-internet.doh.state.fl.us/MQASearchServices/HealthCareProviders?LicenseNumber={license_number}&BoardCode=OT'],
+            ['name' => 'State License (SLP)', 'is_required' => true, 'has_expiry' => true, 'expiry_warning_days' => 30, 'deactivate_on_expiry' => true, 'visible_to_scheduler' => true, 'verification_method' => 'deep_link', 'api_discipline' => 'SLP', 'rapidapi_host' => null, 'deep_link_url_template' => 'https://mqa-internet.doh.state.fl.us/MQASearchServices/HealthCareProviders?LicenseNumber={license_number}&BoardCode=SLP'],
+
+            // Clinical / licensing documents — visible_to_scheduler = true.
+            $manual('Competency', true, true),
+            $manual('Lymphedema Certificate', true, true, 60),
+            $manual('CPR/BLS', true, true),
+            $manual('Physical/Health Clearance', true, true),
+            $manual('TB Test', true, true),
+            $manual('TB Questionnaire', true, true),
+            $manual('Chest X-Ray', true, false),
+            $manual('Hepatitis B Form', true, false),
+            $manual('Flu Shot', true, true),
+            $manual('COVID-19 Vaccine', true, false),
+            $manual('COVID-19 Exemption Form', true, false),
+            $manual('HIV/AIDS Training Certificate', true, false),
+            $manual('Domestic Violence CEU', true, false),
+            $manual("Alzheimer's Continuing Education", true, false),
+            $manual('Prevention of Medical Errors CEU', true, false),
+            $manual('Human Trafficking Prevention', true, false),
+            $manual('Elder Abuse CEU', true, false),
+            $manual('OSHA/Bloodborne Pathogens CEU', true, true),
+            $manual('Liability/Malpractice Insurance', true, true),
+
+            // HR-only documents — visible_to_scheduler = false.
+            $manual("Driver's License", false, true),
+            $manual('Social Security Card', false, false),
+            $manual('Auto Insurance', false, true),
+            $manual('Vehicle Registration', false, true),
+            $manual('FCTS Hire Packet', false, false),
+            $manual('Agency Forms', false, false),
+            $manual('Activa Orientation Checklist', false, false),
+            $manual('Resume', false, false),
+            $manual('Rate Sheet', false, false),
+            $manual('HR Memo', false, false),
+            $manual('Work Comp Exemption Document', false, true, 60),
+            $manual('Level 2 Fingerprinting AHCA Affidavit', false, true, 60),
+            $manual('Level 2 Fingerprinting AHCA Verification', false, true, 60),
+            $manual('Other Licenses', false, true),
+            $manual('OIG Search Results', false, false),
+            $manual('HIPAA / Confidentiality Training', false, false),
+
+            // Pre-existing extras kept as their own active types (required, HR-only).
+            ['name' => 'Background Check', 'is_required' => true, 'has_expiry' => false, 'expiry_warning_days' => 60, 'deactivate_on_expiry' => false, 'visible_to_scheduler' => false, 'verification_method' => 'manual', 'api_discipline' => null, 'rapidapi_host' => null, 'deep_link_url_template' => null],
+            ['name' => 'W-9', 'is_required' => true, 'has_expiry' => false, 'expiry_warning_days' => 0, 'deactivate_on_expiry' => false, 'visible_to_scheduler' => false, 'verification_method' => 'manual', 'api_discipline' => null, 'rapidapi_host' => null, 'deep_link_url_template' => null],
+        ];
+    }
+
+    /**
+     * Retire the demo-name credential types (CPR Certification, Liability Insurance) in
+     * favour of their canonical CliniConnects labels, moving any linked credentials onto
+     * the canonical type first. The (provider_id, document_type_id) unique index means a
+     * provider that somehow holds both is de-duplicated: the old row is dropped rather
+     * than repointed into a collision. Idempotent — once the old type is gone this no-ops.
+     */
+    private function foldRenamedCredentialTypes(int $tenantId): void
+    {
+        foreach (self::CREDENTIAL_TYPE_FOLDS as $oldName => $newName) {
+            $old = CredentialDocumentType::withoutGlobalScopes()
+                ->where('tenant_id', $tenantId)
+                ->where('name', $oldName)
+                ->first();
+
+            $new = CredentialDocumentType::withoutGlobalScopes()
+                ->where('tenant_id', $tenantId)
+                ->where('name', $newName)
+                ->first();
+
+            if ($old === null || $new === null) {
+                continue;
+            }
+
+            foreach (ProviderCredential::where('document_type_id', $old->getKey())->get() as $credential) {
+                $collides = ProviderCredential::where('provider_id', $credential->provider_id)
+                    ->where('document_type_id', $new->getKey())
+                    ->exists();
+
+                if ($collides) {
+                    $credential->delete();
+                } else {
+                    $credential->update(['document_type_id' => $new->getKey()]);
+                }
+            }
+
+            $old->update(['is_active' => false]);
         }
     }
 
