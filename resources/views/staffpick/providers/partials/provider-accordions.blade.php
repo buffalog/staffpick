@@ -25,8 +25,15 @@
     .fi-sp-accordion__dot { display: inline-block; width: 9px; height: 9px; border-radius: 9999px; }
     .fi-sp-accordion__chevron { flex: none; transition: transform 0.2s ease; }
     .fi-sp-accordion__chevron.is-open { transform: rotate(180deg); }
-    .fi-sp-accordion__body { overflow: hidden; max-height: 0; transition: max-height 0.25s ease; }
     .fi-sp-accordion__inner { background: var(--surface-1); border-top: 0.5px solid var(--border); padding: 16px 18px; }
+
+    /* Flatten the embedded Credentials relation manager so it reads as accordion body,
+       not a boxed panel: strip its section shadow/ring/border/background and radius. */
+    .fi-sp-accordion__inner .fi-section,
+    .fi-sp-accordion__inner .fi-section-content-ctn,
+    .fi-sp-accordion__inner .fi-ta,
+    .fi-sp-accordion__inner .fi-ta-ctn { box-shadow: none !important; --tw-ring-color: transparent !important; background: transparent !important; border-color: transparent !important; border-radius: 0 !important; }
+    .fi-sp-accordion__inner--flush { padding: 0; }
 </style>
 
 <div class="fi-sp-accordions">
@@ -94,5 +101,17 @@
 
     <x-sp-accordion :title="__('Notes')" :dot="filled($provider->notes) ? '#f59e0b' : false">
         <div class="text-sm whitespace-pre-line text-gray-700 dark:text-gray-200">{!! filled($provider->notes) ? e($provider->notes) : '<span class="text-gray-400 dark:text-gray-500">'.e(__('No notes.')).'</span>' !!}</div>
+    </x-sp-accordion>
+
+    {{-- Credentials: the existing relation manager (table + Add + per-row Verify) embedded
+         so it keeps all behavior, flattened by the CSS above to sit in the accordion body.
+         Its own heading is dropped (this header replaces it); the red dot reflects the same
+         expiry threshold. --}}
+    <x-sp-accordion :title="__('Credentials')" :dot="$provider->credentialAlertCount() > 0 ? '#ef4444' : false">
+        @livewire(
+            \App\Filament\Dashboard\Resources\Providers\RelationManagers\CredentialsRelationManager::class,
+            ['ownerRecord' => $provider, 'pageClass' => \App\Filament\Dashboard\Resources\Providers\Pages\ViewProvider::class],
+            key('credentials-rm-'.$provider->id)
+        )
     </x-sp-accordion>
 </div>

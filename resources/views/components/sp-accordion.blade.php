@@ -6,7 +6,9 @@
 ])
 
 {{-- Flat, bordered accordion — the mocked design, not Filament's boxed+elevated Section.
-     Styling lives once in provider-accordions.blade.php; this is just the structure. --}}
+     Styling lives once in provider-accordions.blade.php; this is just the structure.
+     x-collapse (bundled by Filament) animates the body height and handles dynamic content
+     (e.g. the embedded Credentials relation manager). --}}
 <div x-data="{ open: false }" class="fi-sp-accordion">
     <button type="button" @click="open = ! open" :aria-expanded="open" class="fi-sp-accordion__header">
         <span class="fi-sp-accordion__label">
@@ -19,9 +21,8 @@
             <path d="m19.5 8.25-7.5 7.5-7.5-7.5" />
         </svg>
     </button>
-    <div class="fi-sp-accordion__body" x-ref="body"
-         :style="open ? 'max-height: ' + $refs.inner.scrollHeight + 'px' : 'max-height: 0px'">
-        <div x-ref="inner" class="fi-sp-accordion__inner">
+    <div x-show="open" x-collapse.duration.250ms x-cloak class="fi-sp-accordion__body">
+        <div class="fi-sp-accordion__inner">
             {{ $slot }}
         </div>
     </div>
