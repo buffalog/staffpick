@@ -162,6 +162,7 @@ class ImportCredentials extends Command
         $dryRun = (bool) $this->option('dry-run');
         $created = 0;
         $existing = 0;
+        $seen = [];
         $providersWithCredential = [];
         $unmatchedPeople = [];
         $unroutedLicense = [];
@@ -217,7 +218,14 @@ class ImportCredentials extends Command
                 $providersWithCredential[$provider->id] = true;
 
                 if ($dryRun) {
-                    $created++;
+                    // Predict the real firstOrCreate outcome: count distinct (provider, type)
+                    // pairs, so folded columns (both license columns, NSO+Liability, etc.)
+                    // collapse to one row exactly as the real run will.
+                    $key = $provider->id.':'.$typeId;
+                    if (! isset($seen[$key])) {
+                        $seen[$key] = true;
+                        $created++;
+                    }
 
                     continue;
                 }
