@@ -24,7 +24,8 @@
         {{-- Address (one compact line) + status pill opposite --}}
         <div class="flex items-start justify-between gap-4">
             <div class="text-sm text-gray-700 dark:text-gray-200">{!! $address !== '' ? e($address) : $notSet !!}</div>
-            <span class="inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset {{ $status['cls'] }}">
+            <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset {{ $status['cls'] }}">
+                <span class="h-1.5 w-1.5 rounded-full bg-current"></span>
                 {{ $status['label'] }}
             </span>
         </div>
