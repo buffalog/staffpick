@@ -15,6 +15,8 @@ use App\Services\UserVerificationService;
 use App\Services\VerificationProviders\PingramProvider;
 use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
+use Filament\Support\Facades\FilamentView;
+use Filament\View\PanelsRenderHook;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -64,5 +66,14 @@ class AppServiceProvider extends ServiceProvider
         FilamentAsset::register([
             Js::make('components-script', __DIR__.'/../../resources/js/components.js'),
         ]);
+
+        // Hide the redundant "View X" page heading on every resource view page across all
+        // panels — the record's name already shows in the page content. Breadcrumbs and
+        // header actions are untouched. Registered globally (no panel scope) so it applies
+        // everywhere at once.
+        FilamentView::registerRenderHook(
+            PanelsRenderHook::HEAD_END,
+            fn (): string => '<style>.fi-resource-view-record-page .fi-header-heading{display:none;}</style>',
+        );
     }
 }
