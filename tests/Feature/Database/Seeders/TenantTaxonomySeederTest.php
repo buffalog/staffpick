@@ -77,6 +77,26 @@ class TenantTaxonomySeederTest extends FeatureTest
         $this->assertSame(1, CredentialDocumentType::where('tenant_id', $tenant->id)->where('name', 'Liability/Malpractice Insurance')->count());
     }
 
+    public function test_reseed_preserves_admin_edited_credential_type_fields(): void
+    {
+        // The seeder runs on every deploy; per-tenant tuning done in the Credentialing
+        // Policies UI must survive it (only new types get their defaults seeded).
+        $tenant = $this->createTenant();
+        app(TenantTaxonomySeeder::class)->seedForTenant($tenant);
+
+        CredentialDocumentType::where('tenant_id', $tenant->id)
+            ->where('name', 'Resume')
+            ->update(['visible_to_scheduler' => true, 'has_expiry' => true, 'is_active' => false]);
+
+        app(TenantTaxonomySeeder::class)->seedForTenant($tenant);
+
+        $resume = CredentialDocumentType::where('tenant_id', $tenant->id)->where('name', 'Resume')->first();
+        $this->assertTrue((bool) $resume->visible_to_scheduler);
+        $this->assertTrue((bool) $resume->has_expiry);
+        $this->assertFalse((bool) $resume->is_active);
+        $this->assertSame(40, CredentialDocumentType::where('tenant_id', $tenant->id)->count());
+    }
+
     public function test_seeding_is_idempotent_and_refreshes_attributes(): void
     {
         $tenant = $this->createTenant();

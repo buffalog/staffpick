@@ -18,10 +18,12 @@ use Illuminate\Database\Seeder;
  * Seeds the default StaffPick taxonomy for a tenant: disciplines, provider tiers,
  * credential document types, and the on-hold / cancellation / decline reason lists.
  *
- * Idempotent — every row is keyed on (tenant_id, name) via updateOrCreate, so the
- * seeder is safe to run repeatedly and on each new tenant bootstrap. Run standalone
- * it targets the default 'fcts' tenant; staffpick:setup-tenant calls seedForTenant()
- * directly for whichever tenant it just provisioned.
+ * Idempotent and wired into DatabaseSeeder, so it runs on every deploy: run() seeds
+ * every existing tenant, and staffpick:setup-tenant calls seedForTenant() for a tenant
+ * it just provisioned. Rows are keyed on (tenant_id, name). Disciplines/tiers/reasons
+ * refresh to their code defaults; credential types only seed their admin-tunable fields
+ * (requiredness, expiry, scheduler visibility, active) on FIRST creation, so per-tenant
+ * edits in the Credentialing Policies UI survive the re-seed.
  */
 class TenantTaxonomySeeder extends Seeder
 {
@@ -224,21 +226,29 @@ class TenantTaxonomySeeder extends Seeder
         }
 
         foreach ($this->credentialDocumentTypes() as $documentType) {
-            CredentialDocumentType::updateOrCreate(
+            $type = CredentialDocumentType::firstOrNew(
                 ['tenant_id' => $tenantId, 'name' => $documentType['name']],
-                [
-                    'is_required' => $documentType['is_required'],
-                    'has_expiry' => $documentType['has_expiry'],
-                    'expiry_warning_days' => $documentType['expiry_warning_days'],
-                    'deactivate_on_expiry' => $documentType['deactivate_on_expiry'],
-                    'is_active' => true,
-                    'visible_to_scheduler' => $documentType['visible_to_scheduler'],
-                    'verification_method' => $documentType['verification_method'],
-                    'api_discipline' => $documentType['api_discipline'],
-                    'rapidapi_host' => $documentType['rapidapi_host'],
-                    'deep_link_url_template' => $documentType['deep_link_url_template'],
-                ],
             );
+
+            // Admin-tunable fields (requiredness, expiry, scheduler visibility, active) are
+            // seeded ONLY when the type is first created, so per-tenant edits made in the
+            // Credentialing Policies UI survive the every-deploy re-seed. Verification wiring
+            // is code-owned and kept current on every run.
+            if (! $type->exists) {
+                $type->is_required = $documentType['is_required'];
+                $type->has_expiry = $documentType['has_expiry'];
+                $type->expiry_warning_days = $documentType['expiry_warning_days'];
+                $type->deactivate_on_expiry = $documentType['deactivate_on_expiry'];
+                $type->visible_to_scheduler = $documentType['visible_to_scheduler'];
+                $type->is_active = true;
+            }
+
+            $type->verification_method = $documentType['verification_method'];
+            $type->api_discipline = $documentType['api_discipline'];
+            $type->rapidapi_host = $documentType['rapidapi_host'];
+            $type->deep_link_url_template = $documentType['deep_link_url_template'];
+
+            $type->save();
         }
 
         // Move any credentials still linked to the pre-split single "State License" type
