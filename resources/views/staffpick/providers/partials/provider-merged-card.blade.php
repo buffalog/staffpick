@@ -24,10 +24,10 @@
         {{-- Address (one compact line) + status pill opposite --}}
         <div class="flex items-start justify-between gap-4">
             <div class="text-sm text-gray-700 dark:text-gray-200">{!! $address !== '' ? e($address) : $notSet !!}</div>
-            <span class="inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset {{ $status['cls'] }}">
+            <span class="inline-flex shrink-0 items-center rounded-full text-xs font-medium ring-1 ring-inset {{ $status['cls'] }}" style="padding: 5px 12px;">
                 {{-- Dot styled inline (h-1.5/w-1.5/bg-current aren't in Filament's CSS build);
                      background: currentColor = the pill's darker same-hue text color. --}}
-                <span style="width: 6px; height: 6px; border-radius: 9999px; background: currentColor; margin-right: 6px; flex: none;"></span>
+                <span style="width: 6px; height: 6px; border-radius: 9999px; background: currentColor; margin-right: 8px; flex: none;"></span>
                 {{ $status['label'] }}
             </span>
         </div>
