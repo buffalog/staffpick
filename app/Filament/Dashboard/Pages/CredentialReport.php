@@ -119,7 +119,9 @@ class CredentialReport extends Page implements HasForms, HasTable
 
         if ($typeId !== null) {
             // Only the credential of the selected type — first() below is that one (or none).
-            $query->with(['credentials' => fn (Builder $q): Builder => $q->where('document_type_id', $typeId)]);
+            // Eager-load constraint closures receive the Relation (HasMany), not a Builder,
+            // so no strict Builder type hint here.
+            $query->with(['credentials' => fn ($relation) => $relation->where('document_type_id', $typeId)]);
         } else {
             $query->whereRaw('1 = 0');
         }
