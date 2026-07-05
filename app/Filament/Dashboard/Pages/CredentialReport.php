@@ -97,7 +97,12 @@ class CredentialReport extends Page implements HasForms, HasTable
                         ->all())
                     ->searchable()
                     ->live()
-                    ->afterStateUpdated(fn ($state) => $this->documentTypeId = filled($state) ? (int) $state : null)
+                    ->afterStateUpdated(function ($state): void {
+                        $this->documentTypeId = filled($state) ? (int) $state : null;
+                        // The table is built once at boot (before this runs), so rebuild it
+                        // with the new type; otherwise it renders one selection stale.
+                        $this->resetTable();
+                    })
                     ->placeholder(__('Select a credential type…')),
             ])
             ->statePath('data');
