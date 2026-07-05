@@ -47,6 +47,13 @@ class CredentialReport extends Page implements HasForms, HasTable
     /** @var array<string, mixed> */
     public array $data = [];
 
+    /**
+     * The selected type id, mirrored out of the form into a first-class public property so
+     * the table reads it reliably each request (reading the form's statePath array from
+     * table() proved lifecycle-flaky — the table rendered before the array hydrated).
+     */
+    public ?int $documentTypeId = null;
+
     /** Memoized selected type (per request) so warn-days isn't re-queried per row. */
     protected ?CredentialDocumentType $selectedType = null;
 
@@ -90,6 +97,7 @@ class CredentialReport extends Page implements HasForms, HasTable
                         ->all())
                     ->searchable()
                     ->live()
+                    ->afterStateUpdated(fn ($state) => $this->documentTypeId = filled($state) ? (int) $state : null)
                     ->placeholder(__('Select a credential type…')),
             ])
             ->statePath('data');
@@ -175,9 +183,7 @@ class CredentialReport extends Page implements HasForms, HasTable
 
     private function selectedTypeId(): ?int
     {
-        $id = $this->data['document_type_id'] ?? null;
-
-        return filled($id) ? (int) $id : null;
+        return $this->documentTypeId;
     }
 
     private function statusFor(Provider $provider, ?int $typeId): string
