@@ -40,3 +40,16 @@
     white-space: normal;
     overflow-wrap: anywhere;
 }
+
+/*
+ * Table filters (funnel) trigger: give the icon breathing room in every table header.
+ * Filament's `.fi-icon-btn` carries `-m-2` (−8px) to widen its hit area without affecting
+ * layout, but that negative margin collapses the flex trigger wrapper to the icon's bare
+ * 20×20 box, so the funnel sits flush against all four edges and reads as broken. The
+ * 0.5rem padding cancels the negative margin, restoring the button's natural 36px footprint
+ * with the icon centered. Targets the shared Filament class so it's consistent across every
+ * table, not a per-view patch.
+ */
+.fi-ta-filters-trigger-action-ctn {
+    padding: 0.5rem;
+}
