@@ -64,10 +64,17 @@ class FeatureTest extends TestCase
         Filament::setCurrentPanel(Filament::getPanel('dashboard'));
         Filament::setTenant($tenant, isQuiet: true);
 
-        app(TenantPermissionService::class)->assignTenantUserRole(
+        // Assign sp_admin alongside the legacy admin role. StaffPick pages/policies gate on
+        // sp_admin/sp_staff via SpRoleAccess after the RBAC overhaul, so a test admin must
+        // carry sp_admin to authorize the same way a real admin account does in production —
+        // without it every canAccess() abort_unless(...) returns 403.
+        app(TenantPermissionService::class)->assignTenantUserRoles(
             $tenant,
             $user,
-            TenancyPermissionConstants::ROLE_ADMIN,
+            [
+                TenancyPermissionConstants::ROLE_ADMIN,
+                TenancyPermissionConstants::ROLE_SP_ADMIN,
+            ],
         );
 
         return $user;
