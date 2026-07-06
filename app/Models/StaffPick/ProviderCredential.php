@@ -92,4 +92,21 @@ class ProviderCredential extends Model
 
         return $query->whereHas('documentType', fn (Builder $q): Builder => $q->where('visible_to_scheduler', true));
     }
+
+    /**
+     * Whether the current user may VERIFY this credential — the write-side mirror of the
+     * visibility rule above (verifiable iff visible). HR/admin/super-admin may verify any
+     * type; sp_staff (schedulers) may verify only types flagged visible_to_scheduler — the
+     * same PT/OT/PTA state-license types they can see. HR-only types (visible_to_scheduler
+     * false, e.g. driver's license) stay admin/HR-only, consistent with staff never seeing
+     * those rows. Anyone without an sp role may not verify.
+     */
+    public function isVerifiableByCurrentUser(): bool
+    {
+        if (SpRoleAccess::canSeeAllCredentials()) {
+            return true;
+        }
+
+        return SpRoleAccess::isAdminOrStaff() && (bool) $this->documentType?->visible_to_scheduler;
+    }
 }

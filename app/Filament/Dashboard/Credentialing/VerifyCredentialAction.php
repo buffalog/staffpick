@@ -11,7 +11,6 @@ use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Support\Icons\Heroicon;
-use Illuminate\Support\Facades\Gate;
 
 /**
  * Reusable "Verify" action for a ProviderCredential, shared by the Credentialing Queue
@@ -22,7 +21,10 @@ use Illuminate\Support\Facades\Gate;
  *                that opens the pre-filled state-board URL in a new tab.
  *  - manual    — opens a modal to mark verified/failed with notes.
  *
- * Gated on Provider 'update' (StaffPickAdminPolicy → tenant admins only).
+ * Authorization is scoped per credential type via ProviderCredential::isVerifiableByCurrentUser
+ * (verifiable iff visible): admin/HR/super-admin verify any type; sp_staff verify only
+ * types flagged visible_to_scheduler. The action is hidden on rows the user can't verify,
+ * and the handler re-checks so a denied request gets a clear message rather than a raw 403.
  */
 class VerifyCredentialAction
 {
@@ -32,6 +34,7 @@ class VerifyCredentialAction
             ->label(__('Verify Now'))
             ->icon(Heroicon::OutlinedShieldCheck)
             ->color('primary')
+            ->visible(fn (ProviderCredential $record): bool => $record->isVerifiableByCurrentUser())
             ->modalHeading(__('Mark credential verification'))
             ->schema(fn (ProviderCredential $record): array => $record->documentType?->verification_method === CredentialDocumentType::METHOD_MANUAL
                 ? [
@@ -46,7 +49,17 @@ class VerifyCredentialAction
                 ]
                 : [])
             ->action(function (ProviderCredential $record, array $data): void {
-                abort_unless(Gate::allows('update', $record->provider), 403);
+                // Re-check server-side (the ->visible() gate hides the button, but a forged
+                // Livewire call must still be refused). Denied = a clear, non-retryable
+                // message rather than a raw 403 that surfaces as a generic "try again" toast.
+                if (! $record->isVerifiableByCurrentUser()) {
+                    Notification::make()
+                        ->title(__('Insufficient permission to verify this credential type'))
+                        ->danger()
+                        ->send();
+
+                    return;
+                }
 
                 $method = $record->documentType?->verification_method;
 
