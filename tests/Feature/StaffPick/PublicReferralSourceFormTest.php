@@ -80,7 +80,7 @@ class PublicReferralSourceFormTest extends FeatureTest
         $this->assertNotNull($source);
         $this->assertSame(ReferralSource::STATUS_PENDING, $source->status);
         $this->assertSame('Dr. Casey Nguyen', $source->contact_name);
-        $this->assertSame($this->tenant->id, $source->tenant_id);
+        $this->assertSame($this->tenant->id, (int) $source->tenant_id);
 
         Mail::assertQueued(ReferralSourceRegisteredStaff::class);
         Mail::assertQueued(ReferralSourceRegisteredApplicant::class);

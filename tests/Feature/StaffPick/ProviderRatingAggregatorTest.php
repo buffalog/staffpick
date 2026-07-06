@@ -106,7 +106,7 @@ class ProviderRatingAggregatorTest extends FeatureTest
         $this->assertNotNull($review);
         $this->assertSame(ProviderRatingReview::TYPE_PROMOTION, $review->review_type);
         $this->assertSame(ProviderRatingReview::STATUS_PENDING, $review->status);
-        $this->assertSame($silver->id, $review->current_tier_id);
+        $this->assertSame($silver->id, (int) $review->current_tier_id);
         $this->assertSame($gold->id, $review->suggested_tier_id);
     }
 
@@ -130,7 +130,7 @@ class ProviderRatingAggregatorTest extends FeatureTest
         $review = ProviderRatingReview::where('provider_id', $provider->id)->first();
         $this->assertNotNull($review);
         $this->assertSame(ProviderRatingReview::TYPE_DEMOTION, $review->review_type);
-        $this->assertSame($silver->id, $review->suggested_tier_id);
+        $this->assertSame($silver->id, (int) $review->suggested_tier_id);
     }
 
     public function test_does_not_create_review_below_min_survey_count(): void

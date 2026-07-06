@@ -36,7 +36,7 @@ class ProviderDisciplinesTest extends FeatureTest
         $provider->assignPrimaryDiscipline();
         $provider->refresh();
 
-        $this->assertSame($pt->id, $provider->discipline_id);
+        $this->assertSame($pt->id, (int) $provider->discipline_id);
         $this->assertEqualsCanonicalizing([$pt->id, $ot->id], $provider->disciplines()->pluck('sp_disciplines.id')->all());
         $this->assertSame($pt->id, (int) $provider->disciplines()->wherePivot('is_primary', true)->value('sp_disciplines.id'));
     }
@@ -53,7 +53,7 @@ class ProviderDisciplinesTest extends FeatureTest
         $provider->assignPrimaryDiscipline();
         $provider->refresh();
 
-        $this->assertSame($ot->id, $provider->discipline_id);
+        $this->assertSame($ot->id, (int) $provider->discipline_id);
         $this->assertSame($ot->id, (int) $provider->disciplines()->wherePivot('is_primary', true)->value('sp_disciplines.id'));
     }
 

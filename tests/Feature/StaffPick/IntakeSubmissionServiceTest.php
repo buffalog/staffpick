@@ -117,7 +117,7 @@ class IntakeSubmissionServiceTest extends FeatureTest
         $subject = Subject::withoutGlobalScopes()->find($intake->subject_id);
         $this->assertNotNull($subject);
         $this->assertSame('Casey', $subject->first_name);
-        $this->assertSame($this->tenant->id, $subject->tenant_id);
+        $this->assertSame($this->tenant->id, (int) $subject->tenant_id);
         $this->assertSame('Post-surgical rehab', $subject->diagnosis);
         // Geocoded from the faked Nominatim response.
         $this->assertSame(26.82056, (float) $subject->latitude);

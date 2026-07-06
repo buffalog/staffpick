@@ -21,7 +21,7 @@ class TenantTaxonomySeederTest extends FeatureTest
         app(TenantTaxonomySeeder::class)->seedForTenant($tenant);
 
         $this->assertSame(3, Discipline::where('tenant_id', $tenant->id)->count());
-        $this->assertSame(3, ProviderTier::where('tenant_id', $tenant->id)->count());
+        $this->assertSame(4, ProviderTier::where('tenant_id', $tenant->id)->count());
         $this->assertSame(40, CredentialDocumentType::where('tenant_id', $tenant->id)->count());
         $this->assertSame(4, OnHoldReason::where('tenant_id', $tenant->id)->count());
         $this->assertSame(4, CancellationReason::where('tenant_id', $tenant->id)->count());
@@ -42,7 +42,7 @@ class TenantTaxonomySeederTest extends FeatureTest
 
         $gold = ProviderTier::where('tenant_id', $tenant->id)->where('name', 'Gold')->first();
         $this->assertNotNull($gold);
-        $this->assertSame(1, $gold->priority);
+        $this->assertSame(2, $gold->priority);
 
         $license = CredentialDocumentType::where('tenant_id', $tenant->id)->where('name', 'State License (PT)')->first();
         $this->assertNotNull($license);
@@ -110,11 +110,11 @@ class TenantTaxonomySeederTest extends FeatureTest
 
         app(TenantTaxonomySeeder::class)->seedForTenant($tenant);
 
-        $this->assertSame(3, ProviderTier::where('tenant_id', $tenant->id)->count());
+        $this->assertSame(4, ProviderTier::where('tenant_id', $tenant->id)->count());
         $this->assertSame(40, CredentialDocumentType::where('tenant_id', $tenant->id)->count());
         $this->assertSame(
-            1,
-            ProviderTier::where('tenant_id', $tenant->id)->where('name', 'Gold')->value('priority'),
+            2,
+            (int) ProviderTier::where('tenant_id', $tenant->id)->where('name', 'Gold')->value('priority'),
         );
     }
 

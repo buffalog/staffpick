@@ -104,7 +104,7 @@ class MatchDispatchTest extends FeatureTest
         $this->assertNotNull($case->last_match_sent_at);
 
         $offer = $case->assignmentOffers()->where('status', AssignmentOffer::STATUS_PENDING)->first();
-        $this->assertSame($platinum->id, $offer->provider_id);
+        $this->assertSame($platinum->id, (int) $offer->provider_id);
         $this->assertSame('Platinum', $offer->tier_at_offer);
         $this->assertSame(120, $offer->response_window_minutes);
     }

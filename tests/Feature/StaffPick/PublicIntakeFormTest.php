@@ -113,7 +113,7 @@ class PublicIntakeFormTest extends FeatureTest
 
         $this->assertNotNull($intake);
         $this->assertSame('pending', $intake->status);
-        $this->assertSame($this->tenant->id, $intake->tenant_id);
+        $this->assertSame($this->tenant->id, (int) $intake->tenant_id);
         $component->assertSet('referenceNumber', $intake->reference_number);
     }
 

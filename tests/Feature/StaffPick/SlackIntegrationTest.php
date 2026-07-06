@@ -233,7 +233,7 @@ class SlackIntegrationTest extends FeatureTest
         $intake = IntakeRequest::where('tenant_id', $this->tenant->id)->firstOrFail();
         $this->assertSame('draft', $intake->status);
         $this->assertSame('C12345', $intake->slack_channel_id);
-        $this->assertSame($this->tenant->id, $intake->tenant_id);
+        $this->assertSame($this->tenant->id, (int) $intake->tenant_id);
 
         $this->assertDatabaseHas('sp_slack_webhook_logs', [
             'tenant_id' => $this->tenant->id,
