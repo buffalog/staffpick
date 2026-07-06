@@ -6,7 +6,6 @@ use App\Filament\Dashboard\Resources\IntakeRequests\Concerns\AssignsMatchedProvi
 use App\Filament\Dashboard\Resources\IntakeRequests\IntakeRequestResource;
 use App\Filament\Dashboard\Resources\IntakeRequests\Tables\IntakeRequestsTable;
 use App\Filament\Dashboard\Support\HelpHeaderAction;
-use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -39,7 +38,6 @@ class ListIntakeRequests extends ListRecords
     {
         return [
             HelpHeaderAction::make('scheduler/managing-intake-requests'),
-            CreateAction::make(),
         ];
     }
 }

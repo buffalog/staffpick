@@ -119,14 +119,15 @@ class IntakeRequestResource extends Resource
     {
         $group = static::getNavigationGroup();
 
-        $item = fn (string $label, string $page, int $sort): NavigationItem => NavigationItem::make($label)
+        $item = fn (string $label, string $page, int $sort, string|BackedEnum|null $icon = null): NavigationItem => NavigationItem::make($label)
             ->group($group)
-            ->icon(static::getNavigationIcon())
+            ->icon($icon ?? static::getNavigationIcon())
             ->sort($sort)
             ->url(static::getUrl($page))
             ->isActiveWhen(fn (): bool => request()->routeIs(static::getRouteBaseName().'.'.$page));
 
         return [
+            $item(__('New :label', ['label' => static::getModelLabel()]), 'create', 0, Heroicon::OutlinedPencil),
             $item(__('All Cases'), 'all-cases', 1),
             $item(__('Active Cases'), 'cases', 2),
             $item(__('Pending Cases'), 'index', 3),
