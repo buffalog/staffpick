@@ -155,6 +155,13 @@ class ProviderForm
                             ->dehydrated(false)
                             ->visible(fn (Get $get): bool => self::isOtherSpecialtySelected($get))
                             ->columnSpanFull(),
+                        Select::make('languages')
+                            ->label(__('Languages Spoken'))
+                            ->relationship('languages', 'name')
+                            ->multiple()
+                            ->searchable()
+                            ->preload()
+                            ->columnSpanFull(),
                         Toggle::make('is_contractor')
                             ->label(__('Is Contractor'))
                             ->helperText(__('Whether this provider is a 1099 contractor rather than an employee.'))
@@ -175,6 +182,10 @@ class ProviderForm
                             ->numeric()
                             ->minValue(0)
                             ->default(25),
+                        Toggle::make('can_adjust_own_service_zones')
+                            ->label(__('Can Adjust Own Service Zones'))
+                            ->helperText(__('Whether this provider may adjust their own service zones.'))
+                            ->columnSpanFull(),
                     ]),
 
                 Section::make(__('Status'))

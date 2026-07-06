@@ -5,6 +5,7 @@
         ->sortByDesc(fn ($discipline): bool => (bool) $discipline->pivot?->is_primary)
         ->values();
     $specialties = $provider->specialties->pluck('name')->filter();
+    $languages = $provider->languages->pluck('name')->filter();
     $feedUrl = $provider->calendarFeedUrl();
     $notSet = '<span class="text-gray-400 dark:text-gray-500">'.__('Not set').'</span>';
     $field = fn (?string $value): string => filled($value) ? e($value) : $notSet;
@@ -70,6 +71,16 @@
                     @endforelse
                 </dd>
             </div>
+            <div class="sm:col-span-2">
+                <dt class="text-xs text-gray-500 dark:text-gray-400">{{ __('Languages Spoken') }}</dt>
+                <dd class="mt-1 flex flex-wrap gap-1.5">
+                    @forelse ($languages as $language)
+                        <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 ring-1 ring-inset ring-gray-950/10 dark:bg-white/10 dark:text-gray-200">{{ $language }}</span>
+                    @empty
+                        {!! $notSet !!}
+                    @endforelse
+                </dd>
+            </div>
         </dl>
     </x-sp-accordion>
 
@@ -82,6 +93,10 @@
             <div>
                 <dt class="text-xs text-gray-500 dark:text-gray-400">{{ __('Maximum Radius') }}</dt>
                 <dd class="font-medium text-gray-900 dark:text-white">{{ $provider->radius_max_miles }}{{ __(' mi') }}</dd>
+            </div>
+            <div>
+                <dt class="text-xs text-gray-500 dark:text-gray-400">{{ __('Can Adjust Own Service Zones') }}</dt>
+                <dd class="font-medium text-gray-900 dark:text-white">{{ $provider->can_adjust_own_service_zones ? __('Yes') : __('No') }}</dd>
             </div>
         </dl>
     </x-sp-accordion>
