@@ -4,6 +4,7 @@ namespace App\Filament\Dashboard\Resources\Providers\Pages;
 
 use App\Filament\Dashboard\Resources\Providers\Concerns\PersistsOtherSpecialtyNote;
 use App\Filament\Dashboard\Resources\Providers\ProviderResource;
+use App\Filament\Dashboard\Support\SpRoleAccess;
 use App\Models\StaffPick\Specialty;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ForceDeleteAction;
@@ -40,6 +41,31 @@ class EditProvider extends EditRecord
             $data['specialty_other_note'] = $this->record->specialties()
                 ->where('sp_specialties.id', $otherId)
                 ->first()?->pivot?->notes;
+        }
+
+        return $data;
+    }
+
+    /**
+     * Defense in depth for the field scoping: the privileged fields are already hidden from
+     * sp_staff in the form, but strip them here too so a forged request can never write them.
+     * Absent keys leave the stored values untouched on an edit.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        if (! SpRoleAccess::isHrOrAdmin()) {
+            unset(
+                $data['tier_id'],
+                $data['payroll_id'],
+                $data['tax_id'],
+                $data['status'],
+                $data['is_active'],
+                $data['deactivated_at'],
+                $data['deactivation_reason'],
+            );
         }
 
         return $data;

@@ -2,13 +2,13 @@
 
 namespace App\Models\StaffPick;
 
+use App\Models\StaffPick\Concerns\StoresSqlServerBlob;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\DB;
 
 /**
  * A proof-of-credential document stored as a BLOB (VARBINARY(MAX)) in Azure SQL. Inherits
@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\DB;
  */
 class CredentialAttachment extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, StoresSqlServerBlob;
 
     /** Accepted upload extensions (final list — enforced server-side, not just client accept). */
     public const ACCEPTED_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png', 'heic', 'docx', 'doc'];
@@ -93,52 +93,6 @@ class CredentialAttachment extends Model
     public function scopeWithoutContent(Builder $query): Builder
     {
         return $query->select(self::METADATA_COLUMNS);
-    }
-
-    /**
-     * Write the BLOB. pdo_sqlsrv can't bind a PHP string into VARBINARY(MAX) (implicit
-     * nvarchar->varbinary conversion is disallowed), so the bytes travel as a hex string
-     * and SQL Server rebuilds them: CONVERT(VARBINARY(MAX), <hex>, 2). SQL Server specific
-     * by design — this table is Azure-SQL-only.
-     */
-    public function storeContent(string $bytes): void
-    {
-        DB::update(
-            "UPDATE {$this->getTable()} SET content = CONVERT(VARBINARY(MAX), ?, 2) WHERE id = ?",
-            [bin2hex($bytes), $this->getKey()],
-        );
-    }
-
-    /**
-     * Read the BLOB back as raw bytes. Fetched as a hex string (CONVERT style 2) to avoid
-     * pdo_sqlsrv returning VARBINARY(MAX) as a stream or mangling its encoding; hex2bin
-     * restores the exact original bytes. Null when never set or cleared on soft delete.
-     */
-    public function readContent(): ?string
-    {
-        $row = DB::selectOne(
-            "SELECT CONVERT(VARCHAR(MAX), content, 2) AS hex FROM {$this->getTable()} WHERE id = ?",
-            [$this->getKey()],
-        );
-
-        return ($row === null || $row->hex === null) ? null : hex2bin($row->hex);
-    }
-
-    /** Whether the BLOB still holds bytes (false once tombstoned). */
-    public function hasContent(): bool
-    {
-        $row = DB::selectOne(
-            "SELECT DATALENGTH(content) AS len FROM {$this->getTable()} WHERE id = ?",
-            [$this->getKey()],
-        );
-
-        return $row !== null && $row->len !== null && (int) $row->len > 0;
-    }
-
-    /** Clear the BLOB to reclaim storage (binding NULL needs no binary conversion). */
-    public function clearContent(): void
-    {
-        DB::update("UPDATE {$this->getTable()} SET content = NULL WHERE id = ?", [$this->getKey()]);
     }
 
     public function isImage(): bool

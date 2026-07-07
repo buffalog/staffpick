@@ -3,11 +3,11 @@
 namespace App\Filament\Dashboard\Resources\Providers\Schemas;
 
 use App\Constants\UsStates;
+use App\Filament\Dashboard\Support\SpRoleAccess;
 use App\Models\StaffPick\Specialty;
 use App\Models\StaffPick\TenantConfig;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DateTimePicker;
-use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -51,17 +51,6 @@ class ProviderForm
                             ->label(__('Alternate Phone'))
                             ->tel()
                             ->maxLength(30),
-                        FileUpload::make('photo')
-                            ->label(__('Profile Photo'))
-                            ->helperText(__('Optional. Uploaded by the provider or by staff on their behalf.'))
-                            ->image()
-                            ->avatar()
-                            ->imageEditor()
-                            ->disk('public')
-                            ->directory('provider-photos')
-                            ->visibility('public')
-                            ->maxSize(5120)
-                            ->columnSpanFull(),
                     ]),
 
                 Section::make(__('Address'))
@@ -117,7 +106,9 @@ class ProviderForm
                             ->label(__('Tier'))
                             ->relationship('tier', 'name')
                             ->searchable()
-                            ->preload(),
+                            ->preload()
+                            // Privileged: sp_staff may not set tier.
+                            ->visible(fn (): bool => SpRoleAccess::isHrOrAdmin()),
                         Select::make('office_id')
                             ->label(__('Office'))
                             ->relationship('office', 'name')
@@ -190,6 +181,8 @@ class ProviderForm
 
                 Section::make(__('Status'))
                     ->columns(2)
+                    // Privileged: active/deactivated status is hr/admin/super-admin only.
+                    ->visible(fn (): bool => SpRoleAccess::isHrOrAdmin())
                     ->schema([
                         Select::make('status')
                             ->label(__('Status'))
@@ -215,6 +208,8 @@ class ProviderForm
 
                 Section::make(__('Payroll'))
                     ->columns(2)
+                    // Privileged: payroll id + tax id are hr/admin/super-admin only.
+                    ->visible(fn (): bool => SpRoleAccess::isHrOrAdmin())
                     ->schema([
                         TextInput::make('payroll_id')
                             ->label(__('Payroll ID'))

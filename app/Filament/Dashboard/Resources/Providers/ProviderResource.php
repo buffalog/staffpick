@@ -51,8 +51,12 @@ class ProviderResource extends Resource
     {
         return parent::getEloquentQuery()
             // Eager-load the relationships the list/card views render (discipline, tier,
-            // languages) to avoid an N+1 across the rows.
-            ->with(['discipline', 'disciplines', 'tier', 'languages'])
+            // languages) to avoid an N+1 across the rows. The photo relation is loaded
+            // metadata-only (never the BLOB) so the avatar can build its versioned URL.
+            ->with([
+                'discipline', 'disciplines', 'tier', 'languages',
+                'photo' => fn ($query) => $query->select(['id', 'provider_id', 'updated_at']),
+            ])
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
             ]);
@@ -78,7 +82,9 @@ class ProviderResource extends Resource
 
     public static function canAccess(): bool
     {
-        return SpRoleAccess::isAdminOrStaff();
+        // Editing is field-scoped in the form; sp_staff, sp_hr, sp_admin, and super-admin
+        // may all reach the resource.
+        return SpRoleAccess::canEditProviders();
     }
 
     public static function getNavigationGroup(): ?string

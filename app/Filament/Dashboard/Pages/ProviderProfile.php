@@ -585,10 +585,26 @@ class ProviderProfile extends Page
     {
         return [
             HelpHeaderAction::make('clinician/completing-your-profile'),
+            $this->managePhotoAction(),
             $this->generateCalendarLinkAction(),
             $this->calendarSubscriptionAction(),
             $this->revokeCalendarLinkAction(),
         ];
+    }
+
+    /** Self-service photo upload — a provider may set their own photo (feature two's new
+     * permission dimension). Only once a provider record is linked to them. */
+    private function managePhotoAction(): Action
+    {
+        return Action::make('managePhoto')
+            ->label(__('Profile photo'))
+            ->icon('heroicon-o-camera')
+            ->color('gray')
+            ->visible(fn (): bool => $this->currentProvider() !== null)
+            ->modalHeading(__('Profile photo'))
+            ->modalContent(fn () => view('staffpick.providers.photo-modal', ['providerId' => $this->currentProvider()->id]))
+            ->modalSubmitAction(false)
+            ->modalCancelActionLabel(__('Close'));
     }
 
     /** Visible before a token exists: issue one for the logged-in provider. */

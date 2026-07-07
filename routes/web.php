@@ -11,6 +11,7 @@ use App\Http\Controllers\ProviderCalendarController;
 use App\Http\Controllers\RoadmapController;
 use App\Http\Controllers\SlackWebhookController;
 use App\Http\Controllers\StaffPick\CredentialAttachmentController;
+use App\Http\Controllers\StaffPick\ProviderPhotoController;
 use App\Http\Controllers\StaffPick\ReferralSourceRegistrationController;
 use App\Http\Controllers\StaffPick\SsoController;
 use App\Http\Controllers\SubscriptionCheckoutController;
@@ -300,3 +301,9 @@ Route::get('/credential-attachments/{attachment}/view', [CredentialAttachmentCon
 Route::get('/credential-attachments/{attachment}/download', [CredentialAttachmentController::class, 'download'])
     ->middleware('auth')
     ->name('staffpick.credential-attachments.download');
+
+// StaffPick — provider profile photo (VARBINARY BLOB). Authorized per-record; aggressively
+// cached (versioned URL + ETag). Shown on every provider card and the profile view.
+Route::get('/provider-photos/{provider}', [ProviderPhotoController::class, 'show'])
+    ->middleware('auth')
+    ->name('staffpick.provider-photos.show');

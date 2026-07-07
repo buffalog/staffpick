@@ -19,6 +19,15 @@ class ViewProvider extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('managePhoto')
+                ->label(__('Photo'))
+                ->icon('heroicon-o-camera')
+                ->color('gray')
+                ->modalHeading(__('Provider photo'))
+                ->modalContent(fn () => view('staffpick.providers.photo-modal', ['providerId' => $this->record->id]))
+                ->modalSubmitAction(false)
+                ->modalCancelActionLabel(__('Close')),
+
             Action::make('approve')
                 ->label(__('Approve'))
                 ->icon('heroicon-o-check-circle')

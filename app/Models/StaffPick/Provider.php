@@ -2,6 +2,7 @@
 
 namespace App\Models\StaffPick;
 
+use App\Constants\TenancyPermissionConstants;
 use App\Models\StaffPick\Concerns\BelongsToTenant;
 use App\Models\User;
 use App\Services\StaffPick\GeocodingService;
@@ -11,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -65,6 +67,7 @@ class Provider extends Model
         'deactivation_reason',
         'payroll_id',
         'tax_id',
+        'tier_source',
         'notes',
         'internal_rating',
         'is_preferred',
@@ -104,6 +107,7 @@ class Provider extends Model
             'submitted_at' => 'datetime',
             'onboarding_step' => 'integer',
             'calendar_token_generated_at' => 'datetime',
+            'tier_changed_at' => 'datetime',
         ];
     }
 
@@ -119,6 +123,16 @@ class Provider extends Model
             }
 
             $provider->geocodeAddressIfNeeded();
+        });
+
+        // Stamp the tier-change audit on every tier change, whatever the surface or role
+        // (form, wizard, or a future automated recalculation). auth()->id() is null outside
+        // a request, which is fine — the point is: something changed the tier, here's when.
+        static::saving(function (Provider $provider): void {
+            if ($provider->isDirty('tier_id')) {
+                $provider->tier_changed_by_user_id = auth()->id();
+                $provider->tier_changed_at = now();
+            }
         });
     }
 
@@ -296,9 +310,51 @@ class Provider extends Model
         return $this->belongsTo(ProviderTier::class, 'tier_id');
     }
 
+    public function tierChangedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'tier_changed_by_user_id');
+    }
+
+    public function photo(): HasOne
+    {
+        return $this->hasOne(ProviderPhoto::class);
+    }
+
     public function office(): BelongsTo
     {
         return $this->belongsTo(Office::class);
+    }
+
+    /**
+     * Whether $user may view or manage (upload/replace) this provider's photo — the single
+     * gate for both the streaming route and the upload control. Staff/HR/admin/super-admin
+     * in the tenant may act on any provider; a provider may act on their OWN record (the
+     * self-service dimension). Computed from the record's own tenant so it holds outside the
+     * Filament panel (the photo route resolves no ambient tenant). tenant_id/user_id are
+     * cast to int for the pdo_sqlsrv string-column comparison.
+     */
+    public function isPhotoAccessibleBy(User $user): bool
+    {
+        if ($user->is_super_admin) {
+            return true;
+        }
+
+        if ($this->user_id !== null && (int) $this->user_id === (int) $user->id) {
+            return true;
+        }
+
+        return $user->hasAnySpRole((int) $this->tenant_id, [
+            TenancyPermissionConstants::ROLE_SP_ADMIN,
+            TenancyPermissionConstants::ROLE_SP_STAFF,
+            TenancyPermissionConstants::ROLE_SP_HR,
+        ]);
+    }
+
+    /** True when a photo row exists — uses the eager-loaded relation if present, else a
+     * cheap existence query (never loads the BLOB). */
+    public function hasPhoto(): bool
+    {
+        return $this->relationLoaded('photo') ? $this->photo !== null : $this->photo()->exists();
     }
 
     public function specialties(): BelongsToMany
