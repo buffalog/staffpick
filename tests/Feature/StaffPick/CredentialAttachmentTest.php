@@ -96,7 +96,7 @@ class CredentialAttachmentTest extends FeatureTest
         // zero bytes.
         Livewire::test(ManageCredentialAttachments::class, ['credentialId' => $credential->id])
             ->set('upload', UploadedFile::fake()->createWithContent('proof.pdf', 'fake-pdf-bytes'))
-            ->call('upload')
+            ->call('save')
             ->assertHasNoErrors();
 
         $attachment = $credential->attachments()->withTrashed()->first();
@@ -113,7 +113,7 @@ class CredentialAttachmentTest extends FeatureTest
 
         Livewire::test(ManageCredentialAttachments::class, ['credentialId' => $credential->id])
             ->set('upload', UploadedFile::fake()->create('malware.exe', 10))
-            ->call('upload')
+            ->call('save')
             ->assertHasErrors('upload');
 
         $this->assertSame(0, $credential->attachments()->withTrashed()->count());

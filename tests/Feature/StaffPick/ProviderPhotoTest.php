@@ -67,7 +67,7 @@ class ProviderPhotoTest extends FeatureTest
 
         Livewire::test(ManageProviderPhoto::class, ['providerId' => $provider->id])
             ->set('upload', UploadedFile::fake()->createWithContent('me.jpg', 'REAL-JPEG-BYTES'))
-            ->call('upload')
+            ->call('save')
             ->assertHasNoErrors();
 
         $photo = ProviderPhoto::where('provider_id', $provider->id)->first();
@@ -83,12 +83,12 @@ class ProviderPhotoTest extends FeatureTest
 
         Livewire::test(ManageProviderPhoto::class, ['providerId' => $provider->id])
             ->set('upload', UploadedFile::fake()->createWithContent('first.jpg', 'FIRST'))
-            ->call('upload')->assertHasNoErrors();
+            ->call('save')->assertHasNoErrors();
         $firstId = ProviderPhoto::where('provider_id', $provider->id)->value('id');
 
         Livewire::test(ManageProviderPhoto::class, ['providerId' => $provider->id])
             ->set('upload', UploadedFile::fake()->createWithContent('second.png', 'SECOND'))
-            ->call('upload')->assertHasNoErrors();
+            ->call('save')->assertHasNoErrors();
 
         $this->assertSame(1, ProviderPhoto::where('provider_id', $provider->id)->count());
         $photo = ProviderPhoto::where('provider_id', $provider->id)->first();
@@ -103,7 +103,7 @@ class ProviderPhotoTest extends FeatureTest
 
         Livewire::test(ManageProviderPhoto::class, ['providerId' => $provider->id])
             ->set('upload', UploadedFile::fake()->createWithContent('resume.pdf', 'x'))
-            ->call('upload')
+            ->call('save')
             ->assertHasErrors('upload');
 
         $this->assertSame(0, ProviderPhoto::where('provider_id', $provider->id)->count());
@@ -170,7 +170,7 @@ class ProviderPhotoTest extends FeatureTest
         $this->actingAs($owner);
         Livewire::test(ManageProviderPhoto::class, ['providerId' => $provider->id])
             ->set('upload', UploadedFile::fake()->createWithContent('self.png', 'SELF'))
-            ->call('upload')
+            ->call('save')
             ->assertHasNoErrors();
 
         $this->assertTrue(ProviderPhoto::where('provider_id', $provider->id)->exists());

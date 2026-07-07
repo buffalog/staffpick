@@ -77,12 +77,12 @@
         <div class="mt-3 flex items-center gap-3">
             <button
                 type="button"
-                wire:click="upload"
+                wire:click="save"
                 wire:loading.attr="disabled"
-                wire:target="upload"
+                wire:target="upload, save"
                 class="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-500 disabled:opacity-50"
             >{{ __('Upload') }}</button>
-            <span wire:loading wire:target="upload" class="text-xs text-gray-500 dark:text-gray-400">{{ __('Uploading…') }}</span>
+            <span wire:loading wire:target="upload, save" class="text-xs text-gray-500 dark:text-gray-400">{{ __('Uploading…') }}</span>
         </div>
     </div>
 </div>

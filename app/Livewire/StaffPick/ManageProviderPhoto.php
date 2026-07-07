@@ -48,7 +48,11 @@ class ManageProviderPhoto extends Component
         return Provider::with('discipline')->findOrFail($this->providerId);
     }
 
-    public function upload(): void
+    // Named save(), NOT upload(): a method named upload() would collide with the public
+    // $upload file property (wire:model target), and Livewire resolves the name to the
+    // property, so wire:click never invokes the action. Tests can't catch this — they call
+    // the method directly server-side — so it must stay verified in a real browser.
+    public function save(): void
     {
         $this->validate([
             'upload' => [
