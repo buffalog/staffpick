@@ -10,6 +10,7 @@ use App\Http\Controllers\ProviderApplicationController;
 use App\Http\Controllers\ProviderCalendarController;
 use App\Http\Controllers\RoadmapController;
 use App\Http\Controllers\SlackWebhookController;
+use App\Http\Controllers\StaffPick\CredentialAttachmentController;
 use App\Http\Controllers\StaffPick\ReferralSourceRegistrationController;
 use App\Http\Controllers\StaffPick\SsoController;
 use App\Http\Controllers\SubscriptionCheckoutController;
@@ -289,3 +290,13 @@ Route::get('/auth/sso/{tenant}/redirect', [SsoController::class, 'redirect'])
 Route::get('/auth/sso/{tenant}/callback', [SsoController::class, 'callback'])
     ->middleware('throttle:sso')
     ->name('staffpick.sso.callback');
+
+// StaffPick — stream credential proof documents (VARBINARY BLOBs) from Azure SQL.
+// Authorization is per-record inside the controller (the record's own tenant + the
+// visible_to_scheduler gate); login is required. view = inline preview, download = attachment.
+Route::get('/credential-attachments/{attachment}/view', [CredentialAttachmentController::class, 'view'])
+    ->middleware('auth')
+    ->name('staffpick.credential-attachments.view');
+Route::get('/credential-attachments/{attachment}/download', [CredentialAttachmentController::class, 'download'])
+    ->middleware('auth')
+    ->name('staffpick.credential-attachments.download');

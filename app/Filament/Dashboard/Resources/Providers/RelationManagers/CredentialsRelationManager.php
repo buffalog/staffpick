@@ -65,6 +65,17 @@ class CredentialsRelationManager extends RelationManager
                     }),
             ])
             ->recordActions([
+                Action::make('attachments')
+                    ->label(__('Attachments'))
+                    ->icon(Heroicon::OutlinedPaperClip)
+                    // Live count of non-tombstoned attachments; hidden when there are none.
+                    ->badge(fn (ProviderCredential $record): ?int => ($count = $record->attachments()->count()) > 0 ? $count : null)
+                    // Same visible_to_scheduler gate as viewing/verifying the credential.
+                    ->visible(fn (ProviderCredential $record): bool => $record->isAccessibleBy(auth()->user()))
+                    ->modalHeading(fn (ProviderCredential $record): string => __('Attachments — :type', ['type' => $record->documentType?->name]))
+                    ->modalContent(fn (ProviderCredential $record) => view('staffpick.credentials.attachments-modal', ['credentialId' => $record->id]))
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel(__('Close')),
                 VerifyCredentialAction::make(),
             ]);
     }

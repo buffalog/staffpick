@@ -2,12 +2,14 @@
 
 namespace App\Models\StaffPick;
 
+use App\Constants\TenancyPermissionConstants;
 use App\Filament\Dashboard\Support\SpRoleAccess;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Inherits tenancy through its parent provider; not directly tenant-scoped.
@@ -78,6 +80,11 @@ class ProviderCredential extends Model
         return $this->belongsTo(User::class, 'verified_by_user_id');
     }
 
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(CredentialAttachment::class, 'provider_credential_id');
+    }
+
     /**
      * The visibility gate (spec section 2): a credential row is visible if the viewer
      * may see all credentials (HR/admin/super-admin) OR its type is flagged
@@ -94,19 +101,47 @@ class ProviderCredential extends Model
     }
 
     /**
-     * Whether the current user may VERIFY this credential — the write-side mirror of the
-     * visibility rule above (verifiable iff visible). HR/admin/super-admin may verify any
-     * type; sp_staff (schedulers) may verify only types flagged visible_to_scheduler — the
-     * same PT/OT/PTA state-license types they can see. HR-only types (visible_to_scheduler
-     * false, e.g. driver's license) stay admin/HR-only, consistent with staff never seeing
-     * those rows. Anyone without an sp role may not verify.
+     * The single visible_to_scheduler gate governing visibility, upload, view/download, and
+     * verification together for a given user. Computed from THIS record's own tenant (via
+     * its provider) rather than the ambient Filament tenant, so it is correct both inside
+     * the panel and on the standalone attachment-streaming route where no panel tenant is
+     * resolved. super-admin passes for every type; sp_admin/sp_hr (canSeeAllCredentials)
+     * pass for every type; sp_staff passes only for types flagged visible_to_scheduler.
+     *
+     * pdo_sqlsrv returns tenant_id as a string, so it is cast to int for the role lookup.
      */
-    public function isVerifiableByCurrentUser(): bool
+    public function isAccessibleBy(User $user): bool
     {
-        if (SpRoleAccess::canSeeAllCredentials()) {
+        if ($user->is_super_admin) {
             return true;
         }
 
-        return SpRoleAccess::isAdminOrStaff() && (bool) $this->documentType?->visible_to_scheduler;
+        $tenantId = $this->provider?->tenant_id;
+
+        if ($tenantId === null) {
+            return false;
+        }
+
+        if ($user->hasAnySpRole((int) $tenantId, [
+            TenancyPermissionConstants::ROLE_SP_ADMIN,
+            TenancyPermissionConstants::ROLE_SP_HR,
+        ])) {
+            return true;
+        }
+
+        return (bool) $this->documentType?->visible_to_scheduler
+            && $user->hasSpRole((int) $tenantId, TenancyPermissionConstants::ROLE_SP_STAFF);
+    }
+
+    /**
+     * Whether the current user may VERIFY this credential — the write-side mirror of the
+     * visibility rule (verifiable iff accessible). Delegates to {@see isAccessibleBy()} so
+     * verification, upload, and view/download all share one gate.
+     */
+    public function isVerifiableByCurrentUser(): bool
+    {
+        $user = auth()->user();
+
+        return $user !== null && $this->isAccessibleBy($user);
     }
 }
