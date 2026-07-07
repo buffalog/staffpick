@@ -12,24 +12,32 @@
                     <div class="min-w-0">
                         <p class="truncate text-sm font-medium text-gray-900 dark:text-white">{{ $attachment->original_filename }}</p>
                         <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                            {{ $attachment->uploaded_at?->format(config('app.datetime_format')) }}
                             @if ($attachment->uploadedBy)
-                                · {{ __('by') }} {{ $attachment->uploadedBy->name }}
+                                {{ __('Uploaded by :name, :date', ['name' => $attachment->uploadedBy->name, 'date' => $attachment->uploaded_at?->format(config('app.datetime_format'))]) }}
+                            @else
+                                {{ __('Uploaded :date', ['date' => $attachment->uploaded_at?->format(config('app.datetime_format'))]) }}
                             @endif
                         </p>
                     </div>
 
-                    <div class="flex flex-none items-center gap-3 text-sm">
+                    {{-- Three inline icon actions per row: view, download, delete. --}}
+                    <div class="flex flex-none items-center gap-1">
                         @if ($attachment->isInlinePreviewable())
                             {{-- Images and PDFs preview inline (native browser rendering); no new tab. --}}
-                            <button type="button" x-on:click="preview = ! preview" class="font-medium text-primary-600 hover:underline dark:text-primary-400">{{ __('View') }}</button>
+                            <button type="button" x-on:click="preview = ! preview" title="{{ __('View') }}" class="rounded-md p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-gray-200">
+                                @svg('heroicon-o-eye', 'h-5 w-5')
+                            </button>
                         @else
                             {{-- DOC/DOCX have no in-browser preview — open the raw file in a new tab and
                                  let the browser/OS handle the Word document. Intended behavior. --}}
-                            <a href="{{ route('staffpick.credential-attachments.view', $attachment) }}" target="_blank" rel="noopener" class="font-medium text-primary-600 hover:underline dark:text-primary-400">{{ __('View') }}</a>
+                            <a href="{{ route('staffpick.credential-attachments.view', $attachment) }}" target="_blank" rel="noopener" title="{{ __('View') }}" class="rounded-md p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-gray-200">
+                                @svg('heroicon-o-eye', 'h-5 w-5')
+                            </a>
                         @endif
 
-                        <a href="{{ route('staffpick.credential-attachments.download', $attachment) }}" class="font-medium text-gray-700 hover:underline dark:text-gray-300">{{ __('Download') }}</a>
+                        <a href="{{ route('staffpick.credential-attachments.download', $attachment) }}" title="{{ __('Download') }}" class="rounded-md p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-gray-200">
+                            @svg('heroicon-o-arrow-down-tray', 'h-5 w-5')
+                        </a>
 
                         {{-- Delete renders ONLY for sp_admin / super-admin. For every other role it is
                              absent from the DOM entirely (server-side @if), not merely hidden. --}}
@@ -38,8 +46,11 @@
                                 type="button"
                                 wire:click="delete({{ $attachment->id }})"
                                 wire:confirm="{{ __('Delete this document? The file is removed but a record that it existed is kept.') }}"
-                                class="font-medium text-danger-600 hover:underline dark:text-danger-400"
-                            >{{ __('Delete') }}</button>
+                                title="{{ __('Delete') }}"
+                                class="rounded-md p-1.5 text-gray-500 transition hover:bg-danger-50 hover:text-danger-600 dark:text-gray-400 dark:hover:bg-danger-400/10 dark:hover:text-danger-400"
+                            >
+                                @svg('heroicon-o-trash', 'h-5 w-5')
+                            </button>
                         @endif
                     </div>
                 </div>
