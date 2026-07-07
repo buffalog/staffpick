@@ -41,14 +41,24 @@ class AvatarThumbnailService
             return ['bytes' => $bytes, 'mime' => $fallbackMime];
         }
 
+        // Read header dimensions without decoding. Undecodable -> keep the original.
+        $info = @getimagesizefromstring($bytes);
+        if ($info === false) {
+            return ['bytes' => $bytes, 'mime' => $fallbackMime];
+        }
+        [$srcWidth, $srcHeight] = [$info[0], $info[1]];
+
+        // Already within the cap — leave it untouched. Also avoids jpeg:size upscaling a
+        // small source: libjpeg-turbo will scale a tiny image UP (to 2x) toward the hint.
+        if (max($srcWidth, $srcHeight) <= self::MAX_DIMENSION) {
+            return ['bytes' => $bytes, 'mime' => $fallbackMime];
+        }
+
         $isJpeg = $fallbackMime === 'image/jpeg';
 
-        // Non-JPEG is decoded at full resolution, so skip a huge one (JPEG is safe via jpeg:size).
-        if (! $isJpeg) {
-            $info = @getimagesizefromstring($bytes);
-            if ($info === false || (($info[0] * $info[1]) > self::MAX_MEGAPIXELS)) {
-                return ['bytes' => $bytes, 'mime' => $fallbackMime];
-            }
+        // Non-JPEG decodes at full resolution, so skip a huge one (JPEG is safe via jpeg:size).
+        if (! $isJpeg && (($srcWidth * $srcHeight) > self::MAX_MEGAPIXELS)) {
+            return ['bytes' => $bytes, 'mime' => $fallbackMime];
         }
 
         $imagick = null;
