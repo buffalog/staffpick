@@ -58,6 +58,10 @@ class ProviderPhotoTest extends FeatureTest
 
     public function test_upload_thumbnails_a_large_image(): void
     {
+        if (! extension_loaded('imagick')) {
+            $this->markTestSkipped('imagick is not installed in this environment');
+        }
+
         $this->actingAs($this->userWithSpRole(TenancyPermissionConstants::ROLE_SP_STAFF));
         $provider = Provider::factory()->create(['tenant_id' => $this->tenant->id]);
         $big = $this->realJpeg(1200, 900);

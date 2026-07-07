@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y \
     curl git unzip zip gnupg ca-certificates \
     libpng-dev libzip-dev libicu-dev libxml2-dev libexif-dev \
     libjpeg62-turbo-dev libfreetype6-dev libwebp-dev \
+    libmagickwand-dev \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Microsoft ODBC driver for SQL Server (required for pdo_sqlsrv)
@@ -32,9 +33,14 @@ RUN docker-php-ext-install \
     xml \
     zip
 
-# GD (with JPEG/PNG/WebP) for server-side avatar thumbnailing via Intervention Image
+# GD (with JPEG/PNG/WebP) for general image work
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install -j"$(nproc)" gd
+
+# Imagick for avatar thumbnailing — its reduced-resolution JPEG decode (jpeg:size) keeps
+# huge photos from OOM-killing the container the way a full GD decode would.
+RUN pecl install imagick \
+    && docker-php-ext-enable imagick
 
 # sqlsrv and pdo_sqlsrv via PECL
 RUN pecl install sqlsrv pdo_sqlsrv \

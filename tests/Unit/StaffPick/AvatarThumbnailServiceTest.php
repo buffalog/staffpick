@@ -3,15 +3,24 @@
 namespace Tests\Unit\StaffPick;
 
 use App\Services\StaffPick\AvatarThumbnailService;
-use Intervention\Image\ImageManager;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Pure image processing — GD only, no app boot or DB, so it runs anywhere GD is present.
+ * Image processing via Imagick — no app boot or DB. Skips where imagick is absent (e.g. the
+ * local dev machine); it runs in CI and on Railway, which have the extension.
  */
 class AvatarThumbnailServiceTest extends TestCase
 {
-    private function largeJpeg(int $w = 2000, int $h = 1500): string
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        if (! extension_loaded('imagick')) {
+            $this->markTestSkipped('imagick is not installed in this environment');
+        }
+    }
+
+    private function jpeg(int $w, int $h): string
     {
         $gd = imagecreatetruecolor($w, $h);
         imagefilledrectangle($gd, 0, 0, $w, $h, imagecolorallocate($gd, 120, 60, 200));
@@ -21,46 +30,68 @@ class AvatarThumbnailServiceTest extends TestCase
         return (string) ob_get_clean();
     }
 
-    public function test_it_downsizes_a_large_image_within_the_cap(): void
+    private function png(int $w, int $h): string
     {
-        $original = $this->largeJpeg(2000, 1500);
+        $gd = imagecreatetruecolor($w, $h);
+        imagefilledrectangle($gd, 0, 0, $w, $h, imagecolorallocate($gd, 30, 120, 200));
+        ob_start();
+        imagepng($gd);
+
+        return (string) ob_get_clean();
+    }
+
+    /** @return array{0: int, 1: int} */
+    private function dims(string $bytes): array
+    {
+        $info = getimagesizefromstring($bytes);
+
+        return [$info[0], $info[1]];
+    }
+
+    public function test_it_downsizes_a_large_jpeg(): void
+    {
+        $original = $this->jpeg(2000, 1500);
         $result = (new AvatarThumbnailService)->process($original, 'image/jpeg');
 
         $this->assertSame('image/jpeg', $result['mime']);
-        $this->assertLessThan(strlen($original), strlen($result['bytes']), 'thumbnail should be smaller');
-
-        $out = ImageManager::gd()->read($result['bytes']);
-        $this->assertLessThanOrEqual(AvatarThumbnailService::MAX_DIMENSION, $out->width());
-        $this->assertLessThanOrEqual(AvatarThumbnailService::MAX_DIMENSION, $out->height());
-        // Aspect ratio preserved (2000x1500 -> 512x384), not cropped to a square.
-        $this->assertSame(512, $out->width());
-        $this->assertSame(384, $out->height());
+        $this->assertLessThan(strlen($original), strlen($result['bytes']));
+        [$w, $h] = $this->dims($result['bytes']);
+        $this->assertLessThanOrEqual(AvatarThumbnailService::MAX_DIMENSION, max($w, $h));
     }
 
-    public function test_it_never_upscales_a_small_image(): void
+    public function test_it_thumbnails_a_high_resolution_jpeg_via_reduced_decode(): void
     {
-        $small = $this->largeJpeg(100, 80);
+        // 4000x3000 (12 MP) — the jpeg:size hint decodes at reduced scale, so this doesn't
+        // materialise the full bitmap; the output is still capped to MAX_DIMENSION.
+        $original = $this->jpeg(4000, 3000);
+        $result = (new AvatarThumbnailService)->process($original, 'image/jpeg');
+
+        [$w, $h] = $this->dims($result['bytes']);
+        $this->assertLessThanOrEqual(AvatarThumbnailService::MAX_DIMENSION, max($w, $h));
+        $this->assertLessThan(strlen($original), strlen($result['bytes']));
+    }
+
+    public function test_it_never_upscales_a_small_jpeg(): void
+    {
+        $small = $this->jpeg(100, 80);
         $result = (new AvatarThumbnailService)->process($small, 'image/jpeg');
 
-        $out = ImageManager::gd()->read($result['bytes']);
-        $this->assertSame(100, $out->width());
-        $this->assertSame(80, $out->height());
+        $this->assertSame([100, 80], $this->dims($result['bytes']));
     }
 
-    public function test_it_skips_images_over_the_megapixel_cap(): void
+    public function test_it_skips_a_huge_non_jpeg(): void
     {
-        // Just over MAX_MEGAPIXELS (~16.8 MP) — must NOT be decoded (the OOM guard), so the
-        // original bytes are returned untouched.
-        $huge = $this->largeJpeg(4100, 4100);
-        $result = (new AvatarThumbnailService)->process($huge, 'image/jpeg');
+        // PNG has no reduced-resolution decode, so anything over the megapixel cap is left
+        // untouched rather than risking an OOM-killing full decode.
+        $huge = $this->png(4100, 4100); // ~16.8 MP
+        $result = (new AvatarThumbnailService)->process($huge, 'image/png');
 
         $this->assertSame($huge, $result['bytes']);
-        $this->assertSame('image/jpeg', $result['mime']);
+        $this->assertSame('image/png', $result['mime']);
     }
 
-    public function test_undecodable_input_falls_back_to_the_original_bytes(): void
+    public function test_heic_and_undecodable_input_fall_back_to_the_original(): void
     {
-        // Stands in for a HEIC (or any format GD can't read): must not throw, keeps original.
         $result = (new AvatarThumbnailService)->process('not-a-real-image', 'image/heic');
 
         $this->assertSame('not-a-real-image', $result['bytes']);
