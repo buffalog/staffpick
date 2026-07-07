@@ -91,8 +91,11 @@ class CredentialAttachmentTest extends FeatureTest
         $this->actingAs($this->userWithSpRole(TenancyPermissionConstants::ROLE_SP_STAFF));
         $credential = $this->credential(true);
 
+        // createWithContent (not create) so ->get() returns real bytes — a plain fake()
+        // ->create() reports a size but writes no content, so storeContent would persist
+        // zero bytes.
         Livewire::test(ManageCredentialAttachments::class, ['credentialId' => $credential->id])
-            ->set('upload', UploadedFile::fake()->create('proof.pdf', 50, 'application/pdf'))
+            ->set('upload', UploadedFile::fake()->createWithContent('proof.pdf', 'fake-pdf-bytes'))
             ->call('upload')
             ->assertHasNoErrors();
 
