@@ -46,6 +46,35 @@ class ProviderPhotoTest extends FeatureTest
         return $photo;
     }
 
+    private function realJpeg(int $w = 1200, int $h = 900): string
+    {
+        $gd = imagecreatetruecolor($w, $h);
+        imagefilledrectangle($gd, 0, 0, $w, $h, imagecolorallocate($gd, 30, 120, 200));
+        ob_start();
+        imagejpeg($gd, null, 92);
+
+        return (string) ob_get_clean();
+    }
+
+    public function test_upload_thumbnails_a_large_image(): void
+    {
+        $this->actingAs($this->userWithSpRole(TenancyPermissionConstants::ROLE_SP_STAFF));
+        $provider = Provider::factory()->create(['tenant_id' => $this->tenant->id]);
+        $big = $this->realJpeg(1200, 900);
+
+        Livewire::test(ManageProviderPhoto::class, ['providerId' => $provider->id])
+            ->set('upload', UploadedFile::fake()->createWithContent('big.jpg', $big))
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $photo = ProviderPhoto::where('provider_id', $provider->id)->first();
+        $stored = $photo->readContent();
+        [$w, $h] = getimagesizefromstring($stored);
+        $this->assertLessThanOrEqual(512, max($w, $h), 'stored image should be downsized to the avatar cap');
+        $this->assertLessThan(strlen($big), strlen($stored), 'thumbnail should be smaller than the upload');
+        $this->assertSame('image/jpeg', $photo->mime_type);
+    }
+
     public function test_provider_photo_accessor_resolves_to_the_relation(): void
     {
         // Regression guard: a legacy `photo` column once shadowed the photo() relation, so

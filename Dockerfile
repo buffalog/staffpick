@@ -10,6 +10,7 @@ ENV PORT=8000
 RUN apt-get update && apt-get install -y \
     curl git unzip zip gnupg ca-certificates \
     libpng-dev libzip-dev libicu-dev libxml2-dev libexif-dev \
+    libjpeg62-turbo-dev libfreetype6-dev libwebp-dev \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Microsoft ODBC driver for SQL Server (required for pdo_sqlsrv)
@@ -30,6 +31,10 @@ RUN docker-php-ext-install \
     sockets \
     xml \
     zip
+
+# GD (with JPEG/PNG/WebP) for server-side avatar thumbnailing via Intervention Image
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+    && docker-php-ext-install -j"$(nproc)" gd
 
 # sqlsrv and pdo_sqlsrv via PECL
 RUN pecl install sqlsrv pdo_sqlsrv \

@@ -4,6 +4,7 @@ namespace App\Livewire\StaffPick;
 
 use App\Models\StaffPick\Provider;
 use App\Models\StaffPick\ProviderPhoto;
+use App\Services\StaffPick\AvatarThumbnailService;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
@@ -66,18 +67,23 @@ class ManageProviderPhoto extends Component
         abort_unless($this->provider->isPhotoAccessibleBy(auth()->user()), 403);
 
         $extension = strtolower($this->upload->getClientOriginalExtension());
+        $originalMime = self::MIME_BY_EXTENSION[$extension] ?? 'application/octet-stream';
+
+        // Thumbnail server-side before storing so avatar/card slots aren't served the full
+        // multi-megapixel original.
+        $processed = app(AvatarThumbnailService::class)->process($this->upload->get(), $originalMime);
 
         // Replace-in-place: one row per provider. updateOrCreate bumps updated_at, which
         // busts the versioned photo URL so the new image shows immediately.
         $photo = ProviderPhoto::updateOrCreate(
             ['provider_id' => $this->provider->id],
             [
-                'mime_type' => self::MIME_BY_EXTENSION[$extension] ?? 'application/octet-stream',
-                'file_size' => $this->upload->getSize(),
+                'mime_type' => $processed['mime'],
+                'file_size' => strlen($processed['bytes']),
                 'updated_by_user_id' => auth()->id(),
             ],
         );
-        $photo->storeContent($this->upload->get());
+        $photo->storeContent($processed['bytes']);
 
         $this->reset('upload');
         unset($this->provider);
