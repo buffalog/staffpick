@@ -1,0 +1,157 @@
+<?php
+
+namespace Tests\Feature\StaffPick;
+
+use App\Models\StaffPick\AssignmentOffer;
+use App\Models\StaffPick\Discipline;
+use App\Models\StaffPick\IntakeRequest;
+use App\Models\StaffPick\Provider;
+use App\Models\StaffPick\ProviderTier;
+use App\Models\StaffPick\Subject;
+use App\Models\Tenant;
+use App\Services\StaffPick\TierResponseScorer;
+use Illuminate\Support\Str;
+use Tests\Feature\FeatureTest;
+
+class TierResponseScorerTest extends FeatureTest
+{
+    private Tenant $tenant;
+
+    private Discipline $discipline;
+
+    private ProviderTier $platinum;
+
+    private ProviderTier $gold;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->tenant = $this->createTenant();
+        $this->discipline = Discipline::create(['tenant_id' => $this->tenant->id, 'name' => 'Physical Therapy']);
+        $this->platinum = ProviderTier::create(['tenant_id' => $this->tenant->id, 'name' => 'Platinum', 'priority' => 1]);
+        $this->gold = ProviderTier::create(['tenant_id' => $this->tenant->id, 'name' => 'Gold', 'priority' => 2]);
+    }
+
+    private function scorer(): TierResponseScorer
+    {
+        return app(TierResponseScorer::class);
+    }
+
+    private function provider(array $attributes = []): Provider
+    {
+        return Provider::factory()->create(array_merge([
+            'tenant_id' => $this->tenant->id,
+            'discipline_id' => $this->discipline->id,
+            'status' => Provider::STATUS_ACTIVE,
+            'is_active' => true,
+        ], $attributes));
+    }
+
+    private function case(array $attributes = []): IntakeRequest
+    {
+        $subject = Subject::factory()->create(['tenant_id' => $this->tenant->id]);
+
+        return IntakeRequest::factory()->create(array_merge([
+            'tenant_id' => $this->tenant->id,
+            'subject_id' => $subject->id,
+            'discipline_id' => $this->discipline->id,
+        ], $attributes));
+    }
+
+    /**
+     * Give a provider $received offers, of which $accepted were accepted.
+     */
+    private function offers(Provider $provider, int $received, int $accepted): void
+    {
+        $case = $this->case();
+
+        for ($i = 0; $i < $received; $i++) {
+            AssignmentOffer::create([
+                'tenant_id' => $this->tenant->id,
+                'intake_request_id' => $case->id,
+                'provider_id' => $provider->id,
+                'offer_sequence' => 1,
+                'status' => $i < $accepted ? AssignmentOffer::STATUS_ACCEPTED : AssignmentOffer::STATUS_DECLINED,
+                'offered_at' => now(),
+                'expires_at' => now()->addMinutes(5),
+                'token' => 'tok_'.Str::random(40),
+            ]);
+        }
+    }
+
+    /**
+     * @return array<int> ordered provider ids
+     */
+    private function order(IntakeRequest $case, Provider ...$providers): array
+    {
+        return $this->scorer()->order($case, collect($providers))
+            ->map(fn (Provider $p): int => $p->id)
+            ->all();
+    }
+
+    public function test_requested_provider_ranks_first_over_everything(): void
+    {
+        // Worst possible on every other signal: no tier, poor response rate, not preferred.
+        $requested = $this->provider(['tier_id' => null]);
+        $this->offers($requested, 10, 1); // 0.1
+
+        $strong = $this->provider(['tier_id' => $this->platinum->id, 'is_preferred' => true]);
+        $this->offers($strong, 10, 10); // 1.0
+
+        $case = $this->case(['requested_provider_id' => $requested->id]);
+
+        $this->assertSame([$requested->id, $strong->id], $this->order($case, $strong, $requested));
+    }
+
+    public function test_preferred_beats_higher_tier_and_response_rate(): void
+    {
+        $preferred = $this->provider(['tier_id' => $this->gold->id, 'is_preferred' => true]);
+        $this->offers($preferred, 10, 1); // 0.1
+
+        $strong = $this->provider(['tier_id' => $this->platinum->id, 'is_preferred' => false]);
+        $this->offers($strong, 10, 10); // 1.0
+
+        $case = $this->case();
+
+        $this->assertSame([$preferred->id, $strong->id], $this->order($case, $strong, $preferred));
+    }
+
+    public function test_tier_beats_response_rate(): void
+    {
+        $platinumBad = $this->provider(['tier_id' => $this->platinum->id]);
+        $this->offers($platinumBad, 10, 0); // 0.0
+
+        $goldPerfect = $this->provider(['tier_id' => $this->gold->id]);
+        $this->offers($goldPerfect, 10, 10); // 1.0
+
+        $case = $this->case();
+
+        $this->assertSame([$platinumBad->id, $goldPerfect->id], $this->order($case, $goldPerfect, $platinumBad));
+    }
+
+    public function test_response_rate_breaks_ties_within_a_tier(): void
+    {
+        $high = $this->provider(['tier_id' => $this->gold->id]);
+        $this->offers($high, 10, 8); // 0.8
+
+        $low = $this->provider(['tier_id' => $this->gold->id]);
+        $this->offers($low, 10, 3); // 0.3
+
+        $case = $this->case();
+
+        $this->assertSame([$high->id, $low->id], $this->order($case, $low, $high));
+    }
+
+    public function test_cold_start_provider_scores_a_perfect_response_rate(): void
+    {
+        $newbie = $this->provider(['tier_id' => $this->gold->id]); // zero offers received → 1.0
+        $veteran = $this->provider(['tier_id' => $this->gold->id]);
+        $this->offers($veteran, 10, 5); // 0.5
+
+        $case = $this->case();
+
+        // No history beats a real 0.5 rate — new providers start perfect until they have history.
+        $this->assertSame([$newbie->id, $veteran->id], $this->order($case, $veteran, $newbie));
+    }
+}

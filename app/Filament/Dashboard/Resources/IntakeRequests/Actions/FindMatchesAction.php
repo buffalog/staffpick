@@ -5,10 +5,14 @@ namespace App\Filament\Dashboard\Resources\IntakeRequests\Actions;
 use App\Models\StaffPick\Assignment;
 use App\Models\StaffPick\AssignmentOffer;
 use App\Models\StaffPick\IntakeRequest;
+use App\Models\StaffPick\Provider;
 use App\Services\StaffPick\MatchingEngine;
+use App\Services\StaffPick\MatchingResult;
+use App\Services\StaffPick\ProviderScorer;
 use Filament\Actions\Action;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Support\Collection;
 
 /**
  * "Find Matches" — runs the matching engine for an intake request and presents the
@@ -44,7 +48,7 @@ class FindMatchesAction
             ])
             ->modalContent(fn (IntakeRequest $record) => view('staffpick.intake-requests.matches', [
                 'record' => $record,
-                'results' => app(MatchingEngine::class)->match($record),
+                'results' => self::orderedResults($record),
                 // Providers with a live (pending) offer already — recomputed each render
                 // so a just-dispatched offer immediately shows as "Offer Sent".
                 'alreadyOfferedProviderIds' => $record->assignmentOffers()
@@ -52,6 +56,26 @@ class FindMatchesAction
                     ->pluck('provider_id')
                     ->all(),
             ]));
+    }
+
+    /**
+     * Eligible providers from {@see MatchingEngine} (unsorted), reordered by the single
+     * {@see ProviderScorer} used by Auto Dispatch. The modal MUST show the exact order the
+     * cascade would offer in — so both paths agree — so we score the eligible providers and
+     * re-associate that order back onto their MatchingResults.
+     *
+     * @return Collection<int, MatchingResult>
+     */
+    private static function orderedResults(IntakeRequest $record): Collection
+    {
+        $results = app(MatchingEngine::class)->match($record);
+        $resultByProviderId = $results->keyBy(fn (MatchingResult $result): int => $result->provider->id);
+
+        return app(ProviderScorer::class)
+            ->order($record, $results->map(fn (MatchingResult $result): Provider => $result->provider))
+            ->map(fn (Provider $provider): ?MatchingResult => $resultByProviderId->get($provider->id))
+            ->filter()
+            ->values();
     }
 
     /** @var array<int, bool> */

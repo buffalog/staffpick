@@ -105,6 +105,38 @@ class FindMatchesActionTest extends FeatureTest
         $this->assertNotContains($outOfRange->id, $results->map(fn ($r) => $r->provider->id)->all());
     }
 
+    public function test_modal_orders_providers_by_the_scorer_not_distance(): void
+    {
+        $tenant = $this->createTenant();
+        $discipline = Discipline::create(['tenant_id' => $tenant->id, 'name' => 'Physical Therapy']);
+        $gold = ProviderTier::create(['tenant_id' => $tenant->id, 'name' => 'Gold', 'priority' => 1]);
+        $silver = ProviderTier::create(['tenant_id' => $tenant->id, 'name' => 'Silver', 'priority' => 2]);
+
+        // Insert the nearer, lower-tier provider FIRST: natural query order and distance both
+        // put Abbott ahead. Only the scorer's tier precedence surfaces the gold provider first.
+        Provider::factory()->create([
+            'tenant_id' => $tenant->id, 'discipline_id' => $discipline->id, 'tier_id' => $silver->id,
+            'last_name' => 'Abbott', 'latitude' => 40.02, 'longitude' => -75.0,
+            'radius_max_miles' => 50, 'is_preferred' => false,
+        ]);
+        Provider::factory()->create([
+            'tenant_id' => $tenant->id, 'discipline_id' => $discipline->id, 'tier_id' => $gold->id,
+            'last_name' => 'Zephyr', 'latitude' => 40.30, 'longitude' => -75.0,
+            'radius_max_miles' => 50, 'is_preferred' => false,
+        ]);
+
+        $subject = Subject::factory()->create(['tenant_id' => $tenant->id, 'latitude' => 40.0, 'longitude' => -75.0]);
+        $intake = IntakeRequest::factory()->create([
+            'tenant_id' => $tenant->id, 'subject_id' => $subject->id, 'discipline_id' => $discipline->id,
+        ]);
+
+        $this->actAsTenant($tenant);
+
+        Livewire::test(ViewIntakeRequest::class, ['record' => $intake->id])
+            ->mountAction('findMatches')
+            ->assertSeeInOrder(['Zephyr', 'Abbott']);
+    }
+
     public function test_assigning_a_matched_provider_creates_an_offer_and_advances_the_case(): void
     {
         [$tenant, $intake, $inRange] = $this->seedCase();

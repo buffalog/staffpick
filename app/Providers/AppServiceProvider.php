@@ -9,8 +9,8 @@ use App\Services\PaymentProviders\Paddle\PaddleProvider;
 use App\Services\PaymentProviders\PaymentService;
 use App\Services\PaymentProviders\Polar\PolarProvider;
 use App\Services\PaymentProviders\Stripe\StripeProvider;
-use App\Services\StaffPick\PlaceholderScorer;
 use App\Services\StaffPick\ProviderScorer;
+use App\Services\StaffPick\TierResponseScorer;
 use App\Services\UserVerificationService;
 use App\Services\VerificationProviders\PingramProvider;
 use Filament\Support\Assets\Js;
@@ -54,8 +54,8 @@ class AppServiceProvider extends ServiceProvider
             $service->setVerificationProviders(...$this->app->tagged('verification-providers'));
         });
 
-        // Match cascade: swap this binding to drop in the real weighted scoring model.
-        $this->app->bind(ProviderScorer::class, PlaceholderScorer::class);
+        // The single source of provider ordering for both Find Matches and the cascade.
+        $this->app->bind(ProviderScorer::class, TierResponseScorer::class);
     }
 
     /**

@@ -8,8 +8,9 @@
     $languageWarning = $results->isNotEmpty() && $results->first()->languageWarning;
 
     // "Offer Sent" state = a live offer in the DB (recomputed each render) unioned with
-    // any dispatched in this modal session (host component property).
-    $offeredIds = array_merge($alreadyOfferedProviderIds ?? [], $this->offeredProviderIds ?? []);
+    // any dispatched in this modal session (host component property). isset($this) guards
+    // the component property so the view also renders standalone (tests, plain view()).
+    $offeredIds = array_merge($alreadyOfferedProviderIds ?? [], isset($this) ? ($this->offeredProviderIds ?? []) : []);
 @endphp
 
 <div class="space-y-4 text-sm">
@@ -34,8 +35,8 @@
     @endif
 
     <p class="text-gray-500 dark:text-gray-400">
-        {{ __('Preferred :providers first, then by tier, then by score (language match + proximity).', [
-            'providers' => mb_strtolower(\Illuminate\Support\Str::plural($providerLabel)),
+        {{ __('Requested :provider first, then preferred, then by tier, then by response rate. Distance and language are informational only.', [
+            'provider' => mb_strtolower($providerLabel),
         ]) }}
     </p>
 
@@ -57,7 +58,6 @@
                         <th class="px-3 py-2">{{ $disciplineLabel }}</th>
                         <th class="px-3 py-2">{{ __('Tier') }}</th>
                         <th class="px-3 py-2 text-right">{{ __('Distance') }}</th>
-                        <th class="px-3 py-2 text-right">{{ __('Score') }}</th>
                         <th class="px-3 py-2 text-center">{{ __('Language') }}</th>
                         <th class="px-3 py-2"></th>
                     </tr>
@@ -87,7 +87,6 @@
                             <td class="px-3 py-2">{{ $disciplineName ?? '—' }}</td>
                             <td class="px-3 py-2">{{ $provider->tier?->name ?? '—' }}</td>
                             <td class="px-3 py-2 text-right tabular-nums">{{ number_format($result->distanceMiles, 1) }} {{ __('mi') }}</td>
-                            <td class="px-3 py-2 text-right font-semibold tabular-nums">{{ number_format($result->score, 3) }}</td>
                             <td class="px-3 py-2 text-center">
                                 @if ($result->languageMatched)
                                     <span class="font-semibold text-green-600 dark:text-green-400" title="{{ __('Language match') }}">&checkmark;</span>
