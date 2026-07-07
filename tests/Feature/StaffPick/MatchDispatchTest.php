@@ -13,8 +13,8 @@ use App\Services\StaffPick\MatchDispatchService;
 use App\Services\StaffPick\MatchingEngine;
 use App\Services\StaffPick\MatchingResult;
 use App\Services\StaffPick\MatchNotificationService;
-use App\Services\StaffPick\PlaceholderScorer;
 use App\Services\StaffPick\SmsService;
+use App\Services\StaffPick\TierResponseScorer;
 use Illuminate\Support\Facades\Mail;
 use Mockery;
 use Tests\Feature\FeatureTest;
@@ -76,14 +76,14 @@ class MatchDispatchTest extends FeatureTest
      */
     private function service(array $eligible): MatchDispatchService
     {
-        $results = collect($eligible)->map(fn (Provider $p): MatchingResult => new MatchingResult($p, 1.0, 1.0, true, false, []));
+        $results = collect($eligible)->map(fn (Provider $p): MatchingResult => new MatchingResult($p, 1.0, true, false, []));
 
         $engine = Mockery::mock(MatchingEngine::class);
         $engine->shouldReceive('match')->andReturn($results);
 
         return new MatchDispatchService(
             $engine,
-            new PlaceholderScorer,
+            new TierResponseScorer,
             app(MatchNotificationService::class),
             app(SmsService::class),
         );

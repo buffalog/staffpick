@@ -21,7 +21,7 @@ class MatchesViewTest extends TestCase
         $provider->last_name = $lastName;
         $provider->setRelation('tier', new ProviderTier(['name' => 'Gold']));
 
-        return new MatchingResult($provider, 1.85, 3.4, $languageMatched, $languageWarning, $factors);
+        return new MatchingResult($provider, 3.4, $languageMatched, $languageWarning, $factors);
     }
 
     private function record(?float $lat, ?float $lng, ?string $languagePreference = null): IntakeRequest
@@ -60,8 +60,23 @@ class MatchesViewTest extends TestCase
         $this->assertStringContainsString('Physical Therapy', $html); // discipline column
         $this->assertStringContainsString('Gold', $html);             // tier column
         $this->assertStringContainsString('3.4', $html);              // distance
-        $this->assertStringContainsString('1.850', $html);            // score
         $this->assertStringContainsString('wire:click="assignProvider(99, 7)"', $html);
+    }
+
+    public function test_it_describes_dispatch_precedence_and_drops_the_score_column(): void
+    {
+        $record = $this->record(40.0, -75.0);
+        $results = new Collection([
+            $this->makeResult('Closematch', ['is_preferred' => false, 'tier_priority' => 1]),
+        ]);
+
+        $html = $this->render($record, $results);
+
+        // Ordering is now requested → preferred → tier → response rate. Distance/language
+        // are informational only, and there is no numeric score column.
+        $this->assertStringContainsString('response rate', $html);
+        $this->assertStringNotContainsString('Score', $html);
+        $this->assertStringNotContainsString('proximity', $html);
     }
 
     public function test_it_flags_preferred_providers(): void

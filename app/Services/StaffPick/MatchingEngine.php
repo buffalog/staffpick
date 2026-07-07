@@ -16,14 +16,6 @@ class MatchingEngine
     private const EARTH_RADIUS_MILES = 3958.7613;
 
     /**
-     * Bonus added to a provider's score for matching the subject's language
-     * preference. Deliberately heavy — greater than the max proximity score (1.0)
-     * so a language match always outranks a closer non-match within the same
-     * tier. Tunable.
-     */
-    public const LANGUAGE_BONUS = 2.0;
-
-    /**
      * Fallbacks used when the tenant has no config row yet (mirror the column
      * defaults on sp_tenant_configs).
      */
@@ -32,13 +24,21 @@ class MatchingEngine
     private const DEFAULT_RADIUS_MILES = 15;
 
     /**
-     * Rank the eligible providers for an intake request, best first.
+     * Return the providers eligible for an intake request. Eligibility ONLY — no
+     * scoring, no ordering. The returned collection is in natural query order;
+     * {@see ProviderScorer} owns the final order for both the manual Find Matches
+     * modal and the automated cascade.
      *
      * Hard filters (exclude entirely): active provider, matching discipline, known
-     * coordinates, within radius_max_miles + feathering, exact gender match when
-     * the subject states a preference, and the tenant's internal/patient rating
-     * floors. Survivors are ordered: preferred providers first, then by tier
-     * (priority ascending), then by score (language match + proximity) descending.
+     * coordinates, within radius_max_miles + feathering, exact gender match when the
+     * subject states a preference, the tenant's internal/patient rating floors, and
+     * language (see below).
+     *
+     * Language is a hard filter with a pool-level fallback: if the subject states a
+     * language preference and at least one eligible provider speaks it, every
+     * non-speaker is excluded. If NO eligible provider speaks it, nobody is excluded
+     * on language and every result is flagged language_warning = true so staff can
+     * see the preference could not be honored.
      *
      * When $radiusOverrideMiles is given (e.g. a scheduler re-trigger after a queue
      * was exhausted), it replaces every provider's own max radius as the eligibility
@@ -77,8 +77,6 @@ class MatchingEngine
             ->where('tenant_id', $intakeRequest->tenant_id)
             // A provider is eligible for the case's discipline if they hold it in their
             // set — multi-discipline providers match cases in ANY discipline they hold.
-            // Scoring is unchanged: they score exactly as a single-discipline provider
-            // would for this discipline (no bonus or penalty for holding several).
             ->whereHas('disciplines', fn (Builder $query): Builder => $query->whereKey($intakeRequest->discipline_id))
             ->where('is_active', true)
             ->where('status', 'active')
@@ -87,7 +85,7 @@ class MatchingEngine
             ->with(['tier', 'languages'])
             ->get();
 
-        // First pass: apply hard filters and gather the scoring inputs.
+        // First pass: apply hard filters (except language) and gather inputs.
         $eligible = new Collection;
 
         foreach ($providers as $provider) {
@@ -126,50 +124,40 @@ class MatchingEngine
                 $provider->languages->flatMap(fn ($language): array => [$language->name, $language->code])->all(),
             );
 
-            $distanceScore = self::scoreDistance($distance, $cutoff);
-
             $eligible->push((object) [
                 'provider' => $provider,
                 'distance' => $distance,
-                'distanceScore' => $distanceScore,
                 'languageMatched' => $languageMatched,
-                'score' => self::composeScore($distanceScore, $languageMatched),
                 'tierPriority' => $provider->tier?->priority ?? PHP_INT_MAX,
                 'isPreferred' => (bool) $provider->is_preferred,
+                'requested' => $isRequested,
                 'outOfRadius' => $distance > $cutoff,
             ]);
         }
 
-        // The whole result set warns when a language was requested but nobody speaks it.
-        $languageWarning = filled($languagePreference)
-            && $eligible->isNotEmpty()
-            && ! $eligible->contains(fn (object $row): bool => $row->languageMatched);
+        // Language hard filter with pool-level fallback. When the preference can be
+        // satisfied, drop every non-speaker. When it can't, keep everyone and warn.
+        $hasPreference = filled($languagePreference);
+        $anySpeaker = $eligible->contains(fn (object $row): bool => $row->languageMatched);
+        $fallbackFired = $hasPreference && $eligible->isNotEmpty() && ! $anySpeaker;
+
+        if ($hasPreference && $anySpeaker) {
+            $eligible = $eligible->filter(fn (object $row): bool => $row->languageMatched);
+        }
 
         return $eligible
             ->map(fn (object $row): MatchingResult => new MatchingResult(
                 provider: $row->provider,
-                score: $row->score,
                 distanceMiles: $row->distance,
                 languageMatched: $row->languageMatched,
-                languageWarning: $languageWarning,
+                languageWarning: $fallbackFired,
                 factors: [
-                    'requested' => $requestedProviderId !== null && $row->provider->id === $requestedProviderId,
+                    'requested' => $row->requested,
                     'out_of_radius' => $row->outOfRadius,
                     'is_preferred' => $row->isPreferred,
                     'tier_priority' => $row->tierPriority,
-                    'distance_score' => round($row->distanceScore, 4),
-                    'language' => $row->languageMatched,
                 ],
             ))
-            ->sort(function (MatchingResult $a, MatchingResult $b): int {
-                // Referral-requested provider first, then preferred, then tier ascending,
-                // then score descending. (Requested still flows through the normal offer
-                // queue — surfacing only changes order, not the pipeline.)
-                return ($b->factors['requested'] <=> $a->factors['requested'])
-                    ?: (($b->factors['is_preferred'] <=> $a->factors['is_preferred'])
-                        ?: (($a->factors['tier_priority'] <=> $b->factors['tier_priority'])
-                            ?: ($b->score <=> $a->score)));
-            })
             ->values();
     }
 
@@ -185,19 +173,6 @@ class MatchingEngine
             + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($lngDelta / 2) ** 2;
 
         return self::EARTH_RADIUS_MILES * 2 * asin(min(1.0, sqrt($a)));
-    }
-
-    /**
-     * Proximity score in [0, 1]: 1 at the subject's doorstep, falling linearly to
-     * 0 at the eligibility cutoff (provider max radius + feathering), clamped.
-     */
-    public static function scoreDistance(float $distanceMiles, float $cutoffMiles): float
-    {
-        if ($cutoffMiles <= 0.0) {
-            return 0.0;
-        }
-
-        return max(0.0, min(1.0, 1.0 - ($distanceMiles / $cutoffMiles)));
     }
 
     /**
@@ -251,13 +226,5 @@ class MatchingEngine
         $haystack = array_map(fn (string $language): string => mb_strtolower($language), $providerLanguages);
 
         return in_array($needle, $haystack, true);
-    }
-
-    /**
-     * Blend the proximity score with a heavy bonus for a language match.
-     */
-    public static function composeScore(float $distanceScore, bool $languageMatched): float
-    {
-        return $distanceScore + ($languageMatched ? self::LANGUAGE_BONUS : 0.0);
     }
 }

@@ -28,18 +28,6 @@ class MatchingScoringTest extends TestCase
         $this->assertEqualsWithDelta(6.9, $miles, 0.2);
     }
 
-    public function test_distance_score_is_one_at_origin_and_zero_at_cutoff(): void
-    {
-        $this->assertSame(1.0, MatchingEngine::scoreDistance(0.0, 27.0));
-        $this->assertSame(0.0, MatchingEngine::scoreDistance(27.0, 27.0));
-        $this->assertEqualsWithDelta(0.5, MatchingEngine::scoreDistance(13.5, 27.0), 0.0001);
-    }
-
-    public function test_distance_score_clamps_to_zero_beyond_cutoff(): void
-    {
-        $this->assertSame(0.0, MatchingEngine::scoreDistance(40.0, 27.0));
-    }
-
     public function test_gender_filter_passes_when_subject_has_no_preference(): void
     {
         $this->assertTrue(MatchingEngine::matchesGender(null, 'male'));
@@ -81,16 +69,5 @@ class MatchingScoringTest extends TestCase
     {
         $this->assertFalse(MatchingEngine::languageMatches(null, ['English', 'en']));
         $this->assertFalse(MatchingEngine::languageMatches('', ['English', 'en']));
-    }
-
-    public function test_compose_score_adds_a_heavy_bonus_for_a_language_match(): void
-    {
-        $withMatch = MatchingEngine::composeScore(0.5, true);
-        $withoutMatch = MatchingEngine::composeScore(0.5, false);
-
-        $this->assertSame(0.5, $withoutMatch);
-        $this->assertSame(0.5 + MatchingEngine::LANGUAGE_BONUS, $withMatch);
-        // Heavy enough that any language match outranks any proximity gap within a tier.
-        $this->assertGreaterThan(MatchingEngine::composeScore(1.0, false), MatchingEngine::composeScore(0.0, true));
     }
 }

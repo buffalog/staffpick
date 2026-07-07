@@ -225,22 +225,23 @@ class MatchingEngineTest extends FeatureTest
         $this->assertEqualsCanonicalizing([$high->id, $unrated->id], $this->ids($this->engine()->match($intake)));
     }
 
-    public function test_language_match_outranks_a_closer_non_match_in_the_same_tier(): void
+    public function test_language_is_a_hard_filter_when_a_speaker_is_eligible(): void
     {
         $tenant = $this->createTenant();
         $discipline = $this->discipline($tenant);
         $tier = $this->tier($tenant, 'Gold', 1);
         $spanish = Language::create(['name' => 'Spanish', 'code' => 'es']);
 
-        $closeNoLang = $this->provider($tenant, $discipline, $tier, 2);
-        $farSpeaksSpanish = $this->provider($tenant, $discipline, $tier, 20);
-        $farSpeaksSpanish->languages()->attach($spanish->id, ['is_primary' => true]);
+        $this->provider($tenant, $discipline, $tier, 2); // closer, no Spanish — excluded
+        $speaksSpanish = $this->provider($tenant, $discipline, $tier, 20);
+        $speaksSpanish->languages()->attach($spanish->id, ['is_primary' => true]);
 
         $intake = $this->intake($tenant, $this->subject($tenant, ['language_preference' => 'Spanish']), $discipline);
 
         $results = $this->engine()->match($intake);
 
-        $this->assertSame([$farSpeaksSpanish->id, $closeNoLang->id], $this->ids($results));
+        // A language preference that CAN be satisfied excludes every non-speaker.
+        $this->assertSame([$speaksSpanish->id], $this->ids($results));
         $this->assertTrue($results->first()->languageMatched);
         $this->assertFalse($results->first()->languageWarning);
     }
@@ -263,41 +264,6 @@ class MatchingEngineTest extends FeatureTest
         $this->assertTrue($results->every(fn (MatchingResult $r) => ! $r->languageMatched));
     }
 
-    public function test_preferred_provider_is_pinned_above_a_higher_tier_non_preferred(): void
-    {
-        $tenant = $this->createTenant();
-        $discipline = $this->discipline($tenant);
-        $gold = $this->tier($tenant, 'Gold', 1);
-        $silver = $this->tier($tenant, 'Silver', 2);
-
-        $goldNonPreferred = $this->provider($tenant, $discipline, $gold, 5);
-        $silverPreferred = $this->provider($tenant, $discipline, $silver, 15, ['is_preferred' => true]);
-
-        $intake = $this->intake($tenant, $this->subject($tenant), $discipline);
-
-        // Preferred wins outright, even though it's a lower tier and farther away.
-        $this->assertSame([$silverPreferred->id, $goldNonPreferred->id], $this->ids($this->engine()->match($intake)));
-    }
-
-    public function test_non_preferred_providers_order_by_tier_then_proximity(): void
-    {
-        $tenant = $this->createTenant();
-        $discipline = $this->discipline($tenant);
-        $gold = $this->tier($tenant, 'Gold', 1);
-        $silver = $this->tier($tenant, 'Silver', 2);
-
-        $goldNear = $this->provider($tenant, $discipline, $gold, 5);
-        $goldFar = $this->provider($tenant, $discipline, $gold, 20);
-        $silverClosest = $this->provider($tenant, $discipline, $silver, 1);
-
-        $intake = $this->intake($tenant, $this->subject($tenant), $discipline);
-
-        $this->assertSame(
-            [$goldNear->id, $goldFar->id, $silverClosest->id],
-            $this->ids($this->engine()->match($intake)),
-        );
-    }
-
     public function test_returns_empty_when_subject_has_no_coordinates(): void
     {
         $tenant = $this->createTenant();
@@ -310,7 +276,7 @@ class MatchingEngineTest extends FeatureTest
         $this->assertTrue($this->engine()->match($intake)->isEmpty());
     }
 
-    public function test_attaches_distance_score_and_flags_to_each_result(): void
+    public function test_attaches_distance_and_flags_to_each_result(): void
     {
         $tenant = $this->createTenant();
         $discipline = $this->discipline($tenant);
@@ -322,7 +288,6 @@ class MatchingEngineTest extends FeatureTest
         $result = $this->engine()->match($intake)->first();
 
         $this->assertEqualsWithDelta(10.0, $result->distanceMiles, 0.3);
-        $this->assertGreaterThan(0.0, $result->score);
         $this->assertSame(1, $result->factors['tier_priority']);
         $this->assertTrue($result->factors['is_preferred']);
     }
