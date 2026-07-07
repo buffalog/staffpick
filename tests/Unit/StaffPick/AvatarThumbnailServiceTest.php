@@ -47,6 +47,17 @@ class AvatarThumbnailServiceTest extends TestCase
         $this->assertSame(80, $out->height());
     }
 
+    public function test_it_skips_images_over_the_megapixel_cap(): void
+    {
+        // Just over MAX_MEGAPIXELS (~16.8 MP) — must NOT be decoded (the OOM guard), so the
+        // original bytes are returned untouched.
+        $huge = $this->largeJpeg(4100, 4100);
+        $result = (new AvatarThumbnailService)->process($huge, 'image/jpeg');
+
+        $this->assertSame($huge, $result['bytes']);
+        $this->assertSame('image/jpeg', $result['mime']);
+    }
+
     public function test_undecodable_input_falls_back_to_the_original_bytes(): void
     {
         // Stands in for a HEIC (or any format GD can't read): must not throw, keeps original.

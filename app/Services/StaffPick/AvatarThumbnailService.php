@@ -20,6 +20,18 @@ class AvatarThumbnailService
     /** Longest-side cap, in px. ~2x the largest avatar/banner slot for retina crispness. */
     public const MAX_DIMENSION = 512;
 
+    /**
+     * Hard cap on source pixels we'll decode. GD decodes to a full ~4 bytes/pixel bitmap in
+     * memory (a 33 MP 8K photo is ~130 MB) which can exceed the container's RAM and get the
+     * process OOM-killed — an uncatchable SIGKILL that crash-loops a migration or fails a
+     * request. Anything larger is left at original size rather than decoded.
+     *
+     * 16 MP (~64 MB bitmap) is a safe margin: this container OOM-killed decoding a 33 MP
+     * (~130 MB) photo, so headroom is under ~130 MB. Standard phone photos are ~12 MP and
+     * pass; genuinely huge images (8K, 48 MP) need a reduced-resolution decoder (Imagick).
+     */
+    public const MAX_MEGAPIXELS = 16_000_000;
+
     /** JPEG quality for the re-encoded thumbnail. */
     private const QUALITY = 80;
 
@@ -31,6 +43,13 @@ class AvatarThumbnailService
         // GD can't decode HEIC — skip it up front (attempting would emit a noisy GD warning)
         // and keep the original. HEIC display is a separate browser limitation regardless.
         if ($fallbackMime === 'image/heic') {
+            return ['bytes' => $bytes, 'mime' => $fallbackMime];
+        }
+
+        // OOM guard: read only the header dimensions (no decode) and skip images whose pixel
+        // count would blow the memory budget when GD decodes them. See MAX_MEGAPIXELS.
+        $info = @getimagesizefromstring($bytes);
+        if ($info === false || (($info[0] * $info[1]) > self::MAX_MEGAPIXELS)) {
             return ['bytes' => $bytes, 'mime' => $fallbackMime];
         }
 
