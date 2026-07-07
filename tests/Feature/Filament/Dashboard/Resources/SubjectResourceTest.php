@@ -108,6 +108,43 @@ class SubjectResourceTest extends FeatureTest
         ]);
     }
 
+    public function test_preferred_language_is_a_disabled_read_only_field_showing_the_intake_value(): void
+    {
+        $tenant = $this->createTenant();
+        $record = Subject::factory()->create([
+            'tenant_id' => $tenant->id,
+            'preferred_language' => 'Spanish',
+        ]);
+
+        $this->actAsTenant($tenant);
+
+        Livewire::test(EditSubject::class, ['record' => $record->getKey()])
+            ->assertFormFieldIsDisabled('preferred_language')
+            ->assertFormSet(['preferred_language' => 'Spanish']);
+    }
+
+    public function test_preferred_language_is_not_writable_through_the_form(): void
+    {
+        $tenant = $this->createTenant();
+        $record = Subject::factory()->create([
+            'tenant_id' => $tenant->id,
+            'preferred_language' => 'Spanish',    // written by public intake, staff cannot edit
+            'language_preference' => null,
+        ]);
+
+        $this->actAsTenant($tenant);
+
+        // Staff edit the matching field; the disabled intake field must not be persisted.
+        Livewire::test(EditSubject::class, ['record' => $record->getKey()])
+            ->fillForm(['language_preference' => 'Portuguese'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $fresh = $record->fresh();
+        $this->assertSame('Spanish', $fresh->preferred_language, 'The disabled intake language must be untouched by a staff save.');
+        $this->assertSame('Portuguese', $fresh->language_preference, 'The staff-editable matching language must save.');
+    }
+
     public function test_view_page_renders_record(): void
     {
         $tenant = $this->createTenant();

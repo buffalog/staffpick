@@ -120,9 +120,6 @@ class SubjectForm
                     Select::make('gender')
                         ->label(__('Gender'))
                         ->options(self::genderOptions()),
-                    TextInput::make('preferred_language')
-                        ->label(__('Preferred Language'))
-                        ->maxLength(255),
                 ]),
 
             Section::make(__('Medical'))
@@ -162,9 +159,20 @@ class SubjectForm
                 ->schema([
                     Select::make('provider_gender_preference')
                         ->label(__('Preferred Provider Gender'))
-                        ->options(self::genderOptions()),
+                        ->options(self::genderOptions())
+                        ->columnSpanFull(),
+                    // Read-only mirror of what a referral source self-reported at intake. Shown
+                    // beside the editable matching field so staff have that context without a
+                    // second editable language field that can drift. Never written from here.
+                    TextInput::make('preferred_language')
+                        ->label(__('Language noted at intake'))
+                        ->helperText(__('Specified by the referral source at submission. Read-only.'))
+                        ->disabled()
+                        ->dehydrated(false)
+                        ->maxLength(255),
                     TextInput::make('language_preference')
                         ->label(__('Language Preference'))
+                        ->helperText(__('The language the matching engine filters on. Edit here.'))
                         ->maxLength(255),
                 ]),
 
