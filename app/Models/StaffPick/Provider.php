@@ -83,7 +83,6 @@ class Provider extends Model
         'preferred_contact_channel',
         'calendar_token',
         'calendar_token_generated_at',
-        'photo',
     ];
 
     protected function casts(): array

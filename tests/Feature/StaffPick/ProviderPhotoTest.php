@@ -46,6 +46,19 @@ class ProviderPhotoTest extends FeatureTest
         return $photo;
     }
 
+    public function test_provider_photo_accessor_resolves_to_the_relation(): void
+    {
+        // Regression guard: a legacy `photo` column once shadowed the photo() relation, so
+        // $provider->photo returned the (null) column and photos never rendered on the card
+        // or profile. The accessor must resolve to the ProviderPhoto relation.
+        $provider = Provider::factory()->create(['tenant_id' => $this->tenant->id]);
+        $this->photo($provider);
+
+        $fresh = $provider->fresh();
+        $this->assertTrue($fresh->hasPhoto());
+        $this->assertInstanceOf(ProviderPhoto::class, $fresh->photo);
+    }
+
     public function test_photo_access_gate_by_role_and_ownership(): void
     {
         $provider = Provider::factory()->create(['tenant_id' => $this->tenant->id]);
