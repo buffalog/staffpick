@@ -9,6 +9,7 @@
 @source '../../../../resources/views/filament';
 @source '../../../../resources/views/livewire';
 @source '../../../../resources/views/components';
+@source '../../../../resources/views/staffpick';
 @source '../../../../app/Livewire';
 @source '../../../../vendor/**/*.blade.php';
 
