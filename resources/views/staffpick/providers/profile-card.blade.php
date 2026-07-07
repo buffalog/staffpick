@@ -41,10 +41,11 @@
     @if ($photoUrl)
         <img src="{{ $photoUrl }}" alt="{{ $provider->full_name }}" loading="lazy" class="h-[140px] w-full object-cover" />
     @else
-        <div class="flex h-[140px] items-center justify-center border-y-2 border-gray-100 dark:border-white/5">
-            {{-- mt-1: the block collapses to the avatar's height in the card's flex column, so
-                 the monogram would otherwise sit flush against the header band — nudge it down. --}}
-            <x-provider-avatar :provider="$provider" :size="88" class="mt-1" />
+        {{-- min-h (not h): a plain h-[140px] here is overridden by a cascade rule and collapses
+             to the avatar's height, dropping the monogram flush against the header. min-height
+             holds the 140px slot so the avatar centers, matching a photo card's banner height. --}}
+        <div class="flex min-h-[140px] items-center justify-center border-y-2 border-gray-100 dark:border-white/5">
+            <x-provider-avatar :provider="$provider" :size="88" />
         </div>
     @endif
 
