@@ -75,6 +75,42 @@ class IntakeRequestResourceTest extends FeatureTest
         ]);
     }
 
+    public function test_new_case_defaults_to_draft_and_persists_as_unmatched(): void
+    {
+        $tenant = $this->createTenant();
+        $this->actAsTenant($tenant);
+
+        $subject = Subject::factory()->create(['tenant_id' => $tenant->id]);
+
+        Livewire::test(CreateIntakeRequest::class)
+            ->assertFormSet(['status' => 'draft']) // create page shows draft, not a live status
+            ->fillForm(['subject_id' => $subject->id]) // leave status at its draft default
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        // Draft is a compose-time placeholder; a saved case starts life as unmatched.
+        $this->assertDatabaseHas('sp_intake_requests', [
+            'subject_id' => $subject->id,
+            'status' => 'unmatched',
+        ]);
+        $this->assertDatabaseMissing('sp_intake_requests', [
+            'subject_id' => $subject->id,
+            'status' => 'draft',
+        ]);
+    }
+
+    public function test_create_page_exposes_actions_as_header_actions(): void
+    {
+        $tenant = $this->createTenant();
+        $this->actAsTenant($tenant);
+
+        Livewire::test(CreateIntakeRequest::class)
+            ->assertSuccessful()
+            ->assertActionExists('create')
+            ->assertActionExists('createAnother')
+            ->assertActionExists('cancel');
+    }
+
     public function test_create_requires_a_subject(): void
     {
         $tenant = $this->createTenant();
