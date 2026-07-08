@@ -85,6 +85,19 @@ class ProvidersTable
                         'inactive' => __('Inactive'),
                         'pending' => __('Pending'),
                     ]),
+                SelectFilter::make('gender')
+                    ->label(__('Gender'))
+                    ->options([
+                        'male' => __('Male'),
+                        'female' => __('Female'),
+                        'non_binary' => __('Non-binary'),
+                        'other' => __('Other'),
+                    ]),
+                SelectFilter::make('languages')
+                    ->label(__('Languages'))
+                    ->relationship('languages', 'name')
+                    ->searchable()
+                    ->preload(),
                 TrashedFilter::make(),
             ])
             ->recordActions([

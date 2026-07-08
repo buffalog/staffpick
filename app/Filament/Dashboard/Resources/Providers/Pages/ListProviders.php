@@ -53,8 +53,8 @@ class ListProviders extends ListRecords
     /**
      * Reuse the existing table (filters, actions, sort, list columns) as-is, and in the
      * default 'grid' layout swap the columns for a single profile-card view laid out in
-     * a responsive content grid. Global text search only applies in the list layout —
-     * the card layout keeps the discipline/tier/status filters.
+     * a responsive content grid. The card column isn't searchable, so re-declare the same
+     * search fields at the table level to keep the global search box in the grid layout too.
      */
     public function table(Table $table): Table
     {
@@ -65,7 +65,8 @@ class ListProviders extends ListRecords
                 ->columns([
                     View::make('staffpick.providers.profile-card'),
                 ])
-                ->contentGrid(['sm' => 1, 'md' => 2, 'xl' => 3]);
+                ->contentGrid(['sm' => 1, 'md' => 2, 'xl' => 3])
+                ->searchable(['first_name', 'last_name', 'business_name']);
         }
 
         return $table;

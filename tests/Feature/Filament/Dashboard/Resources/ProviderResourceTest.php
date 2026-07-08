@@ -8,6 +8,7 @@ use App\Filament\Dashboard\Resources\Providers\Pages\ListProviders;
 use App\Filament\Dashboard\Resources\Providers\Pages\ViewProvider;
 use App\Filament\Dashboard\Resources\Providers\ProviderResource;
 use App\Models\StaffPick\Discipline;
+use App\Models\StaffPick\Language;
 use App\Models\StaffPick\Provider;
 use App\Models\StaffPick\Specialty;
 use Filament\Facades\Filament;
@@ -50,6 +51,54 @@ class ProviderResourceTest extends FeatureTest
         Livewire::test(ListProviders::class)
             ->assertCanSeeTableRecords([$mine])
             ->assertCanNotSeeTableRecords([$theirs]);
+    }
+
+    public function test_gender_filter_narrows_the_grid(): void
+    {
+        $tenant = $this->createTenant();
+        $female = Provider::factory()->create(['tenant_id' => $tenant->id, 'gender' => 'female', 'last_name' => 'Genderfemale']);
+        $male = Provider::factory()->create(['tenant_id' => $tenant->id, 'gender' => 'male', 'last_name' => 'Gendermale']);
+
+        $this->actAsTenant($tenant);
+
+        Livewire::test(ListProviders::class)
+            ->filterTable('gender', 'female')
+            ->assertCanSeeTableRecords([$female])
+            ->assertCanNotSeeTableRecords([$male]);
+    }
+
+    public function test_language_filter_narrows_the_grid(): void
+    {
+        $tenant = $this->createTenant();
+        // firstOrCreate: the languages seeder may already own the 'es' row on the shared DB.
+        $spanish = Language::firstOrCreate(['code' => 'es'], ['name' => 'Spanish']);
+
+        $speaks = Provider::factory()->create(['tenant_id' => $tenant->id, 'last_name' => 'Langspeaks']);
+        $speaks->languages()->attach($spanish->id, ['is_primary' => true]);
+        $silent = Provider::factory()->create(['tenant_id' => $tenant->id, 'last_name' => 'Langsilent']);
+
+        $this->actAsTenant($tenant);
+
+        Livewire::test(ListProviders::class)
+            ->filterTable('languages', $spanish->id)
+            ->assertCanSeeTableRecords([$speaks])
+            ->assertCanNotSeeTableRecords([$silent]);
+    }
+
+    public function test_search_box_narrows_records_in_grid_layout(): void
+    {
+        $tenant = $this->createTenant();
+        $match = Provider::factory()->create(['tenant_id' => $tenant->id, 'last_name' => 'Zephyrenko']);
+        $other = Provider::factory()->create(['tenant_id' => $tenant->id, 'last_name' => 'Abramsonqx']);
+
+        $this->actAsTenant($tenant);
+
+        // Default layout is the card grid; search must still narrow it.
+        Livewire::test(ListProviders::class)
+            ->assertSet('viewLayout', 'grid')
+            ->searchTable('Zephyrenko')
+            ->assertCanSeeTableRecords([$match])
+            ->assertCanNotSeeTableRecords([$other]);
     }
 
     public function test_create_auto_fills_tenant_id_from_current_tenant(): void
