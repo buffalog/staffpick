@@ -75,5 +75,19 @@ class AppServiceProvider extends ServiceProvider
             PanelsRenderHook::HEAD_END,
             fn (): string => '<style>.fi-resource-view-record-page .fi-header-heading{display:none;}</style>',
         );
+
+        // Breathing room for two cramped icon buttons (scoped to just these two so other
+        // filter/notification icons are untouched):
+        //  - the provider card-grid filter funnel, which Filament's -8px toolbar-action
+        //    margin jams into the corner under the active-filter badge;
+        //  - the global header notification bell, which sits flush against the search box
+        //    and the user avatar.
+        FilamentView::registerRenderHook(
+            PanelsRenderHook::HEAD_END,
+            fn (): string => '<style>'
+                .'.fi-resource-providers .fi-ta-ctn-with-content-layout .fi-ta-filters-dropdown .fi-dropdown-trigger .fi-icon-btn{margin:0 !important;}'
+                .'.fi-topbar-database-notifications-btn{margin-inline:0.5rem !important;}'
+                .'</style>',
+        );
     }
 }
