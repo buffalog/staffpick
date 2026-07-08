@@ -43,6 +43,7 @@ class IntakeRequestForm
                 // Top card — always visible, no accordion. A required field must never hide
                 // behind a collapsed section on a create form. Merges Case + Status.
                 Section::make(__('Patient & status'))
+                    ->columnSpanFull()
                     ->columns(2)
                     ->schema([
                         Select::make('subject_id')
@@ -120,6 +121,7 @@ class IntakeRequestForm
                     ]),
 
                 Section::make(__('Service details'))
+                    ->columnSpanFull()
                     ->columns(2)
                     ->collapsible()
                     ->schema([
@@ -151,6 +153,7 @@ class IntakeRequestForm
                     ]),
 
                 Section::make(__('Matching preferences'))
+                    ->columnSpanFull()
                     ->columns(2)
                     ->collapsible()
                     ->schema([
@@ -187,6 +190,7 @@ class IntakeRequestForm
                     ]),
 
                 Section::make(__('Notes'))
+                    ->columnSpanFull()
                     ->schema([
                         Textarea::make('notes')
                             ->label(__('Notes'))
@@ -195,6 +199,7 @@ class IntakeRequestForm
                     ]),
 
                 Section::make(__('Files'))
+                    ->columnSpanFull()
                     ->schema([
                         Repeater::make('files')
                             ->relationship()
@@ -226,6 +231,7 @@ class IntakeRequestForm
                 // Low-priority metadata — collapsed by default. Office lives here because
                 // nothing in matching/dispatch reads it yet (no seeder/factory populates it).
                 Section::make(__('Flags and external references'))
+                    ->columnSpanFull()
                     ->columns(2)
                     ->collapsible()
                     ->collapsed()
