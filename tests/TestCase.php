@@ -6,6 +6,7 @@ use Database\Seeders\Testing\TestingDatabaseSeeder;
 use Illuminate\Database\Seeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Support\Facades\DB;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -25,4 +26,18 @@ abstract class TestCase extends BaseTestCase
      * @var class-string<Seeder>
      */
     protected $seeder = TestingDatabaseSeeder::class;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Fail fast on a lock-wait instead of hanging forever. SQL Server holds the row locks
+        // of each test's wrapping (RefreshDatabase) transaction; a nested DB::transaction()
+        // savepoint in the code under test that contends for them would otherwise block
+        // indefinitely on pdo_sqlsrv (it did — the whole suite hung). A bounded LOCK_TIMEOUT
+        // turns that hang into a named, diagnosable failure so the run completes.
+        if (DB::connection()->getDriverName() === 'sqlsrv') {
+            DB::unprepared('SET LOCK_TIMEOUT 15000');
+        }
+    }
 }
