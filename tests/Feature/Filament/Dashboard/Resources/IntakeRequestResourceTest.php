@@ -63,14 +63,14 @@ class IntakeRequestResourceTest extends FeatureTest
         Livewire::test(CreateIntakeRequest::class)
             ->fillForm([
                 'subject_id' => $subject->id,
-                'status' => 'pending',
+                'status' => 'unmatched',
             ])
             ->call('create')
             ->assertHasNoFormErrors();
 
         $this->assertDatabaseHas('sp_intake_requests', [
             'subject_id' => $subject->id,
-            'status' => 'pending',
+            'status' => 'unmatched',
             'tenant_id' => $tenant->id,
         ]);
     }
@@ -119,7 +119,7 @@ class IntakeRequestResourceTest extends FeatureTest
         Livewire::test(CreateIntakeRequest::class)
             ->fillForm([
                 'subject_id' => null,
-                'status' => 'pending',
+                'status' => 'unmatched',
             ])
             ->call('create')
             ->assertHasFormErrors(['subject_id' => 'required']);
@@ -130,19 +130,19 @@ class IntakeRequestResourceTest extends FeatureTest
         $tenant = $this->createTenant();
         $record = IntakeRequest::factory()->create([
             'tenant_id' => $tenant->id,
-            'status' => 'pending',
+            'status' => 'unmatched',
         ]);
 
         $this->actAsTenant($tenant);
 
         Livewire::test(EditIntakeRequest::class, ['record' => $record->getKey()])
-            ->fillForm(['status' => 'active'])
+            ->fillForm(['status' => 'matched'])
             ->call('save')
             ->assertHasNoFormErrors();
 
         $this->assertDatabaseHas('sp_intake_requests', [
             'id' => $record->id,
-            'status' => 'active',
+            'status' => 'matched',
         ]);
     }
 
@@ -151,7 +151,7 @@ class IntakeRequestResourceTest extends FeatureTest
         $tenant = $this->createTenant();
         $record = IntakeRequest::factory()->create([
             'tenant_id' => $tenant->id,
-            'status' => 'pending',
+            'status' => 'unmatched',
         ]);
 
         $this->actAsTenant($tenant);
@@ -173,7 +173,7 @@ class IntakeRequestResourceTest extends FeatureTest
             'status' => Provider::STATUS_ACTIVE,
             'is_active' => true,
         ]);
-        $record = IntakeRequest::factory()->create(['tenant_id' => $tenant->id, 'status' => 'pending']);
+        $record = IntakeRequest::factory()->create(['tenant_id' => $tenant->id, 'status' => 'unmatched']);
 
         $this->actAsTenant($tenant);
 
@@ -194,7 +194,9 @@ class IntakeRequestResourceTest extends FeatureTest
             'referring_clinician_phone' => '5615550199',
             'is_partial_staffing' => true,
             'assistant_clinician_name' => 'Marcus Lee, PTA',
-            'lead_clinician_id' => $lead->id,
+            // lead_clinician_id is a disabled field ("Populated after matching"), so the
+            // form cannot set it — it stays null despite being filled above.
+            'lead_clinician_id' => null,
         ]);
     }
 

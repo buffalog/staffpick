@@ -22,7 +22,7 @@ class ProviderCalendarFeedTest extends FeatureTest
         IntakeRequest::factory()->create([
             'tenant_id' => $tenant->id,
             'lead_clinician_id' => $provider->id,
-            'status' => 'active',
+            'status' => 'matched',
             'evaluation_date' => '2026-07-01',
             'reference_number' => 'R-TEST01',
         ]);
