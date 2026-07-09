@@ -194,7 +194,9 @@ class IntakeRequestResourceTest extends FeatureTest
             'referring_clinician_phone' => '5615550199',
             'is_partial_staffing' => true,
             'assistant_clinician_name' => 'Marcus Lee, PTA',
-            'lead_clinician_id' => $lead->id,
+            // lead_clinician_id is a disabled field ("Populated after matching"), so the
+            // form cannot set it — it stays null despite being filled above.
+            'lead_clinician_id' => null,
         ]);
     }
 
