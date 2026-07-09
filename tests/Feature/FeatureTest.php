@@ -6,24 +6,16 @@ use App\Constants\TenancyPermissionConstants;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\TenantPermissionService;
-use Database\Seeders\Testing\TestingDatabaseSeeder;
 use Filament\Facades\Filament;
 use Tests\TestCase;
 
 class FeatureTest extends TestCase
 {
-    protected static bool $setUpHasRunOnce = false;
-
     protected function setUp(): void
     {
+        // Schema (migrate:fresh) and the one-time seed are now owned by RefreshDatabase on
+        // the base TestCase, which also wraps each test in a rolled-back transaction.
         parent::setUp();
-
-        if (! static::$setUpHasRunOnce) {
-            $this->artisan('migrate:fresh');
-            $this->seed(TestingDatabaseSeeder::class);
-
-            static::$setUpHasRunOnce = true;
-        }
 
         $this->configureDefaultCurrency();
         $this->withoutExceptionHandling();
