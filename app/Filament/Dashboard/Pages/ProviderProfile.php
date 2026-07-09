@@ -395,6 +395,7 @@ class ProviderProfile extends Page
                         ->label(__('Document'))
                         ->directory('staffpick/credentials')
                         ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])
+                        ->maxSize(10240)
                         ->required((bool) $type->is_required)
                         // Credential files persist on upload completion, not on debounce.
                         ->live()
