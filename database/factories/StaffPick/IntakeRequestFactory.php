@@ -18,7 +18,7 @@ class IntakeRequestFactory extends Factory
     {
         return [
             'reference_number' => fake()->unique()->bothify('CASE-#####'),
-            'status' => 'pending',
+            'status' => 'unmatched',
             'visits_completed' => 0,
             // Subject shares the intake request's tenant; sp_subjects.tenant_id is NOT NULL.
             'subject_id' => fn (array $attributes) => Subject::factory()->create([
