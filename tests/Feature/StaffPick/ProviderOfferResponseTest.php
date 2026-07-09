@@ -88,6 +88,30 @@ class ProviderOfferResponseTest extends FeatureTest
         $this->get('/offers/'.$offer->token)->assertForbidden();
     }
 
+    public function test_a_single_page_load_under_the_rate_limit_is_not_throttled(): void
+    {
+        $user = $this->createUser($this->tenant);
+        $offer = $this->sentOfferFor($user);
+        $this->actingAs($user);
+
+        $this->get('/offers/'.$offer->token)->assertSuccessful();
+    }
+
+    public function test_the_thirty_first_page_load_in_a_minute_is_throttled(): void
+    {
+        $user = $this->createUser($this->tenant);
+        $offer = $this->sentOfferFor($user);
+        $this->actingAs($user);
+
+        // throttle:30,1 — a compromised authenticated session can't flood token guesses at
+        // the DB. 30 loads/minute succeed; the 31st is rejected before the route handler.
+        for ($i = 0; $i < 30; $i++) {
+            $this->get('/offers/'.$offer->token)->assertSuccessful();
+        }
+
+        $this->get('/offers/'.$offer->token)->assertStatus(429);
+    }
+
     public function test_it_shows_the_full_case_to_the_owning_provider(): void
     {
         $user = $this->createUser($this->tenant);
