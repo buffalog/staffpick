@@ -264,9 +264,10 @@ Route::post('/webhooks/slack/{token}', SlackWebhookController::class)
     ->name('staffpick.slack.inbound');
 
 // StaffPick — authenticated provider assignment-offer response page. The token
-// resolves the offer; the page authorizes it against the signed-in provider.
+// resolves the offer; the page authorizes it against the signed-in provider. Page-load
+// throttled so a compromised authenticated session can't flood token guesses at the DB.
 Route::get('/offers/{token}', ProviderOfferResponse::class)
-    ->middleware('auth')
+    ->middleware(['auth', 'throttle:30,1'])
     ->name('staffpick.offer.respond');
 
 // StaffPick — public provider iCal calendar feed (no login). The token authenticates
