@@ -15,6 +15,8 @@ class CheckCredentialExpiryTest extends FeatureTest
 
     private CredentialDocumentType $type;
 
+    private CredentialDocumentType $otherType;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -25,13 +27,20 @@ class CheckCredentialExpiryTest extends FeatureTest
             'name' => 'CPR Certification',
             'verification_method' => 'manual',
         ]);
+        // sp_provider_credentials is unique on (provider_id, document_type_id), so a
+        // provider holding two credentials at once needs two distinct document types.
+        $this->otherType = CredentialDocumentType::create([
+            'tenant_id' => $this->tenant->id,
+            'name' => 'Background Check',
+            'verification_method' => 'manual',
+        ]);
     }
 
-    private function credential(Provider $provider, ?string $expiresAt): ProviderCredential
+    private function credential(Provider $provider, ?string $expiresAt, ?CredentialDocumentType $type = null): ProviderCredential
     {
         return ProviderCredential::create([
             'provider_id' => $provider->id,
-            'document_type_id' => $this->type->id,
+            'document_type_id' => ($type ?? $this->type)->id,
             'status' => 'valid',
             'expires_at' => $expiresAt,
         ]);
@@ -45,9 +54,9 @@ class CheckCredentialExpiryTest extends FeatureTest
         $active = Provider::factory()->create(['tenant_id' => $this->tenant->id, 'is_active' => true, 'status' => 'active']);
         $inactive = Provider::factory()->inactive()->create(['tenant_id' => $this->tenant->id]);
 
-        $expiringSoon = $this->credential($active, now()->addDays(10)->toDateString());   // included
-        $this->credential($active, now()->addDays(200)->toDateString());                  // excluded: not soon
-        $this->credential($inactive, now()->addDays(5)->toDateString());                  // excluded: provider inactive
+        $expiringSoon = $this->credential($active, now()->addDays(10)->toDateString());                     // included
+        $this->credential($active, now()->addDays(200)->toDateString(), $this->otherType);                  // excluded: not soon
+        $this->credential($inactive, now()->addDays(5)->toDateString());                                    // excluded: provider inactive
 
         // Mock the notifier so the command's selection is asserted without the notifier
         // reading the date cast (which the local FreeTDS driver can't parse).
