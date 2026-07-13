@@ -88,6 +88,12 @@ class Provider extends Model
     protected function casts(): array
     {
         return [
+            'tenant_id' => 'integer',
+            'discipline_id' => 'integer',
+            'tier_id' => 'integer',
+            'office_id' => 'integer',
+            'user_id' => 'integer',
+            'tier_changed_by_user_id' => 'integer',
             'latitude' => 'decimal:7',
             'longitude' => 'decimal:7',
             'is_contractor' => 'boolean',

@@ -17,4 +17,16 @@ class SubscriptionDiscount extends Model
         'amount',
         'valid_until',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'subscription_id' => 'integer',
+            'discount_id' => 'integer',
+            'is_recurring' => 'boolean',
+        ];
+    }
 }

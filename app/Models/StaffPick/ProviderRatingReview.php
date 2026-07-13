@@ -46,6 +46,11 @@ class ProviderRatingReview extends Model
     protected function casts(): array
     {
         return [
+            'tenant_id' => 'integer',
+            'provider_id' => 'integer',
+            'current_tier_id' => 'integer',
+            'suggested_tier_id' => 'integer',
+            'reviewed_by_user_id' => 'integer',
             'rating_90day_avg' => 'decimal:2',
             'rating_180day_avg' => 'decimal:2',
             'survey_count' => 'integer',

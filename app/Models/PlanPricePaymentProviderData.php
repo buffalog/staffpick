@@ -15,4 +15,15 @@ class PlanPricePaymentProviderData extends Model
         'payment_provider_price_id',
         'type',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'plan_price_id' => 'integer',
+            'payment_provider_id' => 'integer',
+        ];
+    }
 }

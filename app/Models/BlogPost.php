@@ -44,6 +44,19 @@ class BlogPost extends Model implements HasMedia
         });
     }
 
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'is_published' => 'boolean',
+            'user_id' => 'integer',
+            'author_id' => 'integer',
+            'blog_post_category_id' => 'integer',
+        ];
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

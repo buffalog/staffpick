@@ -17,6 +17,18 @@ class ReferralReward extends Model
         'discount_code_id',
     ];
 
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'referral_id' => 'integer',
+            'referrer_user_id' => 'integer',
+            'discount_code_id' => 'integer',
+        ];
+    }
+
     public function referral(): BelongsTo
     {
         return $this->belongsTo(Referral::class);

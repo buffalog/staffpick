@@ -23,6 +23,8 @@ class SlackWebhookLog extends Model
     protected function casts(): array
     {
         return [
+            'tenant_id' => 'integer',
+            'intake_request_id' => 'integer',
             'signature_valid' => 'boolean',
         ];
     }

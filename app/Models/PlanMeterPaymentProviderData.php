@@ -17,6 +17,8 @@ class PlanMeterPaymentProviderData extends Model
     ];
 
     protected $casts = [
+        'plan_meter_id' => 'integer',
+        'payment_provider_id' => 'integer',
         'data' => 'array',
     ];
 }

@@ -66,6 +66,25 @@ class Transaction extends Model
         });
     }
 
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'user_id' => 'integer',
+            'currency_id' => 'integer',
+            'amount' => 'integer',
+            'subscription_id' => 'integer',
+            'order_id' => 'integer',
+            'payment_provider_id' => 'integer',
+            'total_discount' => 'integer',
+            'total_tax' => 'integer',
+            'total_fees' => 'integer',
+            'tenant_id' => 'integer',
+        ];
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

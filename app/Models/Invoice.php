@@ -15,4 +15,14 @@ class Invoice extends Model
         'status',
         'filename',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'transaction_id' => 'integer',
+        ];
+    }
 }

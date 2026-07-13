@@ -22,6 +22,8 @@ class Referral extends Model
     ];
 
     protected $casts = [
+        'referrer_user_id' => 'integer',
+        'referred_user_id' => 'integer',
         'verified_at' => 'datetime',
         'paid_at' => 'datetime',
         'rewarded_at' => 'datetime',

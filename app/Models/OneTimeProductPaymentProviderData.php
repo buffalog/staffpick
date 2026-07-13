@@ -16,6 +16,17 @@ class OneTimeProductPaymentProviderData extends Model
         'payment_provider_product_id',
     ];
 
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'one_time_product_id' => 'integer',
+            'payment_provider_id' => 'integer',
+        ];
+    }
+
     public function oneTimeProduct(): BelongsTo
     {
         return $this->belongsTo(OneTimeProduct::class);

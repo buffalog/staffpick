@@ -39,6 +39,8 @@ class AuthLog extends Model
     protected function casts(): array
     {
         return [
+            'tenant_id' => 'integer',
+            'user_id' => 'integer',
             'success' => 'boolean',
         ];
     }

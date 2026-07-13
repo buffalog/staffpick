@@ -60,6 +60,7 @@ class ProviderApplication extends Model
     protected function casts(): array
     {
         return [
+            'tenant_id' => 'integer',
             'submitted_at' => 'datetime',
             'reviewed_at' => 'datetime',
             'specialties' => 'array',

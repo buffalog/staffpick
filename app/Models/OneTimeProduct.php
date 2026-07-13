@@ -24,6 +24,8 @@ class OneTimeProduct extends Model
     ];
 
     protected $casts = [
+        'is_active' => 'boolean',
+        'is_visible' => 'boolean',
         'features' => 'array',
         'metadata' => 'array',
     ];

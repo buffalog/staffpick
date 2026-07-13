@@ -25,6 +25,7 @@ class ProviderTier extends Model
     protected function casts(): array
     {
         return [
+            'tenant_id' => 'integer',
             'priority' => 'integer',
             'is_active' => 'boolean',
             'response_window_minutes' => 'integer',

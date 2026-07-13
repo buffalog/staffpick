@@ -43,6 +43,16 @@ class Subscription extends Model
     ];
 
     protected $casts = [
+        'user_id' => 'integer',
+        'plan_id' => 'integer',
+        'price' => 'integer',
+        'currency_id' => 'integer',
+        'payment_provider_id' => 'integer',
+        'interval_id' => 'integer',
+        'interval_count' => 'integer',
+        'is_canceled_at_end_of_cycle' => 'boolean',
+        'quantity' => 'integer',
+        'tenant_id' => 'integer',
         'price_tiers' => 'array',
         'extra_payment_provider_data' => 'array',
     ];

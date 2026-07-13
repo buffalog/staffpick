@@ -30,6 +30,8 @@ class IntakeRequestFile extends Model
     protected function casts(): array
     {
         return [
+            'intake_request_id' => 'integer',
+            'uploaded_by_user_id' => 'integer',
             'file_size' => 'integer',
         ];
     }

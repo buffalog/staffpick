@@ -40,6 +40,8 @@ class ProviderPhoto extends Model
     protected function casts(): array
     {
         return [
+            'provider_id' => 'integer',
+            'updated_by_user_id' => 'integer',
             'file_size' => 'integer',
         ];
     }

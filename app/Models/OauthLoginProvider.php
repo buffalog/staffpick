@@ -16,4 +16,14 @@ class OauthLoginProvider extends Model
         'client_secret',
         'enabled',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'enabled' => 'boolean',
+        ];
+    }
 }

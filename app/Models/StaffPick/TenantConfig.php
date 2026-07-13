@@ -111,6 +111,7 @@ class TenantConfig extends Model
     protected function casts(): array
     {
         return [
+            'tenant_id' => 'integer',
             'default_radius_miles' => 'integer',
             'feathering_miles' => 'integer',
             'offer_window_seconds' => 'integer',

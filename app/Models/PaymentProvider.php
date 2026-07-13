@@ -17,4 +17,16 @@ class PaymentProvider extends Model
         'sort',
         'is_enabled_for_new_payments',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'is_active' => 'boolean',
+            'sort' => 'integer',
+            'is_enabled_for_new_payments' => 'boolean',
+        ];
+    }
 }

@@ -20,6 +20,22 @@ class OrderItem extends Model
         'discount_per_unit',
     ];
 
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'order_id' => 'integer',
+            'one_time_product_id' => 'integer',
+            'quantity' => 'integer',
+            'currency_id' => 'integer',
+            'price_per_unit' => 'integer',
+            'price_per_unit_after_discount' => 'integer',
+            'discount_per_unit' => 'integer',
+        ];
+    }
+
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);

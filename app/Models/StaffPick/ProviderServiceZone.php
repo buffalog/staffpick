@@ -29,6 +29,7 @@ class ProviderServiceZone extends Model
     protected function casts(): array
     {
         return [
+            'provider_id' => 'integer',
             'bbox_north' => 'decimal:7',
             'bbox_south' => 'decimal:7',
             'bbox_east' => 'decimal:7',

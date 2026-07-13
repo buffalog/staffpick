@@ -68,6 +68,8 @@ class User extends Authenticatable implements FilamentUser, HasTenants, MustVeri
      * @var array<string, string>
      */
     protected $casts = [
+        'is_admin' => 'boolean',
+        'is_blocked' => 'boolean',
         'email_verified_at' => 'datetime',
         'phone_number_verified_at' => 'datetime',
         'password' => 'hashed',

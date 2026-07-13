@@ -66,6 +66,9 @@ class CredentialAttachment extends Model
     protected function casts(): array
     {
         return [
+            'provider_credential_id' => 'integer',
+            'uploaded_by_user_id' => 'integer',
+            'deleted_by_user_id' => 'integer',
             'uploaded_at' => 'datetime',
             'file_size' => 'integer',
         ];

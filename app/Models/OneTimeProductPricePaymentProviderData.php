@@ -14,4 +14,15 @@ class OneTimeProductPricePaymentProviderData extends Model
         'payment_provider_id',
         'payment_provider_price_id',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'one_time_product_price_id' => 'integer',
+            'payment_provider_id' => 'integer',
+        ];
+    }
 }

@@ -51,6 +51,8 @@ class Subject extends Model
     protected function casts(): array
     {
         return [
+            'tenant_id' => 'integer',
+            'insurance_type_id' => 'integer',
             'latitude' => 'decimal:7',
             'longitude' => 'decimal:7',
             'date_of_birth' => 'date',
