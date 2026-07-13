@@ -311,10 +311,17 @@ class TenantService
         $tenantUserCount = $tenant->users->count();
 
         foreach ($tenantSubscriptions as $subscription) {
-            if (
-                $subscription->plan->max_users_per_tenant !== 0 &&
-                ($tenantUserCount + ($count - 1)) >= $subscription->plan->max_users_per_tenant
-            ) {
+            // Cast rather than trust the model: pdo_sqlsrv hands back integer columns as
+            // strings, and a strict `!== 0` sentinel check against "0" is always true.
+            // Mirrors TenantCreationService::filterTenantsByPlanMaxUsers().
+            $maxUsersPerTenant = (int) $subscription->plan->max_users_per_tenant;
+
+            // 0 (or below) means unlimited seats.
+            if ($maxUsersPerTenant <= 0) {
+                continue;
+            }
+
+            if (($tenantUserCount + ($count - 1)) >= $maxUsersPerTenant) {
                 return false;
             }
         }
