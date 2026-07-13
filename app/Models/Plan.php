@@ -28,6 +28,26 @@ class Plan extends Model
         'is_visible',
     ];
 
+    /**
+     * pdo_sqlsrv returns integer and bit columns as PHP strings, so every int/bool column
+     * that is ever compared (especially with === / !==) must be cast. Without this,
+     * `max_users_per_tenant` reads back as the string "0" on SQL Server and its
+     * "0 = unlimited" sentinel check silently inverts.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'is_active' => 'boolean',
+            'is_visible' => 'boolean',
+            'has_trial' => 'boolean',
+            'interval_count' => 'integer',
+            'trial_interval_count' => 'integer',
+            'max_users_per_tenant' => 'integer',
+        ];
+    }
+
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
