@@ -2,6 +2,8 @@
 
 namespace App\Models\StaffPick;
 
+use App\Events\StaffPick\ReferralSourceApproved;
+use App\Events\StaffPick\ReferralSourceRejected;
 use App\Models\StaffPick\Concerns\BelongsToTenant;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -69,6 +71,32 @@ class ReferralSource extends Model
     public function isActive(): bool
     {
         return $this->status === self::STATUS_ACTIVE;
+    }
+
+    /** Whether the source is awaiting a staff decision, and so can be approved or rejected. */
+    public function isPendingApproval(): bool
+    {
+        return $this->status === self::STATUS_PENDING;
+    }
+
+    /**
+     * Approve the source. Single source of truth for the transition — the approve action
+     * exists both on the list table and the view page's header, and the notification email
+     * hangs off the event, so both must go through here.
+     */
+    public function approve(): void
+    {
+        $this->update(['status' => self::STATUS_ACTIVE]);
+
+        ReferralSourceApproved::dispatch($this);
+    }
+
+    /** Reject the source with one of {@see rejectionReasonOptions()}. Counterpart to {@see approve()}. */
+    public function reject(string $reason): void
+    {
+        $this->update(['status' => self::STATUS_REJECTED]);
+
+        ReferralSourceRejected::dispatch($this, $reason);
     }
 
     /**

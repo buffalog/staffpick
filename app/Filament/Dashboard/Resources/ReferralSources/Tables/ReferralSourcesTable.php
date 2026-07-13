@@ -8,7 +8,9 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -73,6 +75,37 @@ class ReferralSourcesTable
                     ]),
             ])
             ->recordActions([
+                // Approve/reject also live in ViewReferralSource's header. Both routes call the
+                // same ReferralSource::approve()/reject(), which owns the transition and fires
+                // the event the notification email listens on.
+                Action::make('approve')
+                    ->label(__('Approve'))
+                    ->icon(Heroicon::OutlinedCheckCircle)
+                    ->color('success')
+                    ->visible(fn (ReferralSource $record): bool => $record->isPendingApproval())
+                    ->requiresConfirmation()
+                    ->modalDescription(__('Approve this referral source? They will receive a confirmation email.'))
+                    ->action(function (ReferralSource $record): void {
+                        $record->approve();
+
+                        Notification::make()->title(__('Referral source approved.'))->success()->send();
+                    }),
+                Action::make('reject')
+                    ->label(__('Reject'))
+                    ->icon(Heroicon::OutlinedXCircle)
+                    ->color('danger')
+                    ->visible(fn (ReferralSource $record): bool => $record->isPendingApproval())
+                    ->schema([
+                        Select::make('reason')
+                            ->label(__('Reason for rejection'))
+                            ->required()
+                            ->options(ReferralSource::rejectionReasonOptions()),
+                    ])
+                    ->action(function (array $data, ReferralSource $record): void {
+                        $record->reject($data['reason']);
+
+                        Notification::make()->title(__('Referral source rejected.'))->success()->send();
+                    }),
                 Action::make('intakeLink')
                     ->label(__('Intake link'))
                     ->icon(Heroicon::OutlinedLink)
