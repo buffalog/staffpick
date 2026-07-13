@@ -13,6 +13,18 @@ use Illuminate\Support\Str;
 class UserFactory extends Factory
 {
     /**
+     * Monotonic per-process counter used to make generated emails unique for a whole run.
+     *
+     * fake()->unique() is NOT sufficient here: Laravel rebuilds the application (and with it
+     * the Faker generator, which owns the unique() tracker) for every test, so it only dedupes
+     * within a single test. The suite shares one database with no rollback (see FeatureTest),
+     * and safeEmail() draws from a small pool, so two tests eventually roll the same address
+     * and collide on users_email_unique. That made CI fail randomly depending on how many
+     * users earlier tests happened to create.
+     */
+    private static int $emailSequence = 0;
+
+    /**
      * Define the model's default state.
      *
      * @return array<string, mixed>
@@ -21,7 +33,11 @@ class UserFactory extends Factory
     {
         return [
             'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
+            'email' => sprintf(
+                '%s%d@example.net',
+                Str::before(fake()->unique()->safeEmail(), '@'),
+                ++static::$emailSequence,
+            ),
             'email_verified_at' => now(),
             'password' => Hash::make('password'),
             'remember_token' => Str::random(10),

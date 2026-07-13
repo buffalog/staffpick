@@ -82,9 +82,12 @@ class ReferralSourceApprovalTest extends FeatureTest
     {
         $source = $this->pendingSource();
 
+        // assertHasActionErrors, not assertHasErrors: Filament namespaces an action schema's
+        // validation errors under the mounted action, so they land in the component's error
+        // bag as "mountedActions.0.data.reason" rather than a bare "reason".
         Livewire::test(ListReferralSources::class)
             ->callAction(TestAction::make('reject')->table($source), ['reason' => null])
-            ->assertHasErrors(['reason' => 'required']);
+            ->assertHasActionErrors(['reason' => 'required']);
 
         $this->assertSame(ReferralSource::STATUS_PENDING, $source->fresh()->status);
     }

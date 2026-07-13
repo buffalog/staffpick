@@ -2,8 +2,6 @@
 
 namespace App\Filament\Dashboard\Resources\ReferralSources\Pages;
 
-use App\Events\StaffPick\ReferralSourceApproved;
-use App\Events\StaffPick\ReferralSourceRejected;
 use App\Filament\Dashboard\Resources\ReferralSources\ReferralSourceResource;
 use App\Models\StaffPick\ReferralSource;
 use Filament\Actions\Action;
@@ -23,13 +21,11 @@ class ViewReferralSource extends ViewRecord
                 ->label(__('Approve'))
                 ->icon('heroicon-o-check-circle')
                 ->color('success')
-                ->visible(fn (): bool => $this->record->status === ReferralSource::STATUS_PENDING)
+                ->visible(fn (): bool => $this->record->isPendingApproval())
                 ->requiresConfirmation()
                 ->modalDescription(__('Approve this referral source? They will receive a confirmation email.'))
                 ->action(function (): void {
-                    $this->record->update(['status' => ReferralSource::STATUS_ACTIVE]);
-
-                    ReferralSourceApproved::dispatch($this->record);
+                    $this->record->approve();
 
                     Notification::make()
                         ->title(__('Referral source approved.'))
@@ -43,7 +39,7 @@ class ViewReferralSource extends ViewRecord
                 ->label(__('Reject'))
                 ->icon('heroicon-o-x-circle')
                 ->color('danger')
-                ->visible(fn (): bool => $this->record->status === ReferralSource::STATUS_PENDING)
+                ->visible(fn (): bool => $this->record->isPendingApproval())
                 ->schema([
                     Select::make('reason')
                         ->label(__('Reason for rejection'))
@@ -51,9 +47,7 @@ class ViewReferralSource extends ViewRecord
                         ->options(ReferralSource::rejectionReasonOptions()),
                 ])
                 ->action(function (array $data): void {
-                    $this->record->update(['status' => ReferralSource::STATUS_REJECTED]);
-
-                    ReferralSourceRejected::dispatch($this->record, $data['reason']);
+                    $this->record->reject($data['reason']);
 
                     Notification::make()
                         ->title(__('Referral source rejected.'))
