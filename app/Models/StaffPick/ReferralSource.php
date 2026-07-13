@@ -44,6 +44,9 @@ class ReferralSource extends Model
     protected function casts(): array
     {
         return [
+            'tenant_id' => 'integer',
+            'group_id' => 'integer',
+            'user_id' => 'integer',
             'billing_terms_days' => 'integer',
         ];
     }

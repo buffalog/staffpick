@@ -26,6 +26,23 @@ class Order extends Model
         'comments',
     ];
 
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'user_id' => 'integer',
+            'currency_id' => 'integer',
+            'total_amount' => 'integer',
+            'total_amount_after_discount' => 'integer',
+            'total_discount_amount' => 'integer',
+            'payment_provider_id' => 'integer',
+            'tenant_id' => 'integer',
+            'is_local' => 'boolean',
+        ];
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

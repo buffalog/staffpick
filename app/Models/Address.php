@@ -21,6 +21,17 @@ class Address extends Model
         'tax_number',
     ];
 
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'user_id' => 'integer',
+            'tenant_id' => 'integer',
+        ];
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

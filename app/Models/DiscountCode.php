@@ -19,6 +19,8 @@ class DiscountCode extends Model
     ];
 
     protected $casts = [
+        'discount_id' => 'integer',
+        'referral_reward_id' => 'integer',
         'is_referral_reward' => 'boolean',
     ];
 

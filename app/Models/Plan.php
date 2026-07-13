@@ -39,6 +39,10 @@ class Plan extends Model
     protected function casts(): array
     {
         return [
+            'interval_id' => 'integer',
+            'product_id' => 'integer',
+            'trial_interval_id' => 'integer',
+            'meter_id' => 'integer',
             'is_active' => 'boolean',
             'is_visible' => 'boolean',
             'has_trial' => 'boolean',

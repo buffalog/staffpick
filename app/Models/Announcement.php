@@ -20,4 +20,18 @@ class Announcement extends Model
         'show_on_frontend',
         'show_on_user_dashboard',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'is_active' => 'boolean',
+            'is_dismissible' => 'boolean',
+            'show_for_customers' => 'boolean',
+            'show_on_frontend' => 'boolean',
+            'show_on_user_dashboard' => 'boolean',
+        ];
+    }
 }

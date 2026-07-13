@@ -16,4 +16,15 @@ class OrderDiscount extends Model
         'amount',
         'valid_until',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'discount_id' => 'integer',
+            'order_id' => 'integer',
+        ];
+    }
 }

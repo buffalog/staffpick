@@ -149,6 +149,13 @@ class PolarProviderTest extends FeatureTest
 
     public function test_report_usage_ingests_polar_event_with_customer_and_value(): void
     {
+        // Polar is seeded inactive, and reportUsage() runs assertProviderIsActive(). This
+        // activation was missing but went unnoticed: PaymentProvider::$is_active was un-cast,
+        // so on pdo_sqlsrv the guard compared "0" === false and never fired. With the column
+        // cast the guard works, and the provider has to actually be active — as every other
+        // test in this file already does.
+        $this->paymentProvider->update(['is_active' => true]);
+
         $tenant = $this->createTenant();
         $user = $this->createUser($tenant);
         $meter = PlanMeter::create(['name' => 'API Calls']);
@@ -198,6 +205,10 @@ class PolarProviderTest extends FeatureTest
 
     public function test_report_usage_creates_polar_meter_on_demand_when_missing(): void
     {
+        // See the note above: reportUsage() asserts the provider is active, and the guard
+        // only started working once PaymentProvider::$is_active was cast.
+        $this->paymentProvider->update(['is_active' => true]);
+
         $tenant = $this->createTenant();
         $user = $this->createUser($tenant);
         $meter = PlanMeter::create(['name' => 'API Calls']);

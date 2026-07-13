@@ -89,6 +89,14 @@ class IntakeRequest extends Model
     protected function casts(): array
     {
         return [
+            'tenant_id' => 'integer',
+            'subject_id' => 'integer',
+            'referral_source_id' => 'integer',
+            'discipline_id' => 'integer',
+            'office_id' => 'integer',
+            'assigner_user_id' => 'integer',
+            'on_hold_reason_id' => 'integer',
+            'cancellation_reason_id' => 'integer',
             'start_date' => 'date',
             'end_date' => 'date',
             'visits_authorized' => 'integer',

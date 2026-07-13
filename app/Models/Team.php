@@ -19,6 +19,16 @@ class Team extends Model
 
     protected string $guard_name = 'web';
 
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'tenant_id' => 'integer',
+        ];
+    }
+
     public function tenant()
     {
         return $this->belongsTo(Tenant::class);

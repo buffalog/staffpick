@@ -10,4 +10,15 @@ class SubscriptionUsage extends Model
         'subscription_id',
         'unit_count',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'subscription_id' => 'integer',
+            'unit_count' => 'integer',
+        ];
+    }
 }

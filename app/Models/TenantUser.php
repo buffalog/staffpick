@@ -15,6 +15,10 @@ class TenantUser extends Pivot
     protected string $guard_name = 'web';
 
     protected $casts = [
+        'id' => 'integer',
+        'user_id' => 'integer',
+        'tenant_id' => 'integer',
+        'is_default' => 'boolean',
         'notification_preferences' => 'array',
     ];
 

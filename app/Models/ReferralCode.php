@@ -16,6 +16,17 @@ class ReferralCode extends Model
         'uses_count',
     ];
 
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'user_id' => 'integer',
+            'uses_count' => 'integer',
+        ];
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

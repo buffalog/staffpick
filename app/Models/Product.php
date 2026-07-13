@@ -21,6 +21,8 @@ class Product extends Model
     ];
 
     protected $casts = [
+        'is_popular' => 'boolean',
+        'is_default' => 'boolean',
         'features' => 'array',
         'metadata' => 'array',
     ];

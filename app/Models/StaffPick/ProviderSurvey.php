@@ -44,6 +44,10 @@ class ProviderSurvey extends Model
     protected function casts(): array
     {
         return [
+            'tenant_id' => 'integer',
+            'assignment_id' => 'integer',
+            'provider_id' => 'integer',
+            'subject_id' => 'integer',
             'rating' => 'integer',
             'sent_at' => 'datetime',
             'responded_at' => 'datetime',

@@ -17,6 +17,19 @@ class DiscountCodeRedemption extends Model
         'order_id',
     ];
 
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'discount_code_id' => 'integer',
+            'user_id' => 'integer',
+            'subscription_id' => 'integer',
+            'order_id' => 'integer',
+        ];
+    }
+
     public function discountCode(): BelongsTo
     {
         return $this->belongsTo(DiscountCode::class);

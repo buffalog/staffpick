@@ -26,6 +26,7 @@ class ProviderAvailability extends Model
     protected function casts(): array
     {
         return [
+            'provider_id' => 'integer',
             'day_of_week' => 'integer',
             'is_active' => 'boolean',
         ];

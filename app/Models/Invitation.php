@@ -23,6 +23,9 @@ class Invitation extends Model
     ];
 
     protected $casts = [
+        'user_id' => 'integer',
+        'tenant_id' => 'integer',
+        'team_id' => 'integer',
         'role' => 'array',
     ];
 

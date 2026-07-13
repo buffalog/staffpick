@@ -34,6 +34,11 @@ class Visit extends Model
     protected function casts(): array
     {
         return [
+            'assignment_id' => 'integer',
+            'provider_id' => 'integer',
+            'intake_request_id' => 'integer',
+            'tenant_id' => 'integer',
+            'visit_type_id' => 'integer',
             'visit_date' => 'date',
             'duration_hours' => 'decimal:2',
             'is_billable' => 'boolean',

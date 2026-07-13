@@ -24,6 +24,13 @@ class PlanPrice extends Model
     ];
 
     protected $casts = [
+        'plan_id' => 'integer',
+        'currency_id' => 'integer',
+        'price' => 'integer',
+        'price_per_unit' => 'integer',
+        'setup_fee' => 'integer',
+        'included_seats' => 'integer',
+        'extra_seat_price' => 'integer',
         'tiers' => 'array',
     ];
 

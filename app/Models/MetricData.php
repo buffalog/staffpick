@@ -16,4 +16,14 @@ class MetricData extends Model
         'value',
         'created_at',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'metric_id' => 'integer',
+        ];
+    }
 }

@@ -16,6 +16,17 @@ class UserSubscriptionTrial extends Model
         'trial_ends_at',
     ];
 
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'user_id' => 'integer',
+            'subscription_id' => 'integer',
+        ];
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

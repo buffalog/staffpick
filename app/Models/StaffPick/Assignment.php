@@ -54,6 +54,11 @@ class Assignment extends Model
     protected function casts(): array
     {
         return [
+            'intake_request_id' => 'integer',
+            'provider_id' => 'integer',
+            'tenant_id' => 'integer',
+            'decline_reason_id' => 'integer',
+            'assigned_by_user_id' => 'integer',
             'offered_at' => 'datetime',
             'offer_expires_at' => 'datetime',
             'responded_at' => 'datetime',

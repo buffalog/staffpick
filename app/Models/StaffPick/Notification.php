@@ -38,6 +38,10 @@ class Notification extends Model
     protected function casts(): array
     {
         return [
+            'tenant_id' => 'integer',
+            'recipient_id' => 'integer',
+            'intake_request_id' => 'integer',
+            'provider_id' => 'integer',
             'sent_at' => 'datetime',
         ];
     }

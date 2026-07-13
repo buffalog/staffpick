@@ -14,4 +14,15 @@ class DiscountPaymentProviderData extends Model
         'payment_provider_id',
         'payment_provider_discount_id',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'discount_id' => 'integer',
+            'payment_provider_id' => 'integer',
+        ];
+    }
 }

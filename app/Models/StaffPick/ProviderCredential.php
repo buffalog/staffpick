@@ -57,6 +57,9 @@ class ProviderCredential extends Model
     protected function casts(): array
     {
         return [
+            'provider_id' => 'integer',
+            'document_type_id' => 'integer',
+            'verified_by_user_id' => 'integer',
             'issued_at' => 'date',
             'expires_at' => 'date',
             'verified_at' => 'datetime',

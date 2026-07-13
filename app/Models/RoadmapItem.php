@@ -22,6 +22,17 @@ class RoadmapItem extends Model
         'user_id',
     ];
 
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'upvotes' => 'integer',
+            'user_id' => 'integer',
+        ];
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

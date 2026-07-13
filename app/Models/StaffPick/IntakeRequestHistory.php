@@ -29,6 +29,9 @@ class IntakeRequestHistory extends Model
     protected function casts(): array
     {
         return [
+            'intake_request_id' => 'integer',
+            'tenant_id' => 'integer',
+            'user_id' => 'integer',
             'metadata' => 'array',
             'occurred_at' => 'datetime',
         ];

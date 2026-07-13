@@ -17,6 +17,18 @@ class OneTimeProductPrice extends Model
         'price',
     ];
 
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'one_time_product_id' => 'integer',
+            'currency_id' => 'integer',
+            'price' => 'integer',
+        ];
+    }
+
     public function currency(): BelongsTo
     {
         return $this->belongsTo(Currency::class);

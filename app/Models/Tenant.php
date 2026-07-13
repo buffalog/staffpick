@@ -22,6 +22,17 @@ class Tenant extends Model
         'domain',
     ];
 
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'is_name_auto_generated' => 'boolean',
+            'created_by' => 'integer',
+        ];
+    }
+
     public function invitations(): HasMany
     {
         return $this->hasMany(Invitation::class);

@@ -16,6 +16,17 @@ class PlanPaymentProviderData extends Model
         'payment_provider_product_id',
     ];
 
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'plan_id' => 'integer',
+            'payment_provider_id' => 'integer',
+        ];
+    }
+
     public function plan(): BelongsTo
     {
         return $this->belongsTo(Plan::class);

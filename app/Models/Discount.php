@@ -42,6 +42,24 @@ class Discount extends Model
         });
     }
 
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'is_active' => 'boolean',
+            'max_redemptions' => 'integer',
+            'max_redemptions_per_user' => 'integer',
+            'redemptions' => 'integer',
+            'is_recurring' => 'boolean',
+            'duration_in_months' => 'integer',
+            'maximum_recurring_intervals' => 'integer',
+            'is_enabled_for_all_plans' => 'boolean',
+            'is_enabled_for_all_one_time_products' => 'boolean',
+        ];
+    }
+
     public function discountPaymentProviderData(): HasMany
     {
         return $this->hasMany(DiscountPaymentProviderData::class);
