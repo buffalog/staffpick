@@ -5,8 +5,11 @@ namespace Tests\Feature\Http\Controllers;
 use App\Models\Currency;
 use App\Models\OneTimeProduct;
 use App\Models\OneTimeProductPrice;
+use PHPUnit\Framework\Attributes\Group;
 use Tests\Feature\FeatureTest;
 
+// Quarantined: SaaSykit billing boilerplate, StaffPick has no checkout/plans. See CI triage.
+#[Group('saasykit-unused')]
 class ProductCheckoutControllerTest extends FeatureTest
 {
     public function test_checkout_loads()

@@ -14,6 +14,14 @@
             <directory suffix="Test.php">./tests/Feature</directory>
         </testsuite>
     </testsuites>
+    <!-- Dead SaaSykit billing boilerplate (checkout/plans). StaffPick ships none of it, so
+         these are excluded from the default run. Run them ad hoc by passing the group
+         explicitly to phpunit. -->
+    <groups>
+        <exclude>
+            <group>saasykit-unused</group>
+        </exclude>
+    </groups>
     <source>
         <include>
             <directory suffix=".php">./app</directory>

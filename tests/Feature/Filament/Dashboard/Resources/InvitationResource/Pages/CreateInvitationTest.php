@@ -10,6 +10,7 @@ use App\Filament\Dashboard\Resources\Invitations\Pages\CreateInvitation;
 use App\Models\Invitation;
 use App\Models\Plan;
 use App\Models\Subscription;
+use App\Models\Tenant;
 use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Event;
 use Livewire\Livewire;
@@ -17,32 +18,60 @@ use Tests\Feature\FeatureTest;
 
 class CreateInvitationTest extends FeatureTest
 {
-    public function test_create()
+    /**
+     * InvitationResource::canAccess() gates on SpRoleAccess::isAdmin() (sp_admin), so the
+     * inviter must hold that role — a bare tenancy permission no longer mounts the page.
+     */
+    private function actingAsInviter(Tenant $tenant): void
     {
-        $tenant = $this->createTenant();
-        $user = $this->createUser($tenant, [TenancyPermissionConstants::PERMISSION_INVITE_MEMBERS]);
-        $this->actingAs($user);
+        $this->actingAs($this->createTenantAdmin($tenant));
 
         Filament::setCurrentPanel(
             Filament::getPanel('dashboard'),
         );
 
         Filament::setTenant($tenant);
+    }
+
+    /**
+     * The role field is a multi-select over SP_TENANT_ROLES and Invitation casts `role`
+     * to an array, so the invited roles are read back through the cast rather than
+     * compared against a raw column value.
+     *
+     * @return array<int, string>|null
+     */
+    private function invitedRoles(Tenant $tenant, string $email): ?array
+    {
+        return Invitation::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('email', $email)
+            ->first()
+            ?->role;
+    }
+
+    public function test_create()
+    {
+        $tenant = $this->createTenant();
+        $this->actingAsInviter($tenant);
 
         Event::fake();
 
         Livewire::test(CreateInvitation::class)
             ->fillForm([
                 'email' => 'email@email.com',
-                'role' => TenancyPermissionConstants::ROLE_ADMIN,
+                'role' => [TenancyPermissionConstants::ROLE_SP_STAFF],
             ])
             ->call('create')
             ->assertHasNoFormErrors();
 
         $this->assertDatabaseHas(Invitation::class, [
+            'tenant_id' => $tenant->id,
             'email' => 'email@email.com',
-            'role' => TenancyPermissionConstants::ROLE_ADMIN,
         ]);
+        $this->assertSame(
+            [TenancyPermissionConstants::ROLE_SP_STAFF],
+            $this->invitedRoles($tenant, 'email@email.com'),
+        );
 
         Event::assertDispatched(UserInvitedToTenant::class);
     }
@@ -50,7 +79,7 @@ class CreateInvitationTest extends FeatureTest
     public function test_create_can_only_invite_user_that_is_not_already_in_the_tenant()
     {
         $tenant = $this->createTenant();
-        $user = $this->createUser($tenant, [TenancyPermissionConstants::PERMISSION_INVITE_MEMBERS]);
+        $user = $this->createTenantAdmin($tenant);
         $this->actingAs($user);
 
         Filament::setCurrentPanel(
@@ -64,7 +93,7 @@ class CreateInvitationTest extends FeatureTest
         Livewire::test(CreateInvitation::class)
             ->fillForm([
                 'email' => $user->email,
-                'role' => TenancyPermissionConstants::ROLE_ADMIN,
+                'role' => [TenancyPermissionConstants::ROLE_SP_STAFF],
             ])
             ->call('create')
             ->assertHasFormErrors(['email' => __('The user with email :email is already in the team.', ['email' => $user->email])]);
@@ -75,11 +104,11 @@ class CreateInvitationTest extends FeatureTest
     public function test_create_can_only_invite_user_that_is_not_already_invited()
     {
         $tenant = $this->createTenant();
-        $user = $this->createUser($tenant, [TenancyPermissionConstants::PERMISSION_INVITE_MEMBERS]);
+        $user = $this->createTenantAdmin($tenant);
         $this->actingAs($user);
 
-        $fakeEmail = fake()->email;
-        $invitation = Invitation::factory()->create([
+        $fakeEmail = fake()->unique()->safeEmail();
+        Invitation::factory()->create([
             'user_id' => $user->id,
             'email' => $fakeEmail,
             'tenant_id' => $tenant->id,
@@ -97,7 +126,7 @@ class CreateInvitationTest extends FeatureTest
         Livewire::test(CreateInvitation::class)
             ->fillForm([
                 'email' => $fakeEmail,
-                'role' => TenancyPermissionConstants::ROLE_ADMIN,
+                'role' => [TenancyPermissionConstants::ROLE_SP_STAFF],
             ])
             ->call('create')
             ->assertHasFormErrors(['email' => __('The email :email has already been invited.', ['email' => $fakeEmail])]);
@@ -108,37 +137,28 @@ class CreateInvitationTest extends FeatureTest
     public function test_create_bulk()
     {
         $tenant = $this->createTenant();
-        $user = $this->createUser($tenant, [TenancyPermissionConstants::PERMISSION_INVITE_MEMBERS]);
-        $this->actingAs($user);
-
-        Filament::setCurrentPanel(
-            Filament::getPanel('dashboard'),
-        );
-
-        Filament::setTenant($tenant);
+        $this->actingAsInviter($tenant);
 
         Event::fake();
 
         Livewire::test(CreateInvitation::class)
             ->fillForm([
                 'email' => "email1@email.com, email2@email.com\nemail3@email.com",
-                'role' => TenancyPermissionConstants::ROLE_ADMIN,
+                'role' => [TenancyPermissionConstants::ROLE_SP_STAFF],
             ])
             ->call('create')
             ->assertHasNoFormErrors();
 
-        $this->assertDatabaseHas(Invitation::class, [
-            'email' => 'email1@email.com',
-            'role' => TenancyPermissionConstants::ROLE_ADMIN,
-        ]);
-        $this->assertDatabaseHas(Invitation::class, [
-            'email' => 'email2@email.com',
-            'role' => TenancyPermissionConstants::ROLE_ADMIN,
-        ]);
-        $this->assertDatabaseHas(Invitation::class, [
-            'email' => 'email3@email.com',
-            'role' => TenancyPermissionConstants::ROLE_ADMIN,
-        ]);
+        foreach (['email1@email.com', 'email2@email.com', 'email3@email.com'] as $email) {
+            $this->assertDatabaseHas(Invitation::class, [
+                'tenant_id' => $tenant->id,
+                'email' => $email,
+            ]);
+            $this->assertSame(
+                [TenancyPermissionConstants::ROLE_SP_STAFF],
+                $this->invitedRoles($tenant, $email),
+            );
+        }
 
         Event::assertDispatched(UserInvitedToTenant::class, 3);
     }
@@ -146,8 +166,7 @@ class CreateInvitationTest extends FeatureTest
     public function test_create_bulk_fails_if_subscription_limit_is_reached()
     {
         $tenant = $this->createTenant();
-        $user = $this->createUser($tenant, [TenancyPermissionConstants::PERMISSION_INVITE_MEMBERS]);
-        $this->actingAs($user);
+        $this->actingAsInviter($tenant);
 
         // create a plan with a limit of 2 users
         $plan = Plan::factory()->create([
@@ -161,12 +180,6 @@ class CreateInvitationTest extends FeatureTest
             'status' => SubscriptionStatus::ACTIVE->value,
         ]);
 
-        Filament::setCurrentPanel(
-            Filament::getPanel('dashboard'),
-        );
-
-        Filament::setTenant($tenant);
-
         config()->set('app.allow_tenant_invitations', true);
 
         Event::fake();
@@ -175,7 +188,7 @@ class CreateInvitationTest extends FeatureTest
         Livewire::test(CreateInvitation::class)
             ->fillForm([
                 'email' => 'email1@email.com, email2@email.com',
-                'role' => TenancyPermissionConstants::ROLE_ADMIN,
+                'role' => [TenancyPermissionConstants::ROLE_SP_STAFF],
             ])
             ->call('create')
             ->assertHasFormErrors(['email' => __('You have reached the maximum number of users allowed for your subscription.')]);

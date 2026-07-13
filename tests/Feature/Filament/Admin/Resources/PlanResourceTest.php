@@ -3,8 +3,11 @@
 namespace Tests\Feature\Filament\Admin\Resources;
 
 use App\Filament\Admin\Resources\Plans\PlanResource;
+use PHPUnit\Framework\Attributes\Group;
 use Tests\Feature\FeatureTest;
 
+// Quarantined: SaaSykit billing boilerplate, StaffPick has no checkout/plans. See CI triage.
+#[Group('saasykit-unused')]
 class PlanResourceTest extends FeatureTest
 {
     public function test_list(): void

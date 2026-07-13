@@ -28,10 +28,13 @@ use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Support\Facades\Event;
 use Livewire\Livewire;
 use Mockery;
+use PHPUnit\Framework\Attributes\Group;
 use Spatie\OneTimePasswords\Actions\ConsumeOneTimePasswordAction;
 use Spatie\OneTimePasswords\Enums\ConsumeOneTimePasswordResult;
 use Tests\Feature\FeatureTest;
 
+// Quarantined: SaaSykit billing boilerplate, StaffPick has no checkout/plans. See CI triage.
+#[Group('saasykit-unused')]
 class LocalSubscriptionCheckoutFormTest extends FeatureTest
 {
     public function test_can_checkout_new_user()

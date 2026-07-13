@@ -230,7 +230,9 @@ class MatchingEngineTest extends FeatureTest
         $tenant = $this->createTenant();
         $discipline = $this->discipline($tenant);
         $tier = $this->tier($tenant, 'Gold', 1);
-        $spanish = Language::create(['name' => 'Spanish', 'code' => 'es']);
+        // firstOrCreate: sp_languages.code is globally unique and LanguagesSeederTest may
+        // already own the 'es' row on the shared DB.
+        $spanish = Language::firstOrCreate(['code' => 'es'], ['name' => 'Spanish']);
 
         $this->provider($tenant, $discipline, $tier, 2); // closer, no Spanish — excluded
         $speaksSpanish = $this->provider($tenant, $discipline, $tier, 20);
