@@ -44,9 +44,22 @@ class AssignmentOffer extends Model
         'expired_at',
     ];
 
+    /**
+     * The FK columns must be cast: pdo_sqlsrv returns bigint columns as PHP strings, and
+     * Eloquent's pluck() only applies a cast when hasCast() is true — so an uncast
+     * ->pluck('provider_id') yields ["12"] in production while $provider->id is a real
+     * int. Any strict compare (in_array(..., true), ===) between the two then silently
+     * never matches. That is exactly what broke the MatchDispatchService cascade.
+     *
+     * @return array<string, string>
+     */
     protected function casts(): array
     {
         return [
+            'intake_request_id' => 'integer',
+            'provider_id' => 'integer',
+            'tenant_id' => 'integer',
+            'decline_reason_id' => 'integer',
             'offer_sequence' => 'integer',
             'distance_miles' => 'decimal:2',
             'match_score' => 'decimal:4',

@@ -51,17 +51,22 @@ class MatchDispatchService
         $ordered = $this->eligibleProviders($case, $forceMatch);
 
         // (2) Skip providers tied up with an open offer on a different case.
+        // map to int explicitly: these lists are strict-compared against $provider->id
+        // below, and pdo_sqlsrv would otherwise leak raw strings through a future
+        // un-cast read (see AssignmentOffer::casts()).
         $busyProviderIds = AssignmentOffer::query()
             ->where('status', AssignmentOffer::STATUS_PENDING)
             ->whereNotNull('offered_at')
             ->where('intake_request_id', '!=', $case->id)
             ->pluck('provider_id')
+            ->map(intval(...))
             ->all();
 
         // (3) Skip providers already tried on THIS case (expired or rejected/declined).
         $triedProviderIds = $case->assignmentOffers()
             ->whereIn('status', [AssignmentOffer::STATUS_EXPIRED, AssignmentOffer::STATUS_DECLINED])
             ->pluck('provider_id')
+            ->map(intval(...))
             ->all();
 
         // (4) Top remaining.
