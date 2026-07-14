@@ -67,7 +67,7 @@ class SubscriptionCheckoutFormTest extends FeatureTest
         // get number of subscriptions before checkout
         $subscriptionsBefore = Subscription::count();
         $tenantsBefore = Tenant::count();
-        $email = 'something+'.rand(1, 1000000).'@gmail.com';
+        $email = $this->uniqueEmail('something');
 
         Livewire::test(SubscriptionCheckoutForm::class)
             ->set('name', 'Name')
@@ -109,7 +109,7 @@ class SubscriptionCheckoutFormTest extends FeatureTest
             'price' => 100,
         ]);
 
-        $email = 'existing+'.rand(1, 1000000).'@gmail.com';
+        $email = $this->uniqueEmail('existing');
 
         $user = User::factory()->create([
             'email' => $email,
@@ -163,7 +163,7 @@ class SubscriptionCheckoutFormTest extends FeatureTest
             'price' => 100,
         ]);
 
-        $email = 'existing+'.rand(1, 1000000).'@gmail.com';
+        $email = $this->uniqueEmail('existing');
 
         $tenant = $this->createTenant();
         $user = $this->createUser($tenant, [
@@ -238,7 +238,7 @@ class SubscriptionCheckoutFormTest extends FeatureTest
             'price' => 100,
         ]);
 
-        $email = 'existing+'.rand(1, 1000000).'@gmail.com';
+        $email = $this->uniqueEmail('existing');
 
         $tenant = $this->createTenant();
         $user = $this->createUser($tenant, [
@@ -321,7 +321,7 @@ class SubscriptionCheckoutFormTest extends FeatureTest
             'price' => 100,
         ]);
 
-        $email = 'existing+'.rand(1, 1000000).'@gmail.com';
+        $email = $this->uniqueEmail('existing');
 
         $user = User::factory()->create([
             'email' => $email,
@@ -383,7 +383,7 @@ class SubscriptionCheckoutFormTest extends FeatureTest
 
         $this->expectException(Exception::class);
 
-        $email = 'existing+'.rand(1, 1000000).'@gmail.com';
+        $email = $this->uniqueEmail('existing');
 
         $user = User::factory()->create([
             'email' => $email,
@@ -433,7 +433,7 @@ class SubscriptionCheckoutFormTest extends FeatureTest
         // get number of subscriptions before checkout
         $subscriptionsBefore = Subscription::count();
 
-        $email = 'existing+'.rand(1, 1000000).'@gmail.com';
+        $email = $this->uniqueEmail('existing');
 
         $user = User::factory()->create([
             'email' => $email,
@@ -488,7 +488,7 @@ class SubscriptionCheckoutFormTest extends FeatureTest
         $subscriptionsBefore = Subscription::count();
         $tenantsBefore = Tenant::count();
 
-        $email = 'something+'.rand(1, 1000000).'@gmail.com';
+        $email = $this->uniqueEmail('something');
 
         Livewire::test(SubscriptionCheckoutForm::class)
             ->set('name', 'Name')
@@ -542,7 +542,7 @@ class SubscriptionCheckoutFormTest extends FeatureTest
         // get number of subscriptions before checkout
         $subscriptionsBefore = Subscription::count();
 
-        $email = 'something+'.rand(1, 1000000).'@gmail.com';
+        $email = $this->uniqueEmail('something');
 
         Livewire::test(SubscriptionCheckoutForm::class)
             ->set('name', 'Name')
@@ -569,7 +569,7 @@ class SubscriptionCheckoutFormTest extends FeatureTest
         config(['app.otp_login_enabled' => true]);
 
         $planSlug = 'plan-slug-'.rand(1, 1000000);
-        $email = 'existing'.rand(1, 10000).'@example.com';
+        $email = $this->uniqueEmail('existing');
 
         $sessionDto = new SubscriptionCheckoutDto;
         $sessionDto->planSlug = $planSlug;
@@ -621,7 +621,7 @@ class SubscriptionCheckoutFormTest extends FeatureTest
         config(['app.otp_login_enabled' => true]);
 
         $planSlug = 'plan-slug-'.rand(1, 1000000);
-        $email = 'newuser'.rand(1, 10000).'@example.com';
+        $email = $this->uniqueEmail('newuser');
         $name = 'Test User';
 
         $sessionDto = new SubscriptionCheckoutDto;
@@ -678,7 +678,7 @@ class SubscriptionCheckoutFormTest extends FeatureTest
         config(['app.otp_login_enabled' => true]);
 
         $planSlug = 'plan-slug-'.rand(1, 1000000);
-        $email = 'existing'.rand(1, 10000).'@example.com';
+        $email = $this->uniqueEmail('existing');
 
         $sessionDto = new SubscriptionCheckoutDto;
         $sessionDto->planSlug = $planSlug;
@@ -730,7 +730,7 @@ class SubscriptionCheckoutFormTest extends FeatureTest
         config(['app.otp_login_enabled' => true]);
 
         $planSlug = 'plan-slug-'.rand(1, 1000000);
-        $email = 'existing'.rand(1, 10000).'@example.com';
+        $email = $this->uniqueEmail('existing');
         $otpCode = '123456';
 
         $sessionDto = new SubscriptionCheckoutDto;
@@ -788,7 +788,7 @@ class SubscriptionCheckoutFormTest extends FeatureTest
         config(['app.otp_login_enabled' => true]);
 
         $planSlug = 'plan-slug-'.rand(1, 1000000);
-        $email = 'nonexistent'.rand(1, 10000).'@example.com';
+        $email = $this->uniqueEmail('nonexistent');
 
         $sessionDto = new SubscriptionCheckoutDto;
         $sessionDto->planSlug = $planSlug;
@@ -859,7 +859,7 @@ class SubscriptionCheckoutFormTest extends FeatureTest
         config(['app.recaptcha_enabled' => true]);
 
         $planSlug = 'plan-slug-'.rand(1, 1000000);
-        $email = 'existing'.rand(1, 10000).'@example.com';
+        $email = $this->uniqueEmail('existing');
         $recaptcha = 'test_recaptcha_token';
 
         $sessionDto = new SubscriptionCheckoutDto;
@@ -914,7 +914,7 @@ class SubscriptionCheckoutFormTest extends FeatureTest
         config(['app.recaptcha_enabled' => true]);
 
         $planSlug = 'plan-slug-'.rand(1, 1000000);
-        $email = 'newuser'.rand(1, 10000).'@example.com';
+        $email = $this->uniqueEmail('newuser');
         $name = 'Test User';
         $recaptcha = 'test_recaptcha_token';
 

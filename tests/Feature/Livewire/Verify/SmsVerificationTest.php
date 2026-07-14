@@ -25,7 +25,7 @@ class SmsVerificationTest extends FeatureTest
             ->once()
             ->andReturn('verify-more');
 
-        $email = 'something+'.rand(1, 1000000).'@gmail.com';
+        $email = $this->uniqueEmail('something');
 
         $user = $this->createUser(attributes: [
             'email' => $email,
@@ -61,7 +61,7 @@ class SmsVerificationTest extends FeatureTest
     {
         $this->addVerificationProvider();
 
-        $email = 'something+'.rand(1, 1000000).'@gmail.com';
+        $email = $this->uniqueEmail('something');
 
         $user = $this->createUser(attributes: [
             'email' => $email,
@@ -87,7 +87,7 @@ class SmsVerificationTest extends FeatureTest
             ->once()
             ->andReturn('verify-more');
 
-        $email = 'something+'.rand(1, 1000000).'@gmail.com';
+        $email = $this->uniqueEmail('something');
 
         $user = $this->createUser(attributes: [
             'email' => $email,
@@ -120,13 +120,13 @@ class SmsVerificationTest extends FeatureTest
     {
         $this->addVerificationProvider();
 
-        $email = 'something+'.rand(1, 1000000).'@gmail.com';
+        $email = $this->uniqueEmail('something');
 
         $user = $this->createUser(attributes: [
             'email' => $email,
         ]);
 
-        $email2 = 'something+'.rand(1, 1000000).'@gmail.com';
+        $email2 = $this->uniqueEmail('something');
         $user2 = $this->createUser(attributes: [
             'email' => $email2,
             'phone_number' => '+18482560282',
