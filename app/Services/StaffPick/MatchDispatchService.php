@@ -7,6 +7,7 @@ use App\Models\StaffPick\Assignment;
 use App\Models\StaffPick\AssignmentOffer;
 use App\Models\StaffPick\DeclineReason;
 use App\Models\StaffPick\IntakeRequest;
+use App\Models\StaffPick\Language;
 use App\Models\StaffPick\Provider;
 use App\Models\User;
 use Filament\Actions\Action as NotificationAction;
@@ -45,8 +46,10 @@ class MatchDispatchService
      *
      * @param  bool  $forceMatch  staff override from an ESCALATED card — bypasses the
      *                            geo filter (stub). Eligibility relaxation rules land later.
+     * @param  array<int, int>  $excludeProviderIds  providers this run already lost a race on
+     *                                               (see the guard in sendOffer) — skip them.
      */
-    public function dispatch(IntakeRequest $case, bool $forceMatch = false): void
+    public function dispatch(IntakeRequest $case, bool $forceMatch = false, array $excludeProviderIds = []): void
     {
         $ordered = $this->eligibleProviders($case, $forceMatch);
 
@@ -73,6 +76,7 @@ class MatchDispatchService
         $provider = $ordered
             ->reject(fn (Provider $p): bool => in_array($p->id, $busyProviderIds, true))
             ->reject(fn (Provider $p): bool => in_array($p->id, $triedProviderIds, true))
+            ->reject(fn (Provider $p): bool => in_array((int) $p->id, $excludeProviderIds, true))
             ->first();
 
         if ($provider === null) {
@@ -81,7 +85,18 @@ class MatchDispatchService
             return;
         }
 
-        $this->sendOffer($case, $provider);
+        if ($this->sendOffer($case, $provider, guarded: true) !== null) {
+            return;
+        }
+
+        // Lost the race under the lock. Either a concurrent dispatch already opened an offer
+        // on this case (nothing to do — one open offer per case), or the provider got taken
+        // by another case's dispatch, in which case cascade past them.
+        if ($this->openOffer($case) === null) {
+            $excludeProviderIds[] = (int) $provider->id;
+
+            $this->dispatch($case, $forceMatch, $excludeProviderIds);
+        }
     }
 
     /**
@@ -210,12 +225,39 @@ class MatchDispatchService
         return $this->scorer->order($case, $providers);
     }
 
-    private function sendOffer(IntakeRequest $case, Provider $provider): void
+    /**
+     * Create + deliver one offer.
+     *
+     * @param  bool  $guarded  serialize the pick against concurrent dispatches (AUTO path).
+     *                         Returns null when the race was lost and nothing was sent. The
+     *                         manual offerTo() path is unguarded — staff override wins.
+     */
+    private function sendOffer(IntakeRequest $case, Provider $provider, bool $guarded = false): ?AssignmentOffer
     {
         $tier = $provider->tier;
         $windowMinutes = $tier?->response_window_minutes ?? self::DEFAULT_WINDOW_MINUTES;
+        $languageWarning = $this->languageWarning($case, $provider);
 
-        $offer = DB::transaction(function () use ($case, $provider, $tier, $windowMinutes): AssignmentOffer {
+        $offer = DB::transaction(function () use ($case, $provider, $tier, $windowMinutes, $languageWarning, $guarded): ?AssignmentOffer {
+            // Take an exclusive lock on the provider row (SQL Server UPDLOCK) so two
+            // concurrent dispatches can't both read "free" and both offer them, then
+            // re-validate under it: the busy/open-offer reads dispatch() made are stale
+            // the moment another cascade commits an offer.
+            if ($guarded) {
+                Provider::query()->whereKey($provider->id)->lockForUpdate()->first();
+
+                $taken = AssignmentOffer::query()
+                    ->where('status', AssignmentOffer::STATUS_PENDING)
+                    ->where(fn ($query) => $query
+                        ->where('provider_id', $provider->id)
+                        ->orWhere('intake_request_id', $case->id))
+                    ->exists();
+
+                if ($taken) {
+                    return null;
+                }
+            }
+
             // MATCH_MADE is transient — set, then immediately advanced to MATCH_SENT.
             $case->update(['status' => IntakeRequest::STATUS_MATCH_MADE]);
 
@@ -227,6 +269,7 @@ class MatchDispatchService
                 'status' => AssignmentOffer::STATUS_PENDING,
                 'tier_at_offer' => $tier?->name,
                 'response_window_minutes' => $windowMinutes,
+                'language_warning' => $languageWarning,
                 'offered_at' => now(),
                 'expires_at' => now()->addMinutes($windowMinutes),
                 'delivery_channel' => $provider->preferred_contact_channel ?: Provider::CHANNEL_EMAIL,
@@ -242,8 +285,34 @@ class MatchDispatchService
             return $offer;
         });
 
+        if ($offer === null) {
+            return null;
+        }
+
         // Deliver outside the transaction — SMS is a synchronous external call.
         $this->deliverOffer($offer);
+
+        return $offer;
+    }
+
+    /**
+     * True when the subject stated a language preference this provider does not speak.
+     *
+     * Computed per offer rather than copied from MatchingEngine's pool-level flag: it must
+     * hold for the manual offerTo() path too, and stay correct when a requested non-speaker
+     * is offered while speakers exist in the pool.
+     */
+    private function languageWarning(IntakeRequest $case, Provider $provider): bool
+    {
+        $case->loadMissing('subject');
+        $provider->loadMissing('languages');
+
+        $preference = $case->subject?->language_preference;
+
+        return filled($preference) && ! MatchingEngine::languageMatches(
+            $preference,
+            $provider->languages->flatMap(fn (Language $language): array => [$language->name, $language->code])->all(),
+        );
     }
 
     private function escalate(IntakeRequest $case): void

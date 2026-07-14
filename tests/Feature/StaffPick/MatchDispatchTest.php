@@ -5,6 +5,7 @@ namespace Tests\Feature\StaffPick;
 use App\Models\StaffPick\AssignmentOffer;
 use App\Models\StaffPick\Discipline;
 use App\Models\StaffPick\IntakeRequest;
+use App\Models\StaffPick\Language;
 use App\Models\StaffPick\Provider;
 use App\Models\StaffPick\ProviderTier;
 use App\Models\StaffPick\Subject;
@@ -15,7 +16,10 @@ use App\Services\StaffPick\MatchingResult;
 use App\Services\StaffPick\MatchNotificationService;
 use App\Services\StaffPick\SmsService;
 use App\Services\StaffPick\TierResponseScorer;
+use Illuminate\Database\Events\TransactionBeginning;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Mockery;
 use Tests\Feature\FeatureTest;
 
@@ -56,9 +60,10 @@ class MatchDispatchTest extends FeatureTest
         ]);
     }
 
-    private function unmatchedCase(): IntakeRequest
+    /** @param  array<string, mixed>  $subjectAttributes */
+    private function unmatchedCase(array $subjectAttributes = []): IntakeRequest
     {
-        $subject = Subject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $subject = Subject::factory()->create(['tenant_id' => $this->tenant->id, ...$subjectAttributes]);
 
         return IntakeRequest::factory()->create([
             'tenant_id' => $this->tenant->id,
@@ -185,6 +190,96 @@ class MatchDispatchTest extends FeatureTest
 
         $this->assertSame(0, $optedOut->notifications()->count(), 'opted-out staff should get no in-app bell');
         $this->assertGreaterThan(0, $default->notifications()->count(), 'default staff should get the bell');
+    }
+
+    public function test_offer_to_a_non_speaker_is_flagged_language_warning(): void
+    {
+        $provider = $this->provider($this->platinum); // speaks nothing
+        $case = $this->unmatchedCase(['language_preference' => 'Spanish']);
+
+        $this->service([$provider])->dispatch($case);
+
+        $this->assertTrue((bool) $case->assignmentOffers()->first()->language_warning);
+    }
+
+    public function test_offer_to_a_speaker_is_not_flagged(): void
+    {
+        $spanish = Language::firstOrCreate(['code' => 'es'], ['name' => 'Spanish']);
+        $provider = $this->provider($this->platinum);
+        $provider->languages()->attach($spanish->id, ['is_primary' => true]);
+        $case = $this->unmatchedCase(['language_preference' => 'Spanish']);
+
+        $this->service([$provider])->dispatch($case);
+
+        $this->assertFalse((bool) $case->assignmentOffers()->first()->language_warning);
+    }
+
+    public function test_offer_is_not_flagged_when_the_subject_states_no_preference(): void
+    {
+        $provider = $this->provider($this->platinum);
+        $case = $this->unmatchedCase(); // factory leaves language_preference null
+
+        $this->service([$provider])->dispatch($case);
+
+        $this->assertFalse((bool) $case->assignmentOffers()->first()->language_warning);
+    }
+
+    /**
+     * The race: a concurrent cascade commits a pending offer for the top provider in the
+     * window between dispatch()'s busy-provider read and sendOffer()'s insert. Simulated by
+     * writing that offer on TransactionBeginning — which fires exactly inside that window —
+     * so no real threads are needed.
+     */
+    public function test_dispatch_cascades_when_the_top_provider_is_taken_mid_flight(): void
+    {
+        $platinum = $this->provider($this->platinum);
+        $gold = $this->provider($this->gold);
+        $case = $this->unmatchedCase();
+        $otherCase = $this->unmatchedCase();
+
+        $raced = false;
+        Event::listen(TransactionBeginning::class, function () use (&$raced, $platinum, $otherCase): void {
+            if ($raced) {
+                return;
+            }
+
+            $raced = true;
+
+            AssignmentOffer::create([
+                'tenant_id' => $this->tenant->id,
+                'intake_request_id' => $otherCase->id,
+                'provider_id' => $platinum->id,
+                'offer_sequence' => 1,
+                'status' => AssignmentOffer::STATUS_PENDING,
+                'offered_at' => now(),
+                'expires_at' => now()->addMinutes(30),
+                'delivery_channel' => Provider::CHANNEL_PORTAL,
+                'token' => Str::random(48),
+            ]);
+        });
+
+        $this->service([$platinum, $gold])->dispatch($case);
+
+        $this->assertTrue($raced, 'the simulated concurrent offer never fired');
+
+        $offers = $case->assignmentOffers()->where('status', AssignmentOffer::STATUS_PENDING)->get();
+        $this->assertCount(1, $offers, 'the taken provider must not be double-offered');
+        $this->assertSame($gold->id, (int) $offers->first()->provider_id);
+        $this->assertSame($gold->id, (int) $case->refresh()->current_match_provider_id);
+    }
+
+    public function test_a_case_with_an_open_offer_does_not_get_a_second_one(): void
+    {
+        $platinum = $this->provider($this->platinum);
+        $gold = $this->provider($this->gold);
+        $case = $this->unmatchedCase();
+        $service = $this->service([$platinum, $gold]);
+
+        $service->dispatch($case);
+        $service->dispatch($case->refresh()); // re-entrant run (e.g. a job racing a staff action)
+
+        $this->assertSame(1, $case->assignmentOffers()->where('status', AssignmentOffer::STATUS_PENDING)->count());
+        $this->assertSame($platinum->id, (int) $case->refresh()->current_match_provider_id);
     }
 
     public function test_acceptance_matches_and_sets_lead_clinician(): void
