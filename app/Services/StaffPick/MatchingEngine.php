@@ -168,6 +168,31 @@ class MatchingEngine
     }
 
     /**
+     * Why match() can return nothing for STRUCTURAL reasons — a missing prerequisite the
+     * provider pool can't fix. Returns null when the case is matchable (so an empty result
+     * then means the pool is genuinely exhausted). These checks MUST stay in lockstep with
+     * match()'s early-return guard at the top of the method.
+     */
+    public static function blockingReason(IntakeRequest $case): ?string
+    {
+        if ($case->discipline_id === null) {
+            return IntakeRequest::ESCALATION_NO_DISCIPLINE;
+        }
+
+        $subject = $case->subject;
+
+        if ($subject === null) {
+            return IntakeRequest::ESCALATION_NO_SUBJECT;
+        }
+
+        if ($subject->latitude === null || $subject->longitude === null) {
+            return IntakeRequest::ESCALATION_NEEDS_COORDINATES;
+        }
+
+        return null;
+    }
+
+    /**
      * Great-circle distance between two lat/lng points, in miles (Haversine).
      */
     public static function distanceMiles(float $lat1, float $lng1, float $lat2, float $lng2): float

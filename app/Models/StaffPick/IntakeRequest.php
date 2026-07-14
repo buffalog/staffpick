@@ -43,6 +43,16 @@ class IntakeRequest extends Model
 
     public const STATUS_CANCELLED = 'cancelled';
 
+    // Why a case escalated. POOL_EXHAUSTED is the genuine "we tried everyone" case; the
+    // rest are structural — a missing prerequisite no amount of provider availability fixes.
+    public const ESCALATION_POOL_EXHAUSTED = 'pool_exhausted';
+
+    public const ESCALATION_NEEDS_COORDINATES = 'needs_coordinates';
+
+    public const ESCALATION_NO_DISCIPLINE = 'no_discipline';
+
+    public const ESCALATION_NO_SUBJECT = 'no_subject';
+
     protected $fillable = [
         'tenant_id',
         'reference_number',
@@ -83,8 +93,20 @@ class IntakeRequest extends Model
         'current_match_provider_id',
         'cascade_attempt',
         'escalated_at',
+        'escalation_reason',
         'last_match_sent_at',
     ];
+
+    /** Staff-facing sentence for an escalation reason: what's wrong and what to do about it. */
+    public static function escalationReasonLabel(?string $reason): string
+    {
+        return match ($reason) {
+            self::ESCALATION_NEEDS_COORDINATES => __('No map coordinates — geocode the subject address, then re-run matching.'),
+            self::ESCALATION_NO_DISCIPLINE => __('No discipline set — set one, then re-run matching.'),
+            self::ESCALATION_NO_SUBJECT => __('No subject on file — add the subject, then re-run matching.'),
+            default => __('Provider pool exhausted — manual intervention required.'),
+        };
+    }
 
     protected function casts(): array
     {
