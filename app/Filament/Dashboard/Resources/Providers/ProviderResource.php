@@ -102,9 +102,15 @@ class ProviderResource extends Resource
         return Str::plural(static::getModelLabel());
     }
 
+    /**
+     * Derived from the model label, NOT hardcoded — a tenant that renames Provider to
+     * Clinician must see "Clinicians" in the sidebar, not a fixed string. (A nav-only
+     * refactor once inlined __('Provider List') here and silently un-wired the
+     * tenant-configurable label for this item.)
+     */
     public static function getNavigationLabel(): string
     {
-        return __('Provider List');
+        return static::getPluralModelLabel();
     }
 
     public static function getNavigationBadge(): ?string

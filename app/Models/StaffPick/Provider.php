@@ -139,6 +139,33 @@ class Provider extends Model
                 $provider->tier_changed_at = now();
             }
         });
+
+        // Guarantee the matching invariant: MatchingEngine filters providers ONLY through
+        // the disciplines pivot (whereHas('disciplines')), with no fallback to the legacy
+        // discipline_id column. A provider written by any path that sets discipline_id but
+        // forgets to sync the pivot is therefore invisible to matching FOREVER — silently,
+        // with no error, just never offered work. Rather than trust every writer to
+        // remember, backfill it here so the pivot cannot be empty while discipline_id is set.
+        //
+        // Backfill only when the pivot is empty: a multi-discipline provider manages their
+        // own pivot explicitly, and this must never touch it. Non-empty pivot = no-op.
+        //
+        // No recursion: syncWithoutDetaching writes to sp_provider_disciplines, not to the
+        // provider row, and the relation does not $touches the parent — so saved() does not
+        // re-fire. (ProviderDisciplineBackfillTest pins this.)
+        static::saved(function (Provider $provider): void {
+            if ($provider->discipline_id === null) {
+                return;
+            }
+
+            if ($provider->disciplines()->exists()) {
+                return;
+            }
+
+            $provider->disciplines()->syncWithoutDetaching([
+                $provider->discipline_id => ['is_primary' => true],
+            ]);
+        });
     }
 
     /**
