@@ -21,6 +21,7 @@ use Illuminate\Support\Collection;
  *   2. is_preferred.
  *   3. Tier rank (max_priority + 1 - tier.priority; no tier = the tenant's worst tier).
  *   4. Response rate (accepted ÷ received; a provider with zero offers scores 1.0).
+ *   5. Distance (closest first), lowest precedence — only breaks a full tie above.
  *
  * Why lexicographic and not summed weights: every future factor — exit-survey ratings,
  * paperwork/documentation timeliness, whatever else gets added — becomes a ONE-LINE
@@ -45,9 +46,10 @@ class TierResponseScorer implements ProviderScorer
             ->max('priority') ?? self::DEFAULT_MAX_PRIORITY);
 
         $rates = $this->responseRates($case, $eligible);
+        $distances = $this->distances($case, $eligible);
 
         return $eligible
-            ->sort(fn (Provider $a, Provider $b): int => $this->compare($a, $b, $case, $maxPriority, $rates))
+            ->sort(fn (Provider $a, Provider $b): int => $this->compare($a, $b, $case, $maxPriority, $rates, $distances))
             ->values();
     }
 
@@ -57,13 +59,15 @@ class TierResponseScorer implements ProviderScorer
      * Add a new factor by inserting one `?:` clause at the precedence it deserves.
      *
      * @param  array<int, float>  $rates  provider id => response rate (see responseRates())
+     * @param  array<int, float>  $distances  provider id => miles from the subject (see distances())
      */
-    private function compare(Provider $a, Provider $b, IntakeRequest $case, int $maxPriority, array $rates): int
+    private function compare(Provider $a, Provider $b, IntakeRequest $case, int $maxPriority, array $rates, array $distances): int
     {
         return $this->requestedRank($b, $case) <=> $this->requestedRank($a, $case)
             ?: $this->preferredRank($b) <=> $this->preferredRank($a)
             ?: $this->tierRank($b, $maxPriority) <=> $this->tierRank($a, $maxPriority)
-            ?: $this->rateOf($rates, $b) <=> $this->rateOf($rates, $a);
+            ?: $this->rateOf($rates, $b) <=> $this->rateOf($rates, $a)
+            ?: $this->distanceOf($distances, $a) <=> $this->distanceOf($distances, $b); // closest first
     }
 
     /**
@@ -72,6 +76,14 @@ class TierResponseScorer implements ProviderScorer
     private function rateOf(array $rates, Provider $provider): float
     {
         return $rates[(int) $provider->id] ?? 1.0; // cold start: no resolved offers = perfect
+    }
+
+    /**
+     * @param  array<int, float>  $distances
+     */
+    private function distanceOf(array $distances, Provider $provider): float
+    {
+        return $distances[(int) $provider->id] ?? 0.0; // no basis => neutral, tiebreak no-ops
     }
 
     /**
@@ -140,5 +152,32 @@ class TierResponseScorer implements ProviderScorer
                 (int) $row->provider_id => (int) $row->accepted / (int) $row->received,
             ])
             ->all();
+    }
+
+    /**
+     * Straight-line miles from the case subject to each provider, keyed by provider id.
+     * Lowest-precedence tiebreak: when everything above ties, closest wins. Pure function of
+     * coords the scorer already has, so the interface stays untouched. Subject ungeocoded =>
+     * empty map => the tiebreak no-ops (distanceOf defaults to neutral).
+     *
+     * @param  Collection<int, Provider>  $eligible
+     * @return array<int, float>
+     */
+    private function distances(IntakeRequest $case, Collection $eligible): array
+    {
+        $subject = $case->subject;
+
+        if ($subject?->latitude === null || $subject?->longitude === null) {
+            return [];
+        }
+
+        $lat = (float) $subject->latitude;
+        $lng = (float) $subject->longitude;
+
+        return $eligible->mapWithKeys(fn (Provider $p): array => [
+            (int) $p->id => ($p->latitude === null || $p->longitude === null)
+                ? PHP_FLOAT_MAX
+                : MatchingEngine::distanceMiles($lat, $lng, (float) $p->latitude, (float) $p->longitude),
+        ])->all();
     }
 }
