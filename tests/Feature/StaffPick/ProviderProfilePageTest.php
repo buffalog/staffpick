@@ -42,23 +42,25 @@ class ProviderProfilePageTest extends FeatureTest
             ->assertSee('Credentials');
     }
 
-    public function test_a_non_admin_clinician_sees_the_nav_even_before_onboarding(): void
+    public function test_a_non_admin_clinician_can_reach_the_wizard_even_before_onboarding(): void
     {
         // setUp acts as a non-admin tenant member with no provider record yet —
-        // they must still see the page (it's the onboarding wizard).
-        $this->assertTrue(ProviderProfile::shouldRegisterNavigation());
+        // they must still reach the page (it's the onboarding wizard).
+        //
+        // Access, not nav registration: the RBAC overhaul moved clinician-facing navigation
+        // into its own panel, so ProviderProfile::shouldRegisterNavigation() is now always
+        // false and asserting on it says nothing.
         $this->assertTrue(ProviderProfile::canAccess());
     }
 
-    public function test_the_nav_is_hidden_from_an_admin_only_user_without_a_provider_record(): void
+    public function test_the_wizard_is_hidden_from_an_admin_only_user_without_a_provider_record(): void
     {
         $this->actingAs($this->createTenantAdmin($this->tenant));
 
-        $this->assertFalse(ProviderProfile::shouldRegisterNavigation());
         $this->assertFalse(ProviderProfile::canAccess());
     }
 
-    public function test_an_admin_who_is_also_a_clinician_sees_the_nav(): void
+    public function test_an_admin_who_is_also_a_clinician_can_reach_the_wizard(): void
     {
         $admin = $this->createTenantAdmin($this->tenant);
         $this->actingAs($admin);
@@ -72,7 +74,6 @@ class ProviderProfilePageTest extends FeatureTest
             'is_active' => true,
         ]);
 
-        $this->assertTrue(ProviderProfile::shouldRegisterNavigation());
         $this->assertTrue(ProviderProfile::canAccess());
     }
 
@@ -170,7 +171,7 @@ class ProviderProfilePageTest extends FeatureTest
                 'city' => 'North Palm Beach',
                 'state' => 'FL',
                 'zip' => '33408',
-                'discipline_id' => $discipline->id,
+                'discipline_ids' => [$discipline->id],
                 'years_experience' => 8,
                 'radius_preferred_miles' => 15,
                 'radius_max_miles' => 25,
@@ -302,7 +303,7 @@ class ProviderProfilePageTest extends FeatureTest
                 'city' => 'North Palm Beach',
                 'state' => 'FL',
                 'zip' => '33408',
-                'discipline_id' => $discipline->id,
+                'discipline_ids' => [$discipline->id],
                 'years_experience' => 8,
                 'radius_preferred_miles' => 15,
                 'radius_max_miles' => 25,
@@ -339,7 +340,7 @@ class ProviderProfilePageTest extends FeatureTest
                 'city' => 'North Palm Beach',
                 'state' => 'FL',
                 'zip' => '33408',
-                'discipline_id' => $discipline->id,
+                'discipline_ids' => [$discipline->id],
                 'specialties' => [$ortho->id, $other->id],
                 'specialty_other_note' => 'Aquatic Therapy',
                 'years_experience' => 8,

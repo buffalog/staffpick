@@ -43,24 +43,28 @@ class DashboardNavigationTest extends FeatureTest
             $byLabel[$label] = $group;
         }
 
-        // Group order, with Support (Help) pinned to the bottom.
+        // Group order, with Support (Help) pinned to the bottom. The Dispatch and
+        // Credentialing groups were renamed to Cases and Our Providers by the nav refactor.
         $this->assertSame([
             '(ungrouped)',
-            'Dispatch',
-            'Credentialing',
+            'Cases',
+            'Our Providers',
             'Settings',
             'Administration',
             'Support',
         ], $order);
         $this->assertSame('Support', end($order));
 
-        // Item placement.
-        $this->assertContains('Dashboard', $items['(ungrouped)']);
-        $this->assertSame('Board', $items['Dispatch'][0]);
-        foreach (['Board', 'Intake Requests', 'Providers', 'Referral Sources', 'Cases'] as $item) {
-            $this->assertContains($item, $items['Dispatch']);
+        // Item placement. The board and calendar sit ungrouped, above the groups.
+        foreach (['Dashboard', 'Full Board', 'Service Calendar'] as $item) {
+            $this->assertContains($item, $items['(ungrouped)']);
         }
-        $this->assertContains('Credentialing', $items['Credentialing']);
+        foreach (['New Intake Request', 'All Cases', 'Active Cases', 'Referral Sources'] as $item) {
+            $this->assertContains($item, $items['Cases']);
+        }
+        foreach (['Providers', 'Credential Review'] as $item) {
+            $this->assertContains($item, $items['Our Providers']);
+        }
         // "My Account" group removed: ProviderProfile + MyOffers no longer register in
         // the sidebar (reached via the user/avatar menu instead).
         $this->assertArrayNotHasKey('My Account', $items);
@@ -72,9 +76,9 @@ class DashboardNavigationTest extends FeatureTest
         }
         $this->assertSame(['Help'], $items['Support']);
 
-        // Settings starts collapsed; Dispatch and Administration stay expanded.
+        // Settings starts collapsed; Cases and Administration stay expanded.
         $this->assertTrue($byLabel['Settings']->isCollapsed());
-        $this->assertFalse($byLabel['Dispatch']->isCollapsed());
+        $this->assertFalse($byLabel['Cases']->isCollapsed());
         $this->assertFalse($byLabel['Administration']->isCollapsed());
     }
 }

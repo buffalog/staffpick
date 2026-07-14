@@ -81,7 +81,7 @@ class DisciplineSpecialtyTest extends FeatureTest
         $this->assertStringContainsString('{license_number}', $ot->deep_link_url_template);
 
         $this->assertSame('deep_link', $byName('State License (SLP)')->verification_method);
-        $this->assertSame('manual', $byName('CPR Certification')->verification_method);
+        $this->assertSame('manual', $byName('CPR/BLS')->verification_method);
 
         // The pre-split single type is retired.
         $legacy = $byName('State License');

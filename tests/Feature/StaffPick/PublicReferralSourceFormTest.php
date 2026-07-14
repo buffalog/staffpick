@@ -29,11 +29,16 @@ class PublicReferralSourceFormTest extends FeatureTest
     {
         $this->get(route('staffpick.referral-source.register', ['tenantSlug' => $this->tenant->uuid]))
             ->assertSuccessful()
-            ->assertSee('Register as a referral source');
+            ->assertSee('Register with '.$this->tenant->name);
     }
 
     public function test_an_unknown_tenant_is_a_404(): void
     {
+        // FeatureTest::setUp() calls withoutExceptionHandling() globally, which rethrows the
+        // controller's ModelNotFoundException instead of rendering it. Any test asserting a
+        // real status code has to put the handler back first.
+        $this->withExceptionHandling();
+
         $this->get(route('staffpick.referral-source.register', ['tenantSlug' => 'does-not-exist']))
             ->assertNotFound();
     }
