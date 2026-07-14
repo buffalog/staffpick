@@ -48,9 +48,13 @@ class TierResponseScorerTest extends FeatureTest
         ], $attributes));
     }
 
-    private function case(array $attributes = []): IntakeRequest
+    /**
+     * @param  array<string, mixed>  $attributes
+     * @param  array<string, mixed>  $subjectAttributes
+     */
+    private function case(array $attributes = [], array $subjectAttributes = []): IntakeRequest
     {
-        $subject = Subject::factory()->create(['tenant_id' => $this->tenant->id]);
+        $subject = Subject::factory()->create(['tenant_id' => $this->tenant->id, ...$subjectAttributes]);
 
         return IntakeRequest::factory()->create(array_merge([
             'tenant_id' => $this->tenant->id,
@@ -78,6 +82,23 @@ class TierResponseScorerTest extends FeatureTest
                 'token' => 'tok_'.Str::random(40),
             ]);
         }
+    }
+
+    /**
+     * A single offer of an arbitrary status (reuses the offers() shape).
+     */
+    private function offer(Provider $provider, string $status): void
+    {
+        AssignmentOffer::create([
+            'tenant_id' => $this->tenant->id,
+            'intake_request_id' => $this->case()->id,
+            'provider_id' => $provider->id,
+            'offer_sequence' => 1,
+            'status' => $status,
+            'offered_at' => now(),
+            'expires_at' => now()->addMinutes(5),
+            'token' => 'tok_'.Str::random(40),
+        ]);
     }
 
     /**
@@ -153,5 +174,31 @@ class TierResponseScorerTest extends FeatureTest
 
         // No history beats a real 0.5 rate — new providers start perfect until they have history.
         $this->assertSame([$newbie->id, $veteran->id], $this->order($case, $veteran, $newbie));
+    }
+
+    public function test_a_pending_offer_is_excluded_from_the_response_rate_denominator(): void
+    {
+        // X resolved 1/1 = 1.0, plus a pending offer that must NOT sink it to 0.5.
+        $x = $this->provider(['tier_id' => $this->gold->id]);
+        $this->offers($x, 1, 1);
+        $this->offer($x, AssignmentOffer::STATUS_PENDING);
+
+        $y = $this->provider(['tier_id' => $this->gold->id]);
+        $this->offers($y, 2, 1); // real 0.5
+
+        // Only passes if pending is excluded: then X = 1.0 > Y = 0.5.
+        $this->assertSame([$x->id, $y->id], $this->order($this->case(), $y, $x));
+    }
+
+    public function test_a_withdrawn_offer_is_excluded_from_the_response_rate_denominator(): void
+    {
+        $x = $this->provider(['tier_id' => $this->gold->id]);
+        $this->offers($x, 1, 1);
+        $this->offer($x, AssignmentOffer::STATUS_WITHDRAWN);
+
+        $y = $this->provider(['tier_id' => $this->gold->id]);
+        $this->offers($y, 2, 1); // real 0.5
+
+        $this->assertSame([$x->id, $y->id], $this->order($this->case(), $y, $x));
     }
 }

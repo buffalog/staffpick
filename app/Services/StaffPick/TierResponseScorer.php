@@ -44,8 +44,10 @@ class TierResponseScorer implements ProviderScorer
             ->where('tenant_id', $case->tenant_id)
             ->max('priority') ?? self::DEFAULT_MAX_PRIORITY);
 
+        $rates = $this->responseRates($case, $eligible);
+
         return $eligible
-            ->sort(fn (Provider $a, Provider $b): int => $this->compare($a, $b, $case, $maxPriority))
+            ->sort(fn (Provider $a, Provider $b): int => $this->compare($a, $b, $case, $maxPriority, $rates))
             ->values();
     }
 
@@ -53,13 +55,23 @@ class TierResponseScorer implements ProviderScorer
      * Strict lexicographic comparison, best-first. Each signal is evaluated in precedence
      * order; the first non-tie decides, and lower signals only break ties above them.
      * Add a new factor by inserting one `?:` clause at the precedence it deserves.
+     *
+     * @param  array<int, float>  $rates  provider id => response rate (see responseRates())
      */
-    private function compare(Provider $a, Provider $b, IntakeRequest $case, int $maxPriority): int
+    private function compare(Provider $a, Provider $b, IntakeRequest $case, int $maxPriority, array $rates): int
     {
         return $this->requestedRank($b, $case) <=> $this->requestedRank($a, $case)
             ?: $this->preferredRank($b) <=> $this->preferredRank($a)
             ?: $this->tierRank($b, $maxPriority) <=> $this->tierRank($a, $maxPriority)
-            ?: $this->responseRate($b) <=> $this->responseRate($a);
+            ?: $this->rateOf($rates, $b) <=> $this->rateOf($rates, $a);
+    }
+
+    /**
+     * @param  array<int, float>  $rates
+     */
+    private function rateOf(array $rates, Provider $provider): float
+    {
+        return $rates[(int) $provider->id] ?? 1.0; // cold start: no resolved offers = perfect
     }
 
     /**
@@ -88,25 +100,45 @@ class TierResponseScorer implements ProviderScorer
     }
 
     /**
-     * Accepted ÷ received across all of this provider's sent offers. Cold start: a provider
-     * with zero offers received scores 1.0 (a perfect start), so new providers are surfaced
-     * until they build a real history rather than sinking to the bottom on 0.0.
+     * Response rate per provider in ONE grouped query, keyed by provider id. Replaces the
+     * per-provider count pair that used to fire inside compare() (2 queries × O(n log n)
+     * comparisons — a 40-provider pool was hundreds of round-trips).
      *
-     * Note: one count pair per provider per ordering — fine for the small eligible pools
-     * we see. Precompute in a single grouped query if pools ever grow.
+     * Denominator is RESOLVED offers only — accepted, declined, expired. Pending (not yet
+     * answered) and withdrawn (the system pulled it when another provider took the case) are
+     * excluded: the provider had no fair chance to respond, so counting them would sink their
+     * rate for something that isn't their doing. Cold start (no resolved offers) is handled at
+     * read in rateOf(): absent from the map => 1.0.
+     *
+     * pdo_sqlsrv returns aggregates as STRINGS — cast every count to int before dividing.
+     *
+     * @param  Collection<int, Provider>  $eligible
+     * @return array<int, float> provider id => response rate
      */
-    private function responseRate(Provider $provider): float
+    private function responseRates(IntakeRequest $case, Collection $eligible): array
     {
-        $received = $provider->assignmentOffers()->whereNotNull('offered_at')->count();
+        $ids = $eligible->map(fn (Provider $p): int => (int) $p->id)->all();
 
-        if ($received === 0) {
-            return 1.0;
+        if ($ids === []) {
+            return [];
         }
 
-        $accepted = $provider->assignmentOffers()
-            ->where('status', AssignmentOffer::STATUS_ACCEPTED)
-            ->count();
-
-        return $accepted / $received;
+        return AssignmentOffer::query()
+            ->select('provider_id')
+            ->selectRaw('COUNT(*) as received')
+            ->selectRaw('SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as accepted', [AssignmentOffer::STATUS_ACCEPTED])
+            ->where('tenant_id', $case->tenant_id)
+            ->whereIn('provider_id', $ids)
+            ->whereIn('status', [
+                AssignmentOffer::STATUS_ACCEPTED,
+                AssignmentOffer::STATUS_DECLINED,
+                AssignmentOffer::STATUS_EXPIRED,
+            ])
+            ->groupBy('provider_id')
+            ->get()
+            ->mapWithKeys(fn ($row): array => [
+                (int) $row->provider_id => (int) $row->accepted / (int) $row->received,
+            ])
+            ->all();
     }
 }
