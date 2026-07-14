@@ -80,7 +80,7 @@ class MatchDispatchService
             ->first();
 
         if ($provider === null) {
-            $this->escalate($case);
+            $this->escalate($case, MatchingEngine::blockingReason($case));
 
             return;
         }
@@ -315,15 +315,23 @@ class MatchDispatchService
         );
     }
 
-    private function escalate(IntakeRequest $case): void
+    /**
+     * Escalate with the REAL reason. An ungeocoded (or discipline-less) case returns an
+     * empty pool for a structural reason, and telling staff "pool exhausted" sends them
+     * to check provider availability when the fix is the subject's address.
+     */
+    private function escalate(IntakeRequest $case, ?string $reason = null): void
     {
+        $reason ??= IntakeRequest::ESCALATION_POOL_EXHAUSTED;
+
         $case->update([
             'status' => IntakeRequest::STATUS_ESCALATED,
+            'escalation_reason' => $reason,
             'escalated_at' => now(),
             'current_match_provider_id' => null,
         ]);
 
-        $this->notifyStaff($case, MatchNotificationService::EVENT_ESCALATED, __('Case escalated'), __('Provider pool exhausted — manual intervention required.'));
+        $this->notifyStaff($case, MatchNotificationService::EVENT_ESCALATED, __('Case escalated'), IntakeRequest::escalationReasonLabel($reason));
     }
 
     private function openOffer(IntakeRequest $case): ?AssignmentOffer

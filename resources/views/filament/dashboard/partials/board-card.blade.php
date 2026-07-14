@@ -88,6 +88,13 @@
             </div>
         @endif
 
+        @if ($retrigger && filled($card->escalation_reason))
+            <div class="pointer-events-none relative z-10 flex items-start gap-1.5 text-xs text-amber-700">
+                <x-filament::icon icon="heroicon-o-exclamation-triangle" class="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span>{{ \App\Models\StaffPick\IntakeRequest::escalationReasonLabel($card->escalation_reason) }}</span>
+            </div>
+        @endif
+
         @if ($retrigger)
             <div class="pointer-events-auto relative z-20 pt-1">
                 <x-filament::button

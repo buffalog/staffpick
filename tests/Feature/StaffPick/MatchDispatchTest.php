@@ -60,8 +60,11 @@ class MatchDispatchTest extends FeatureTest
         ]);
     }
 
-    /** @param  array<string, mixed>  $subjectAttributes */
-    private function unmatchedCase(array $subjectAttributes = []): IntakeRequest
+    /**
+     * @param  array<string, mixed>  $subjectAttributes
+     * @param  array<string, mixed>  $caseAttributes
+     */
+    private function unmatchedCase(array $subjectAttributes = [], array $caseAttributes = []): IntakeRequest
     {
         $subject = Subject::factory()->create(['tenant_id' => $this->tenant->id, ...$subjectAttributes]);
 
@@ -70,6 +73,7 @@ class MatchDispatchTest extends FeatureTest
             'discipline_id' => $this->discipline->id,
             'subject_id' => $subject->id,
             'status' => IntakeRequest::STATUS_UNMATCHED,
+            ...$caseAttributes,
         ]);
     }
 
@@ -190,6 +194,42 @@ class MatchDispatchTest extends FeatureTest
 
         $this->assertSame(0, $optedOut->notifications()->count(), 'opted-out staff should get no in-app bell');
         $this->assertGreaterThan(0, $default->notifications()->count(), 'default staff should get the bell');
+    }
+
+    public function test_an_ungeocoded_case_escalates_with_the_needs_coordinates_reason(): void
+    {
+        $case = $this->unmatchedCase(['latitude' => null, 'longitude' => null]);
+
+        $this->service([])->dispatch($case);
+
+        $case->refresh();
+        $this->assertSame(IntakeRequest::STATUS_ESCALATED, $case->status);
+        $this->assertSame(IntakeRequest::ESCALATION_NEEDS_COORDINATES, $case->escalation_reason);
+    }
+
+    public function test_a_genuinely_exhausted_pool_escalates_with_the_default_reason(): void
+    {
+        // Geocoded, discipline set — nothing structural is missing, so an empty pool really
+        // IS an empty pool. Guards the accurate-reason change against swallowing exhaustion.
+        $case = $this->unmatchedCase(['latitude' => 26.82, 'longitude' => -80.05]);
+
+        $this->service([])->dispatch($case);
+
+        $case->refresh();
+        $this->assertSame(IntakeRequest::STATUS_ESCALATED, $case->status);
+        $this->assertSame(IntakeRequest::ESCALATION_POOL_EXHAUSTED, $case->escalation_reason);
+    }
+
+    public function test_a_case_with_no_discipline_escalates_with_the_no_discipline_reason(): void
+    {
+        $case = $this->unmatchedCase(
+            ['latitude' => 26.82, 'longitude' => -80.05],
+            ['discipline_id' => null],
+        );
+
+        $this->service([])->dispatch($case);
+
+        $this->assertSame(IntakeRequest::ESCALATION_NO_DISCIPLINE, $case->refresh()->escalation_reason);
     }
 
     public function test_offer_to_a_non_speaker_is_flagged_language_warning(): void

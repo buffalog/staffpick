@@ -49,12 +49,14 @@ class MatchingEngineTest extends FeatureTest
         ], $attributes));
     }
 
-    private function intake(Tenant $tenant, Subject $subject, Discipline $discipline): IntakeRequest
+    /** @param  array<string, mixed>  $attributes */
+    private function intake(Tenant $tenant, Subject $subject, Discipline $discipline, array $attributes = []): IntakeRequest
     {
         return IntakeRequest::factory()->create([
             'tenant_id' => $tenant->id,
             'subject_id' => $subject->id,
             'discipline_id' => $discipline->id,
+            ...$attributes,
         ]);
     }
 
@@ -246,6 +248,40 @@ class MatchingEngineTest extends FeatureTest
         $this->assertSame([$speaksSpanish->id], $this->ids($results));
         $this->assertTrue($results->first()->languageMatched);
         $this->assertFalse($results->first()->languageWarning);
+    }
+
+    /**
+     * The referral asked for this specific provider, so — exactly as with distance — the
+     * request overrides the language gate. They survive alongside the speakers, flagged.
+     */
+    public function test_a_requested_provider_who_does_not_speak_the_preferred_language_survives_when_speakers_exist(): void
+    {
+        $tenant = $this->createTenant();
+        $discipline = $this->discipline($tenant);
+        $tier = $this->tier($tenant, 'Gold', 1);
+        $spanish = Language::firstOrCreate(['code' => 'es'], ['name' => 'Spanish']);
+
+        $speaksSpanish = $this->provider($tenant, $discipline, $tier, 5);
+        $speaksSpanish->languages()->attach($spanish->id, ['is_primary' => true]);
+        $requested = $this->provider($tenant, $discipline, $tier, 8); // no Spanish, but asked for by name
+
+        $intake = $this->intake(
+            $tenant,
+            $this->subject($tenant, ['language_preference' => 'Spanish']),
+            $discipline,
+            ['requested_provider_id' => $requested->id],
+        );
+
+        $results = $this->engine()->match($intake);
+
+        $this->assertEqualsCanonicalizing([$speaksSpanish->id, $requested->id], $this->ids($results));
+
+        $requestedResult = $results->firstWhere(fn (MatchingResult $r): bool => $r->provider->id === $requested->id);
+        $this->assertTrue($requestedResult->languageWarning, 'the requested non-speaker must be flagged');
+        $this->assertFalse($requestedResult->languageMatched);
+
+        $speakerResult = $results->firstWhere(fn (MatchingResult $r): bool => $r->provider->id === $speaksSpanish->id);
+        $this->assertFalse($speakerResult->languageWarning);
     }
 
     public function test_language_warning_set_when_no_eligible_provider_speaks_the_language(): void
