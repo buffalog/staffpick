@@ -34,11 +34,12 @@ class MatchingEngine
      * subject states a preference, the tenant's internal/patient rating floors, and
      * language (see below).
      *
-     * Language is a hard filter with a pool-level fallback: if the subject states a
-     * language preference and at least one eligible provider speaks it, every
-     * non-speaker is excluded. If NO eligible provider speaks it, nobody is excluded
-     * on language and every result is flagged language_warning = true so staff can
-     * see the preference could not be honored.
+     * Language is a hard filter with two escapes: if the subject states a language
+     * preference and at least one eligible provider speaks it, every non-speaker is
+     * excluded EXCEPT a referral-requested provider (the request overrides the gate,
+     * as it does for distance). If NO eligible provider speaks it, nobody is excluded
+     * on language. Every surviving non-speaker is flagged language_warning = true so
+     * staff can see the preference could not be honored.
      *
      * When $radiusOverrideMiles is given (e.g. a scheduler re-trigger after a queue
      * was exhausted), it replaces every provider's own max radius as the eligibility
@@ -135,14 +136,15 @@ class MatchingEngine
             ]);
         }
 
-        // Language hard filter with pool-level fallback. When the preference can be
-        // satisfied, drop every non-speaker. When it can't, keep everyone and warn.
         $hasPreference = filled($languagePreference);
         $anySpeaker = $eligible->contains(fn (object $row): bool => $row->languageMatched);
-        $fallbackFired = $hasPreference && $eligible->isNotEmpty() && ! $anySpeaker;
 
+        // Language hard filter with two escapes: (1) a referral-requested provider is
+        // never dropped on language — like distance, the request overrides the gate
+        // (they carry language_warning so staff see the preference couldn't be honored);
+        // (2) if NO eligible provider speaks it, nobody is dropped and everyone is warned.
         if ($hasPreference && $anySpeaker) {
-            $eligible = $eligible->filter(fn (object $row): bool => $row->languageMatched);
+            $eligible = $eligible->filter(fn (object $row): bool => $row->languageMatched || $row->requested);
         }
 
         return $eligible
@@ -150,7 +152,11 @@ class MatchingEngine
                 provider: $row->provider,
                 distanceMiles: $row->distance,
                 languageMatched: $row->languageMatched,
-                languageWarning: $fallbackFired,
+                // Per-row: a preference was stated and THIS provider doesn't speak it. Identical
+                // to the old pool flag in every existing case (no-speaker fallback => all rows are
+                // non-speakers => all true), and correctly true for the one requested non-speaker
+                // who now survives while speakers exist.
+                languageWarning: $hasPreference && ! $row->languageMatched,
                 factors: [
                     'requested' => $row->requested,
                     'out_of_radius' => $row->outOfRadius,

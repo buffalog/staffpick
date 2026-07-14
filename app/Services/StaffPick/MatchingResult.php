@@ -7,9 +7,9 @@ use App\Models\StaffPick\Provider;
 /**
  * The outcome of running a single provider through {@see MatchingEngine}: the
  * provider, its straight-line distance to the subject, whether it matched the
- * subject's language preference (informational), a collection-level language
- * warning (a preference existed but no eligible provider could satisfy it), and
- * the per-factor breakdown (out_of_radius, is_preferred, requested, tier_priority).
+ * subject's language preference (informational), a per-row language warning (a
+ * preference was stated and THIS provider does not speak it), and the per-factor
+ * breakdown (out_of_radius, is_preferred, requested, tier_priority).
  *
  * This class carries eligibility only — no score, no order. Ordering is owned by
  * {@see ProviderScorer}.
