@@ -104,6 +104,7 @@ class ProviderResourceTest extends FeatureTest
     public function test_create_auto_fills_tenant_id_from_current_tenant(): void
     {
         $tenant = $this->createTenant();
+        $discipline = Discipline::create(['tenant_id' => $tenant->id, 'name' => 'Speech Therapy', 'abbreviation' => 'SLP']);
         $this->actAsTenant($tenant);
 
         Livewire::test(CreateProvider::class)
@@ -112,6 +113,9 @@ class ProviderResourceTest extends FeatureTest
                 'last_name' => 'Stone',
                 'email' => 'avery.stone@example.com',
                 'status' => 'active',
+                // A provider now holds a SET of disciplines (multi-select, required) rather
+                // than a single discipline_id column.
+                'disciplines' => [$discipline->id],
             ])
             ->call('create')
             ->assertHasNoFormErrors();
@@ -144,9 +148,13 @@ class ProviderResourceTest extends FeatureTest
     public function test_edit_updates_provider(): void
     {
         $tenant = $this->createTenant();
+        $discipline = Discipline::create(['tenant_id' => $tenant->id, 'name' => 'Edit Therapy', 'abbreviation' => 'ET']);
+        // The provider needs a discipline: it's required on the form, so a provider with an
+        // empty disciplines set can't be saved even when the edit doesn't touch that field.
         $provider = Provider::factory()->create([
             'tenant_id' => $tenant->id,
             'last_name' => 'Original',
+            'discipline_id' => $discipline->id,
         ]);
 
         $this->actAsTenant($tenant);
@@ -193,7 +201,7 @@ class ProviderResourceTest extends FeatureTest
                 'first_name' => 'Avery',
                 'last_name' => 'Stone',
                 'status' => 'active',
-                'discipline_id' => $discipline->id,
+                'disciplines' => [$discipline->id],
                 'specialties' => [$other->id],
                 'specialty_other_note' => 'Aquatic Therapy',
             ])

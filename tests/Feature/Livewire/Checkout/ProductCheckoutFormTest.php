@@ -518,7 +518,7 @@ class ProductCheckoutFormTest extends FeatureTest
             'price' => 50,
         ]);
 
-        $email = 'existing'.rand(1, 10000).'@example.com';
+        $email = $this->uniqueEmail('existing');
         $user = User::factory()->create(['email' => $email]);
 
         $this->addPaymentProviderForRendering();
@@ -578,7 +578,7 @@ class ProductCheckoutFormTest extends FeatureTest
             'price' => 50,
         ]);
 
-        $email = 'newuser'.rand(1, 10000).'@example.com';
+        $email = $this->uniqueEmail('newuser');
         $name = 'Test User';
 
         $this->addPaymentProviderForRendering();
@@ -644,7 +644,7 @@ class ProductCheckoutFormTest extends FeatureTest
             'price' => 50,
         ]);
 
-        $email = 'existing'.rand(1, 10000).'@example.com';
+        $email = $this->uniqueEmail('existing');
         $user = User::factory()->create(['email' => $email]);
 
         $this->addPaymentProviderForRendering();
@@ -753,7 +753,7 @@ class ProductCheckoutFormTest extends FeatureTest
             'price' => 50,
         ]);
 
-        $email = 'existing'.rand(1, 10000).'@example.com';
+        $email = $this->uniqueEmail('existing');
         $recaptcha = 'test_recaptcha_token';
         $user = User::factory()->create(['email' => $email]);
 
@@ -816,7 +816,7 @@ class ProductCheckoutFormTest extends FeatureTest
             'price' => 50,
         ]);
 
-        $email = 'newuser'.rand(1, 10000).'@example.com';
+        $email = $this->uniqueEmail('newuser');
         $name = 'Test User';
         $recaptcha = 'test_recaptcha_token';
         $newUser = User::factory()->make(['email' => $email, 'name' => $name]);

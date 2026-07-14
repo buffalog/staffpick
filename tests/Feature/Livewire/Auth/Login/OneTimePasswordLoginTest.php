@@ -53,7 +53,7 @@ class OneTimePasswordLoginTest extends FeatureTest
 
     public function test_submit_email_with_valid_data_and_existing_user()
     {
-        $email = 'existing'.rand(1, 10000).'@example.com';
+        $email = $this->uniqueEmail('existing');
         $user = User::factory()->create(['email' => $email]);
 
         $validator = Mockery::mock(Validator::class);
@@ -82,7 +82,7 @@ class OneTimePasswordLoginTest extends FeatureTest
 
     public function test_submit_email_with_non_existing_user()
     {
-        $email = 'nonexistent'.rand(1, 10000).'@example.com';
+        $email = $this->uniqueEmail('nonexistent');
 
         $validator = Mockery::mock(Validator::class);
         $validator->shouldReceive('fails')->andReturn(false);
@@ -102,7 +102,7 @@ class OneTimePasswordLoginTest extends FeatureTest
 
     public function test_submit_email_when_otp_service_fails_to_send_code()
     {
-        $email = 'existing'.rand(1, 10000).'@example.com';
+        $email = $this->uniqueEmail('existing');
         $user = User::factory()->create(['email' => $email]);
 
         $validator = Mockery::mock(Validator::class);
@@ -155,7 +155,7 @@ class OneTimePasswordLoginTest extends FeatureTest
     {
         config(['app.recaptcha_enabled' => true]);
 
-        $email = 'existing'.rand(1, 10000).'@example.com';
+        $email = $this->uniqueEmail('existing');
         $recaptcha = 'test_recaptcha_token';
         $user = User::factory()->create(['email' => $email]);
 
@@ -193,7 +193,7 @@ class OneTimePasswordLoginTest extends FeatureTest
     {
         config(['app.recaptcha_enabled' => false]);
 
-        $email = 'existing'.rand(1, 10000).'@example.com';
+        $email = $this->uniqueEmail('existing');
         $recaptcha = 'test_recaptcha_token';
         $user = User::factory()->create(['email' => $email]);
 

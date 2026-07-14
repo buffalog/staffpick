@@ -6,12 +6,20 @@
          displayDetailsOnTestsThatTriggerErrors="true"
 
 >
+    <!-- ExampleTest (an empty Laravel skeleton stub) and FeatureTest (our base class) both
+         match the *Test.php suffix but declare no test methods, so PHPUnit raises
+         "No tests found in class". PHPUnit 11 defaults failOnPhpunitWarning to TRUE, so those
+         two warnings alone exit 1 — a fully passing suite still reported a red build. Exclude
+         the non-test files rather than switching the flag off; it's worth keeping, it's what
+         catches things like a misnamed test method. -->
     <testsuites>
         <testsuite name="Unit">
             <directory suffix="Test.php">./tests/Unit</directory>
+            <exclude>./tests/Unit/ExampleTest.php</exclude>
         </testsuite>
         <testsuite name="Feature">
             <directory suffix="Test.php">./tests/Feature</directory>
+            <exclude>./tests/Feature/FeatureTest.php</exclude>
         </testsuite>
     </testsuites>
     <!-- Dead SaaSykit billing boilerplate (checkout/plans). StaffPick ships none of it, so

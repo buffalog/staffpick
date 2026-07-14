@@ -41,7 +41,7 @@ class OneTimePasswordRegistrationTest extends FeatureTest
 
     public function test_successful_registration_with_valid_data()
     {
-        $email = 'newuser'.rand(1, 10000).'@example.com';
+        $email = $this->uniqueEmail('newuser');
         $name = 'New User';
         $userFields = [
             'email' => $email,
@@ -87,7 +87,7 @@ class OneTimePasswordRegistrationTest extends FeatureTest
 
     public function test_registration_with_existing_user_email()
     {
-        $email = 'existing'.rand(1, 10000).'@example.com';
+        $email = $this->uniqueEmail('existing');
         $name = 'New User';
         $userFields = [
             'email' => $email,
@@ -120,7 +120,7 @@ class OneTimePasswordRegistrationTest extends FeatureTest
 
     public function test_registration_when_otp_service_fails_to_send_code()
     {
-        $email = 'newuser'.rand(1, 10000).'@example.com';
+        $email = $this->uniqueEmail('newuser');
         $name = 'New User';
         $userFields = [
             'email' => $email,
@@ -167,7 +167,7 @@ class OneTimePasswordRegistrationTest extends FeatureTest
     {
         config(['app.recaptcha_enabled' => true]);
 
-        $email = 'newuser'.rand(1, 10000).'@example.com';
+        $email = $this->uniqueEmail('newuser');
         $name = 'New User';
         $recaptcha = 'test_recaptcha_token';
         $userFields = [
@@ -218,7 +218,7 @@ class OneTimePasswordRegistrationTest extends FeatureTest
     {
         config(['app.recaptcha_enabled' => false]);
 
-        $email = 'newuser'.rand(1, 10000).'@example.com';
+        $email = $this->uniqueEmail('newuser');
         $name = 'New User';
         $recaptcha = 'test_recaptcha_token';
         $userFields = [

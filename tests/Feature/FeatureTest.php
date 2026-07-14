@@ -14,6 +14,30 @@ class FeatureTest extends TestCase
 {
     protected static bool $setUpHasRunOnce = false;
 
+    /** Monotonic per-process counter behind {@see uniqueEmail()}. */
+    private static int $uniqueEmailSequence = 0;
+
+    /**
+     * A test email guaranteed unique for the whole run.
+     *
+     * Tests used to mint these as 'existing'.rand(1, 10000).'@example.com'. The suite shares
+     * ONE database that is never rolled back (see setUp below — migrate:fresh once per
+     * process, no RefreshDatabase, which is a documented pdo_sqlsrv deadlock landmine), and
+     * users.email is UNIQUE. Roughly a dozen tests drew from that 10,000-value space, so a
+     * birthday collision blew up a random test on ~1% of runs.
+     *
+     * Worse, it was not stably random: Faker draws from PHP's global mt_rand, so ANY change
+     * to how many tests run re-rolls every subsequent rand() — which is why simply adding
+     * tests kept tripping it in unrelated files.
+     *
+     * The counter shares its lifetime with the database (both reset per process), so this is
+     * collision-proof by construction rather than by luck.
+     */
+    protected function uniqueEmail(string $prefix = 'user'): string
+    {
+        return sprintf('%s%d@example.com', $prefix, ++static::$uniqueEmailSequence);
+    }
+
     protected function setUp(): void
     {
         parent::setUp();

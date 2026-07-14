@@ -155,7 +155,7 @@ class FindMatchesActionTest extends FeatureTest
         ]);
         $this->assertDatabaseHas('sp_intake_requests', [
             'id' => $intake->id,
-            'status' => 'assigned_pending',
+            'status' => IntakeRequest::STATUS_MATCHED,
         ]);
     }
 }
