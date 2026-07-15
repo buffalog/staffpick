@@ -372,6 +372,8 @@ class MatchDispatchService
         }
 
         $discipline = $intake?->discipline?->name ?? __('Unspecified');
+        // City is fine in the in-app bell (Azure SQL), but NOT in the vendor-delivered SMS/email
+        // below — a patient city there is PHI transiting a non-BAA vendor.
         $city = $intake?->subject?->city ?? __('your area');
         $url = route('staffpick.offer.respond', ['token' => $offer->token]);
 
@@ -385,7 +387,7 @@ class MatchDispatchService
 
         match ($offer->delivery_channel) {
             Provider::CHANNEL_SMS => filled($provider->phone)
-                ? $this->sms->send($provider->phone, __('New assignment offer: :discipline in :city. Sign in to respond: :url', ['discipline' => $discipline, 'city' => $city, 'url' => $url]))
+                ? $this->sms->send($provider->phone, __('New assignment offer: :discipline. Sign in to respond: :url', ['discipline' => $discipline, 'url' => $url]))
                 : null,
             Provider::CHANNEL_PORTAL => null,
             default => filled($provider->email)

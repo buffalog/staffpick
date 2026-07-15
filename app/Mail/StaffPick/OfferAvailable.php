@@ -10,9 +10,9 @@ use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * Sent to a provider when they receive an assignment offer. Contains NO PHI — only
- * discipline, general area (city), proposed start date, and the login-gated link to
- * review full details. The full case is only visible after login at /offers/{token}.
+ * Sent to a provider when they receive an assignment offer. Carries NO patient identifier —
+ * discipline, proposed start date, and the login-gated link only (no city; a patient city in
+ * a vendor-delivered email is PHI). The full case is only visible after login at /offers/{token}.
  */
 class OfferAvailable extends Mailable
 {
