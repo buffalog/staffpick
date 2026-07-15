@@ -4,6 +4,7 @@ namespace Tests\Feature\StaffPick;
 
 use App\Models\StaffPick\IntakeRequest;
 use App\Models\StaffPick\Provider;
+use App\Models\StaffPick\Subject;
 use App\Models\Tenant;
 use Tests\Feature\FeatureTest;
 
@@ -19,8 +20,18 @@ class ProviderCalendarFeedTest extends FeatureTest
             'calendar_token_generated_at' => now(),
         ]);
 
+        // Sentinel patient name — no address, so the on-save geocoder never fires. If this
+        // name ever appears in the ICS the feed is leaking PHI to third-party calendar apps.
+        $subject = Subject::create([
+            'tenant_id' => $tenant->id,
+            'first_name' => 'Zzyxpatient',
+            'last_name' => 'Qqwlastname',
+            'is_active' => true,
+        ]);
+
         IntakeRequest::factory()->create([
             'tenant_id' => $tenant->id,
+            'subject_id' => $subject->id,
             'lead_clinician_id' => $provider->id,
             'status' => 'matched',
             'evaluation_date' => '2026-07-01',
@@ -44,8 +55,12 @@ class ProviderCalendarFeedTest extends FeatureTest
         $body = $response->getContent();
         $this->assertStringContainsString('BEGIN:VCALENDAR', $body);
         $this->assertStringContainsString('BEGIN:VEVENT', $body);
-        $this->assertStringContainsString('R-TEST01', $body);
+        $this->assertStringContainsString('R-TEST01', $body); // feature intact
         $this->assertStringContainsString('DTSTART;VALUE=DATE:20260701', $body);
+
+        // HIPAA: the third-party-synced ICS must carry no patient identifier.
+        $this->assertStringNotContainsString('Zzyxpatient', $body);
+        $this->assertStringNotContainsString('Qqwlastname', $body);
     }
 
     public function test_invalid_token_404s(): void

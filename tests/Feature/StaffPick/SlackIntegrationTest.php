@@ -66,15 +66,16 @@ class SlackIntegrationTest extends FeatureTest
 
     // ---- Outbound -----------------------------------------------------------
 
-    public function test_intake_received_queues_a_slack_message_with_first_name_only(): void
+    public function test_intake_received_queues_a_slack_message_with_no_patient_identifier(): void
     {
         Queue::fake();
         $this->configureSlack();
 
+        // Distinctive sentinel names — if either survives into the payload, PHI leaked.
         $subject = Subject::create([
             'tenant_id' => $this->tenant->id,
-            'first_name' => 'Casey',
-            'last_name' => 'Nguyen',
+            'first_name' => 'Zzyxpatient',
+            'last_name' => 'Qqwlastname',
             'is_active' => true,
         ]);
         $source = ReferralSource::create([
@@ -97,10 +98,10 @@ class SlackIntegrationTest extends FeatureTest
             $json = json_encode($job->payload);
 
             return $job->webhookUrl === 'https://hooks.slack.test/webhook'
-                && str_contains($json, 'R-ABC234')
-                && str_contains($json, 'Casey')
-                && ! str_contains($json, 'Nguyen') // HIPAA: last name not leaked
-                && str_contains($json, 'Palm Beach Pediatrics');
+                && str_contains($json, 'R-ABC234')                 // feature intact
+                && str_contains($json, 'Palm Beach Pediatrics')    // non-PHI context intact
+                && ! str_contains($json, 'Zzyxpatient')            // HIPAA: no patient first name
+                && ! str_contains($json, 'Qqwlastname');           // HIPAA: no patient last name
         });
     }
 
