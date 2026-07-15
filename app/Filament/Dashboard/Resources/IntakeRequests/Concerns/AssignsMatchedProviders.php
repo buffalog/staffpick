@@ -36,6 +36,14 @@ trait AssignsMatchedProviders
     public ?array $offerConfirmation = null;
 
     /**
+     * Twin of {@see $offerConfirmation} for the Assign button: set when a direct assign
+     * would commit a provider who still has a live offer out on another case.
+     *
+     * @var array{intakeRequestId:int, providerId:int, providerName:string, conflictReference:string}|null
+     */
+    public ?array $assignConfirmation = null;
+
+    /**
      * Semi-auto: dispatch a single offer to one matched provider. Keeps the modal open
      * so staff can offer multiple providers; does not unmount the action.
      *
@@ -104,7 +112,7 @@ trait AssignsMatchedProviders
             ->first();
     }
 
-    public function assignProvider(int $intakeRequestId, int $providerId): void
+    public function assignProvider(int $intakeRequestId, int $providerId, bool $confirmed = false): void
     {
         // Both lookups run through the BelongsToTenant scope, so a record from
         // another tenant simply resolves to null.
@@ -119,6 +127,23 @@ trait AssignsMatchedProviders
         // is a directly-invokable Livewire RPC, so authorize the mutation here too.
         abort_unless(SpRoleAccess::isAdminOrStaff(), 403);
 
+        // Same over-commitment guard as the offer path: assigning here commits the provider
+        // while a live offer of theirs is still open on another case. Confirm-and-proceed.
+        $conflict = $this->providerOfferConflict($provider, $intakeRequest);
+
+        if ($conflict !== null && ! $confirmed) {
+            $this->assignConfirmation = [
+                'intakeRequestId' => (int) $intakeRequest->id,
+                'providerId' => (int) $provider->id,
+                'providerName' => trim("{$provider->first_name} {$provider->last_name}"),
+                'conflictReference' => $conflict->intakeRequest?->reference_number ?: "#{$conflict->intake_request_id}",
+            ];
+
+            return; // keep the modal open; do NOT unmount
+        }
+
+        $this->assignConfirmation = null;
+
         app(AssignmentService::class)->assign($intakeRequest, $provider);
 
         Notification::make()
@@ -127,5 +152,11 @@ trait AssignsMatchedProviders
             ->send();
 
         $this->unmountAction();
+    }
+
+    /** Dismiss a pending assign confirm-and-proceed prompt without assigning. */
+    public function cancelAssignConfirmation(): void
+    {
+        $this->assignConfirmation = null;
     }
 }
