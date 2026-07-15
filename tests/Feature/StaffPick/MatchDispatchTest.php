@@ -10,6 +10,7 @@ use App\Models\StaffPick\Provider;
 use App\Models\StaffPick\ProviderTier;
 use App\Models\StaffPick\Subject;
 use App\Models\Tenant;
+use App\Services\StaffPick\AssignmentService;
 use App\Services\StaffPick\MatchDispatchService;
 use App\Services\StaffPick\MatchingEngine;
 use App\Services\StaffPick\MatchingResult;
@@ -338,5 +339,37 @@ class MatchDispatchTest extends FeatureTest
         $this->assertSame(IntakeRequest::STATUS_MATCHED, $case->status);
         $this->assertSame($platinum->id, $case->lead_clinician_id);
         $this->assertSame(1, $case->assignments()->where('is_current', true)->count());
+    }
+
+    /** A pending, delivered offer to $provider on $case. */
+    private function pendingOffer(IntakeRequest $case, Provider $provider): AssignmentOffer
+    {
+        return AssignmentOffer::create([
+            'tenant_id' => $this->tenant->id,
+            'intake_request_id' => $case->id,
+            'provider_id' => $provider->id,
+            'offer_sequence' => 1,
+            'status' => AssignmentOffer::STATUS_PENDING,
+            'offered_at' => now(),
+            'expires_at' => now()->addMinutes(30),
+            'delivery_channel' => Provider::CHANNEL_PORTAL,
+            'token' => Str::random(48),
+        ]);
+    }
+
+    public function test_manual_assign_withdraws_the_cases_open_offer(): void
+    {
+        $x = $this->provider($this->platinum);
+        $y = $this->provider($this->gold);
+        $case = $this->unmatchedCase();
+        $yOffer = $this->pendingOffer($case, $y);
+
+        app(AssignmentService::class)->assign($case, $x);
+
+        $this->assertSame(AssignmentOffer::STATUS_WITHDRAWN, $yOffer->refresh()->status);
+        $case->refresh();
+        $this->assertSame(IntakeRequest::STATUS_MATCHED, $case->status);
+        $this->assertSame($x->id, $case->lead_clinician_id);
+        $this->assertNull($case->current_match_provider_id);
     }
 }
