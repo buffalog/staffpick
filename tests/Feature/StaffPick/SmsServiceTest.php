@@ -58,6 +58,24 @@ class SmsServiceTest extends TestCase
         });
     }
 
+    public function test_it_does_not_log_the_vendor_response_body(): void
+    {
+        Log::spy();
+        // Pingram error bodies can echo the recipient phone (PHI); this one carries a sentinel.
+        Http::fake(['api.pingram.io/*' => Http::response(['error' => 'ECHOED_PHI +15615551234'], 500)]);
+
+        app(SmsService::class)->send('+15615551234', 'Hi');
+
+        Log::shouldHaveReceived('warning')->once()->withArgs(function (string $message, array $context): bool {
+            $json = json_encode($context);
+
+            return ($context['status'] ?? null) === 500
+                && ($context['to'] ?? '') === '********1234'
+                && ! str_contains($json, 'ECHOED_PHI')      // vendor body not logged
+                && ! str_contains($json, '5615551234');      // full phone not logged
+        });
+    }
+
     public function test_it_is_a_no_op_when_no_api_key_is_configured(): void
     {
         config()->set('services.pingram.api_key', null);
