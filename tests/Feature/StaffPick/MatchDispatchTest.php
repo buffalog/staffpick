@@ -372,4 +372,39 @@ class MatchDispatchTest extends FeatureTest
         $this->assertSame($x->id, $case->lead_clinician_id);
         $this->assertNull($case->current_match_provider_id);
     }
+
+    public function test_a_withdrawn_offer_cannot_clobber_the_manual_assignment(): void
+    {
+        $x = $this->provider($this->platinum);
+        $y = $this->provider($this->gold);
+        $case = $this->unmatchedCase();
+        $yOffer = $this->pendingOffer($case, $y);
+
+        app(AssignmentService::class)->assign($case, $x); // withdraws Y's offer (commit 1)
+
+        // Y tries to accept the now-withdrawn offer — must no-op, not overwrite the placement.
+        $this->service([])->handleAcceptance($case->refresh(), $yOffer->refresh());
+
+        $case->refresh();
+        $this->assertSame($x->id, $case->lead_clinician_id, 'manual lead must survive a stale accept');
+        $this->assertSame(IntakeRequest::STATUS_MATCHED, $case->status);
+        $this->assertSame(0, $case->assignments()->where('is_current', true)->where('provider_id', $y->id)->count());
+    }
+
+    public function test_accepting_a_non_pending_offer_is_a_no_op(): void
+    {
+        $default = $this->createTenantAdmin($this->tenant);
+
+        $y = $this->provider($this->gold);
+        $case = $this->unmatchedCase(); // stays UNMATCHED — never advanced
+        $withdrawn = $this->pendingOffer($case, $y);
+        $withdrawn->update(['status' => AssignmentOffer::STATUS_WITHDRAWN, 'responded_at' => now()]);
+
+        $this->service([])->handleAcceptance($case->refresh(), $withdrawn->refresh());
+
+        $this->assertSame(AssignmentOffer::STATUS_WITHDRAWN, $withdrawn->refresh()->status);
+        $this->assertSame(IntakeRequest::STATUS_UNMATCHED, $case->refresh()->status);
+        $this->assertSame(0, $case->assignments()->count());
+        $this->assertSame(0, $default->notifications()->count(), 'no accepted-event bell for a no-op accept');
+    }
 }
