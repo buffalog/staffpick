@@ -12,6 +12,7 @@ use App\Models\StaffPick\ProviderSurvey;
 use App\Models\StaffPick\Subject;
 use App\Models\Tenant;
 use App\Services\StaffPick\SmsService;
+use App\Services\StaffPick\TenantContext;
 use Illuminate\Support\Facades\Mail;
 use Mockery;
 use Tests\Feature\FeatureTest;
@@ -54,10 +55,11 @@ class SendProviderSurveyJobTest extends FeatureTest
         $sms = Mockery::mock(SmsService::class);
         $sms->shouldReceive('send')->once()->andReturn(true);
 
-        (new SendProviderSurvey($assignment->id))->handle($sms);
+        (new SendProviderSurvey($assignment->id))->handle($sms, app(TenantContext::class));
 
         $this->assertDatabaseHas('sp_provider_surveys', [
             'assignment_id' => $assignment->id,
+            'tenant_id' => $tenant->id, // survey created under the assignment's tenant context
             'delivery_channel' => ProviderSurvey::CHANNEL_SMS,
             'status' => ProviderSurvey::STATUS_SENT,
         ]);
@@ -71,7 +73,7 @@ class SendProviderSurveyJobTest extends FeatureTest
         $tenant = $this->createTenant();
         $assignment = $this->assignment($tenant, ['phone' => null, 'email' => 'patient@example.com']);
 
-        (new SendProviderSurvey($assignment->id))->handle($this->smsReturning(true));
+        (new SendProviderSurvey($assignment->id))->handle($this->smsReturning(true), app(TenantContext::class));
 
         Mail::assertSent(ProviderSurveyRequest::class);
         $this->assertDatabaseHas('sp_provider_surveys', [
@@ -86,7 +88,7 @@ class SendProviderSurveyJobTest extends FeatureTest
         $tenant = $this->createTenant();
         $assignment = $this->assignment($tenant, ['phone' => null, 'email' => null]);
 
-        (new SendProviderSurvey($assignment->id))->handle($this->smsReturning(true));
+        (new SendProviderSurvey($assignment->id))->handle($this->smsReturning(true), app(TenantContext::class));
 
         $this->assertDatabaseHas('sp_provider_surveys', [
             'assignment_id' => $assignment->id,
@@ -110,7 +112,7 @@ class SendProviderSurveyJobTest extends FeatureTest
         $sms = Mockery::mock(SmsService::class);
         $sms->shouldNotReceive('send');
 
-        (new SendProviderSurvey($assignment->id))->handle($sms);
+        (new SendProviderSurvey($assignment->id))->handle($sms, app(TenantContext::class));
 
         $this->assertSame(1, ProviderSurvey::where('assignment_id', $assignment->id)->count());
     }

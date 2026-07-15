@@ -10,6 +10,7 @@ use App\Services\PaymentProviders\PaymentService;
 use App\Services\PaymentProviders\Polar\PolarProvider;
 use App\Services\PaymentProviders\Stripe\StripeProvider;
 use App\Services\StaffPick\ProviderScorer;
+use App\Services\StaffPick\TenantContext;
 use App\Services\StaffPick\TierResponseScorer;
 use App\Services\UserVerificationService;
 use App\Services\VerificationProviders\PingramProvider;
@@ -56,6 +57,10 @@ class AppServiceProvider extends ServiceProvider
 
         // The single source of provider ordering for both Find Matches and the cascade.
         $this->app->bind(ProviderScorer::class, TierResponseScorer::class);
+
+        // Runtime tenant context for background work — a singleton so set()/run() persist
+        // across app(TenantContext::class) calls within a job. See BelongsToTenant.
+        $this->app->singleton(TenantContext::class);
     }
 
     /**

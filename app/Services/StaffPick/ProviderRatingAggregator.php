@@ -19,7 +19,9 @@ use DateTimeInterface;
 class ProviderRatingAggregator
 {
     /**
-     * Recompute ratings for every active provider across all tenants.
+     * Recompute ratings for every active provider in the current tenant (the Provider query
+     * auto-scopes to the active {@see TenantContext}; {@see AggregateProviderRatings} drives
+     * one pass per tenant).
      */
     public function aggregate(?DateTimeInterface $asOf = null): int
     {
