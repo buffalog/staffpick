@@ -38,10 +38,12 @@ class SmsService
                 ]);
 
             if ($response->failed()) {
+                // No response body: Pingram's error body can echo the recipient phone (a HIPAA
+                // identifier). Status + masked phone are enough to debug; the full request lives
+                // in Pingram's own dashboard.
                 Log::warning('Pingram SMS send failed.', [
                     'to' => $this->maskPhone($to),
                     'status' => $response->status(),
-                    'body' => $response->body(),
                 ]);
 
                 return false;
