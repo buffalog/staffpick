@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Constants\TenancyPermissionConstants;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\StaffPick\TenantContext;
 use App\Services\TenantPermissionService;
 use Database\Seeders\Testing\TestingDatabaseSeeder;
 use Filament\Facades\Filament;
@@ -52,6 +53,10 @@ class FeatureTest extends TestCase
         $this->configureDefaultCurrency();
         $this->withoutExceptionHandling();
         $this->withoutVite();
+
+        // The TenantContext singleton persists across tests in a process; clear it so a context
+        // set by a prior test never leaks into this one (which would silently mis-scope PHI reads).
+        app(TenantContext::class)->set(null);
     }
 
     protected function createUser(?Tenant $tenant = null, array $tenantPermissions = [], array $attributes = [])

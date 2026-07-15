@@ -10,6 +10,7 @@ use App\Models\StaffPick\Subject;
 use App\Models\Tenant;
 use App\Services\StaffPick\MatchingEngine;
 use App\Services\StaffPick\MatchingResult;
+use App\Services\StaffPick\TenantContext;
 use Tests\Feature\FeatureTest;
 
 /**
@@ -37,6 +38,10 @@ class ProviderDisciplineBackfillTest extends FeatureTest
         parent::setUp();
 
         $this->tenant = $this->createTenant();
+
+        // The matchability check runs MatchingEngine, which reads the case's Subject (PHI);
+        // in production it always runs in a tenant context. All fixtures belong to $this->tenant.
+        app(TenantContext::class)->set($this->tenant);
     }
 
     /**

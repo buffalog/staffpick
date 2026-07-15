@@ -209,7 +209,7 @@ class SlackIntegrationTest extends FeatureTest
             'tenant_id' => $this->tenant->id,
             'signature_valid' => false,
         ]);
-        $this->assertSame(0, IntakeRequest::where('tenant_id', $this->tenant->id)->count());
+        $this->assertSame(0, IntakeRequest::query()->crossTenant()->where('tenant_id', $this->tenant->id)->count());
     }
 
     public function test_a_url_verification_challenge_is_echoed_back(): void
@@ -231,7 +231,7 @@ class SlackIntegrationTest extends FeatureTest
             'event' => ['type' => 'message', 'text' => 'Please log a new referral for a patient', 'channel' => 'C12345'],
         ], 'shhh-secret')->assertOk();
 
-        $intake = IntakeRequest::where('tenant_id', $this->tenant->id)->firstOrFail();
+        $intake = IntakeRequest::query()->crossTenant()->where('tenant_id', $this->tenant->id)->firstOrFail();
         $this->assertSame('draft', $intake->status);
         $this->assertSame('C12345', $intake->slack_channel_id);
         $this->assertSame($this->tenant->id, (int) $intake->tenant_id);
@@ -259,7 +259,7 @@ class SlackIntegrationTest extends FeatureTest
             'event' => ['type' => 'message', 'text' => 'new referral', 'channel' => 'C123', 'bot_id' => 'B0001'],
         ], 'shhh-secret')->assertOk();
 
-        $this->assertSame(0, IntakeRequest::where('tenant_id', $this->tenant->id)->count());
+        $this->assertSame(0, IntakeRequest::query()->crossTenant()->where('tenant_id', $this->tenant->id)->count());
         $this->assertSame(0, SlackWebhookLog::where('tenant_id', $this->tenant->id)->count());
         Queue::assertNothingPushed();
     }
@@ -275,7 +275,7 @@ class SlackIntegrationTest extends FeatureTest
         ], 'shhh-secret')->assertOk();
 
         $this->assertSame(0, SlackWebhookLog::where('tenant_id', $this->tenant->id)->count());
-        $this->assertSame(0, IntakeRequest::where('tenant_id', $this->tenant->id)->count());
+        $this->assertSame(0, IntakeRequest::query()->crossTenant()->where('tenant_id', $this->tenant->id)->count());
     }
 
     public function test_a_message_without_the_keyword_creates_no_intake(): void
@@ -288,7 +288,7 @@ class SlackIntegrationTest extends FeatureTest
             'event' => ['type' => 'message', 'text' => 'just a normal message', 'channel' => 'C12345'],
         ], 'shhh-secret')->assertOk();
 
-        $this->assertSame(0, IntakeRequest::where('tenant_id', $this->tenant->id)->count());
+        $this->assertSame(0, IntakeRequest::query()->crossTenant()->where('tenant_id', $this->tenant->id)->count());
         $this->assertDatabaseHas('sp_slack_webhook_logs', [
             'tenant_id' => $this->tenant->id,
             'signature_valid' => true,

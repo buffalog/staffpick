@@ -16,6 +16,7 @@ use App\Services\StaffPick\MatchingEngine;
 use App\Services\StaffPick\MatchingResult;
 use App\Services\StaffPick\MatchNotificationService;
 use App\Services\StaffPick\SmsService;
+use App\Services\StaffPick\TenantContext;
 use App\Services\StaffPick\TierResponseScorer;
 use Illuminate\Database\Events\TransactionBeginning;
 use Illuminate\Support\Facades\Event;
@@ -47,6 +48,10 @@ class MatchDispatchTest extends FeatureTest
         ]);
         $this->platinum = ProviderTier::create(['tenant_id' => $this->tenant->id, 'name' => 'Platinum', 'priority' => 1, 'response_window_minutes' => 120, 'is_active' => true]);
         $this->gold = ProviderTier::create(['tenant_id' => $this->tenant->id, 'name' => 'Gold', 'priority' => 2, 'response_window_minutes' => 60, 'is_active' => true]);
+
+        // These tests drive services directly (no Filament request); production always runs them
+        // in a tenant context, so mirror that — every case/offer here belongs to $this->tenant.
+        app(TenantContext::class)->set($this->tenant);
     }
 
     private function provider(ProviderTier $tier): Provider

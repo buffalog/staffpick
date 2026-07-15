@@ -64,7 +64,7 @@ class SendProviderSurveyJobTest extends FeatureTest
             'status' => ProviderSurvey::STATUS_SENT,
         ]);
         // A response token is generated so the SMS can carry a survey link.
-        $this->assertNotEmpty(ProviderSurvey::where('assignment_id', $assignment->id)->value('token'));
+        $this->assertNotEmpty(ProviderSurvey::query()->crossTenant()->where('assignment_id', $assignment->id)->value('token'));
     }
 
     public function test_the_sms_copy_reveals_no_treatment_fact(): void
@@ -85,7 +85,7 @@ class SendProviderSurveyJobTest extends FeatureTest
         // This SMS transits the vendor (no BAA): no treatment fact, but the survey link stays.
         $this->assertStringNotContainsStringIgnoringCase('therapy', $captured);
         $this->assertStringContainsString(
-            ProviderSurvey::where('assignment_id', $assignment->id)->first()->responseUrl(),
+            ProviderSurvey::query()->crossTenant()->where('assignment_id', $assignment->id)->first()->responseUrl(),
             $captured,
         );
     }
@@ -128,7 +128,7 @@ class SendProviderSurveyJobTest extends FeatureTest
             'tenant_id' => $tenant->id,
             'assignment_id' => $assignment->id,
             'provider_id' => $assignment->provider_id,
-            'subject_id' => $assignment->intakeRequest->subject_id,
+            'subject_id' => $assignment->intakeRequest()->crossTenant()->value('subject_id'),
             'status' => ProviderSurvey::STATUS_SENT,
         ]);
 
@@ -137,6 +137,6 @@ class SendProviderSurveyJobTest extends FeatureTest
 
         (new SendProviderSurvey($assignment->id))->handle($sms, app(TenantContext::class));
 
-        $this->assertSame(1, ProviderSurvey::where('assignment_id', $assignment->id)->count());
+        $this->assertSame(1, ProviderSurvey::query()->crossTenant()->where('assignment_id', $assignment->id)->count());
     }
 }

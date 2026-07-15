@@ -18,6 +18,7 @@ use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
 use Filament\Support\Facades\FilamentView;
 use Filament\View\PanelsRenderHook;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -68,6 +69,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // The explicit, greppable "I am reading across tenants on purpose." Drops the tenant
+        // global scope so a BearsTenantPhi model can be read cross-tenant without tripping the
+        // fail-closed guard (metrics, infra sweeps, super-admin). See BelongsToTenant.
+        Builder::macro('crossTenant', fn () => $this->withoutGlobalScope('tenant'));
+
         FilamentAsset::register([
             Js::make('components-script', __DIR__.'/../../resources/js/components.js'),
         ]);

@@ -250,6 +250,10 @@ class IntakeRequestResourceTest extends FeatureTest
         $tenant = $this->createTenant();
         $record = IntakeRequest::factory()->create(['tenant_id' => $tenant->id]);
 
+        // Establish the panel tenant before touching the record's PHI relations (reading
+        // $record->subject is now fail-closed without a tenant context).
+        $this->actAsTenant($tenant);
+
         $record->subject->update([
             'provider_gender_preference' => 'female',
             'language_preference' => 'Spanish',
@@ -257,8 +261,6 @@ class IntakeRequestResourceTest extends FeatureTest
 
         $specialty = Specialty::create(['tenant_id' => $tenant->id, 'name' => 'Pediatrics', 'is_active' => true]);
         $record->specialties()->attach($specialty->id);
-
-        $this->actAsTenant($tenant);
 
         Livewire::test(ViewIntakeRequest::class, ['record' => $record->getKey()])
             ->assertSuccessful()

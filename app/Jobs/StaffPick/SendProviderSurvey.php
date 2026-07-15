@@ -24,16 +24,18 @@ class SendProviderSurvey implements ShouldQueue
 
     public function handle(SmsService $sms, TenantContext $context): void
     {
-        // Unscoped find is safe — assignment id is globally unique. Everything after it
-        // (survey lookup + create) runs in the assignment's tenant context so those scoped
-        // queries can't touch another tenant's rows.
-        $assignment = Assignment::with(['tenant', 'intakeRequest.subject'])->find($this->assignmentId);
+        // Look up by global assignment id, tenant unknown until found → crossTenant(). Load only
+        // the tenant (not PHI) here; the PHI relations (intakeRequest.subject) are deferred into
+        // the context below so those scoped reads can't reach another tenant.
+        $assignment = Assignment::query()->crossTenant()->with('tenant')->find($this->assignmentId);
 
         if ($assignment === null || $assignment->tenant === null) {
             return;
         }
 
         $context->run($assignment->tenant, function () use ($sms, $assignment): void {
+            $assignment->load('intakeRequest.subject');
+
             // One survey per assignment, even if completion fires more than once.
             if (ProviderSurvey::query()->where('assignment_id', $assignment->id)->exists()) {
                 return;

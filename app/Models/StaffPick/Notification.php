@@ -3,6 +3,7 @@
 namespace App\Models\StaffPick;
 
 use App\Models\StaffPick\Concerns\BelongsToTenant;
+use App\Models\StaffPick\Contracts\BearsTenantPhi;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * domain label like "provider"/"user"/"referral_source", not a model class), so
  * it is not wired as a polymorphic relation.
  */
-class Notification extends Model
+class Notification extends Model implements BearsTenantPhi
 {
     use BelongsToTenant, HasFactory;
 

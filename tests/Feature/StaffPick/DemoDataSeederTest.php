@@ -7,6 +7,7 @@ use App\Models\StaffPick\Provider;
 use App\Models\StaffPick\Subject;
 use App\Models\Tenant;
 use App\Services\StaffPick\MatchingEngine;
+use App\Services\StaffPick\TenantContext;
 use Database\Seeders\StaffPick\DemoDataSeeder;
 use Tests\Feature\FeatureTest;
 
@@ -14,7 +15,13 @@ class DemoDataSeederTest extends FeatureTest
 {
     private function fctsTenant(): Tenant
     {
-        return Tenant::firstOrCreate(['uuid' => 'fcts'], ['name' => 'First Class Therapy Solutions']);
+        $tenant = Tenant::firstOrCreate(['uuid' => 'fcts'], ['name' => 'First Class Therapy Solutions']);
+
+        // Operate as this tenant for the rest of the test — the assertions read the seeded PHI
+        // and run the engine, both of which are scoped. (The seeder's own run() restores to this.)
+        app(TenantContext::class)->set($tenant);
+
+        return $tenant;
     }
 
     public function test_it_seeds_providers_subjects_and_intake_requests(): void

@@ -12,6 +12,7 @@ use App\Models\StaffPick\TenantConfig;
 use App\Models\Tenant;
 use App\Services\StaffPick\MatchingEngine;
 use App\Services\StaffPick\MatchingResult;
+use App\Services\StaffPick\TenantContext;
 use Illuminate\Support\Collection;
 use Tests\Feature\FeatureTest;
 
@@ -26,6 +27,17 @@ class MatchingEngineTest extends FeatureTest
     private function engine(): MatchingEngine
     {
         return app(MatchingEngine::class);
+    }
+
+    /**
+     * Run the engine in the case's tenant context — the engine reads the case's Subject (PHI),
+     * and in production it always runs inside a tenant (Filament request or a scoped job).
+     *
+     * @return Collection<int, MatchingResult>
+     */
+    private function matchScoped(IntakeRequest $intake): Collection
+    {
+        return app(TenantContext::class)->run($intake->tenant, fn () => $this->engine()->match($intake));
     }
 
     private function discipline(Tenant $tenant, string $name = 'Physical Therapy'): Discipline
@@ -93,7 +105,7 @@ class MatchingEngineTest extends FeatureTest
 
         $intake = $this->intake($tenant, $this->subject($tenant), $discipline);
 
-        $this->assertSame([$inRange->id], $this->ids($this->engine()->match($intake)));
+        $this->assertSame([$inRange->id], $this->ids($this->matchScoped($intake)));
     }
 
     public function test_includes_provider_within_feathering_band(): void
@@ -109,7 +121,7 @@ class MatchingEngineTest extends FeatureTest
 
         $this->assertEqualsCanonicalizing(
             [$inside->id, $nearMiss->id],
-            $this->ids($this->engine()->match($intake)),
+            $this->ids($this->matchScoped($intake)),
         );
     }
 
@@ -125,7 +137,7 @@ class MatchingEngineTest extends FeatureTest
 
         $intake = $this->intake($tenant, $this->subject($tenant), $pt);
 
-        $this->assertSame([$match->id], $this->ids($this->engine()->match($intake)));
+        $this->assertSame([$match->id], $this->ids($this->matchScoped($intake)));
     }
 
     public function test_multi_discipline_provider_matches_cases_in_any_held_discipline(): void
@@ -144,11 +156,11 @@ class MatchingEngineTest extends FeatureTest
 
         // Eligible for a PT case, alongside the PT-only provider.
         $ptIntake = $this->intake($tenant, $this->subject($tenant), $pt);
-        $this->assertEqualsCanonicalizing([$dual->id, $ptOnly->id], $this->ids($this->engine()->match($ptIntake)));
+        $this->assertEqualsCanonicalizing([$dual->id, $ptOnly->id], $this->ids($this->matchScoped($ptIntake)));
 
         // Eligible for an OT case, where the PT-only provider is not.
         $otIntake = $this->intake($tenant, $this->subject($tenant), $ot);
-        $this->assertSame([$dual->id], $this->ids($this->engine()->match($otIntake)));
+        $this->assertSame([$dual->id], $this->ids($this->matchScoped($otIntake)));
     }
 
     public function test_excludes_inactive_providers(): void
@@ -162,7 +174,7 @@ class MatchingEngineTest extends FeatureTest
 
         $intake = $this->intake($tenant, $this->subject($tenant), $discipline);
 
-        $this->assertSame([$active->id], $this->ids($this->engine()->match($intake)));
+        $this->assertSame([$active->id], $this->ids($this->matchScoped($intake)));
     }
 
     public function test_gender_preference_is_a_hard_filter(): void
@@ -177,7 +189,7 @@ class MatchingEngineTest extends FeatureTest
 
         $intake = $this->intake($tenant, $this->subject($tenant, ['provider_gender_preference' => 'female']), $discipline);
 
-        $this->assertSame([$female->id], $this->ids($this->engine()->match($intake)));
+        $this->assertSame([$female->id], $this->ids($this->matchScoped($intake)));
     }
 
     public function test_no_gender_preference_admits_all_genders(): void
@@ -192,7 +204,7 @@ class MatchingEngineTest extends FeatureTest
 
         $intake = $this->intake($tenant, $this->subject($tenant), $discipline);
 
-        $this->assertCount(3, $this->engine()->match($intake));
+        $this->assertCount(3, $this->matchScoped($intake));
     }
 
     public function test_internal_rating_floor_excludes_low_but_passes_unrated(): void
@@ -208,7 +220,7 @@ class MatchingEngineTest extends FeatureTest
 
         $intake = $this->intake($tenant, $this->subject($tenant), $discipline);
 
-        $this->assertEqualsCanonicalizing([$high->id, $unrated->id], $this->ids($this->engine()->match($intake)));
+        $this->assertEqualsCanonicalizing([$high->id, $unrated->id], $this->ids($this->matchScoped($intake)));
     }
 
     public function test_patient_rating_floor_excludes_low_but_passes_unrated(): void
@@ -224,7 +236,7 @@ class MatchingEngineTest extends FeatureTest
 
         $intake = $this->intake($tenant, $this->subject($tenant), $discipline);
 
-        $this->assertEqualsCanonicalizing([$high->id, $unrated->id], $this->ids($this->engine()->match($intake)));
+        $this->assertEqualsCanonicalizing([$high->id, $unrated->id], $this->ids($this->matchScoped($intake)));
     }
 
     public function test_language_is_a_hard_filter_when_a_speaker_is_eligible(): void
@@ -242,7 +254,7 @@ class MatchingEngineTest extends FeatureTest
 
         $intake = $this->intake($tenant, $this->subject($tenant, ['language_preference' => 'Spanish']), $discipline);
 
-        $results = $this->engine()->match($intake);
+        $results = $this->matchScoped($intake);
 
         // A language preference that CAN be satisfied excludes every non-speaker.
         $this->assertSame([$speaksSpanish->id], $this->ids($results));
@@ -272,7 +284,7 @@ class MatchingEngineTest extends FeatureTest
             ['requested_provider_id' => $requested->id],
         );
 
-        $results = $this->engine()->match($intake);
+        $results = $this->matchScoped($intake);
 
         $this->assertEqualsCanonicalizing([$speaksSpanish->id, $requested->id], $this->ids($results));
 
@@ -295,7 +307,7 @@ class MatchingEngineTest extends FeatureTest
 
         $intake = $this->intake($tenant, $this->subject($tenant, ['language_preference' => 'Spanish']), $discipline);
 
-        $results = $this->engine()->match($intake);
+        $results = $this->matchScoped($intake);
 
         $this->assertCount(2, $results);
         $this->assertTrue($results->every(fn (MatchingResult $r) => $r->languageWarning));
@@ -311,7 +323,7 @@ class MatchingEngineTest extends FeatureTest
 
         $intake = $this->intake($tenant, $this->subject($tenant, ['latitude' => null, 'longitude' => null]), $discipline);
 
-        $this->assertTrue($this->engine()->match($intake)->isEmpty());
+        $this->assertTrue($this->matchScoped($intake)->isEmpty());
     }
 
     public function test_attaches_distance_and_flags_to_each_result(): void
@@ -323,7 +335,7 @@ class MatchingEngineTest extends FeatureTest
 
         $intake = $this->intake($tenant, $this->subject($tenant), $discipline);
 
-        $result = $this->engine()->match($intake)->first();
+        $result = $this->matchScoped($intake)->first();
 
         $this->assertEqualsWithDelta(10.0, $result->distanceMiles, 0.3);
         $this->assertSame(1, $result->factors['tier_priority']);

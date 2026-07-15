@@ -7,6 +7,8 @@ use App\Models\StaffPick\DeclineReason;
 use App\Models\StaffPick\Provider;
 use App\Models\Tenant;
 use App\Services\StaffPick\MatchDispatchService;
+use App\Services\StaffPick\TenantContext;
+use Closure;
 use Illuminate\Contracts\View\View;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
@@ -66,9 +68,25 @@ class ProviderOfferResponse extends Component
 
     public function getOfferProperty(): AssignmentOffer
     {
-        return AssignmentOffer::withoutGlobalScopes()
-            ->with(['intakeRequest.subject', 'intakeRequest.discipline'])
-            ->findOrFail($this->offerId);
+        // Public token page: no Filament tenant. Resolve the offer cross-tenant by its id
+        // (authorized in mount/actionableOffer), then load its PHI relations inside the offer's
+        // own tenant context so those scoped reads fail closed against another tenant's data.
+        $offer = AssignmentOffer::withoutGlobalScopes()->findOrFail($this->offerId);
+
+        return $this->inOfferTenant($offer, fn () => $offer->load(['intakeRequest.subject', 'intakeRequest.discipline']));
+    }
+
+    /**
+     * Run $callback in the offer's own tenant context — the isolation boundary for this
+     * token-authenticated page (the token lookup is cross-tenant; everything after is scoped).
+     */
+    private function inOfferTenant(AssignmentOffer $offer, Closure $callback): mixed
+    {
+        $tenant = Tenant::find($offer->tenant_id);
+
+        abort_if($tenant === null, 404);
+
+        return app(TenantContext::class)->run($tenant, $callback);
     }
 
     /**
@@ -92,7 +110,8 @@ class ProviderOfferResponse extends Component
             return;
         }
 
-        app(MatchDispatchService::class)->handleAcceptance($offer->intakeRequest, $offer, auth()->user());
+        $this->inOfferTenant($offer, fn () => app(MatchDispatchService::class)
+            ->handleAcceptance($offer->intakeRequest, $offer, auth()->user()));
 
         $this->responded = true;
         $this->outcome = 'accepted';
@@ -117,7 +136,8 @@ class ProviderOfferResponse extends Component
             return;
         }
 
-        app(MatchDispatchService::class)->handleRejection($offer->intakeRequest, $offer, (int) $this->declineReasonId);
+        $this->inOfferTenant($offer, fn () => app(MatchDispatchService::class)
+            ->handleRejection($offer->intakeRequest, $offer, (int) $this->declineReasonId));
 
         $this->responded = true;
         $this->outcome = 'declined';
