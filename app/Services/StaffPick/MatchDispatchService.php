@@ -165,7 +165,17 @@ class MatchDispatchService
      */
     public function handleAcceptance(IntakeRequest $case, AssignmentOffer $offer, ?User $actor = null): void
     {
-        DB::transaction(function () use ($case, $offer, $actor): void {
+        $accepted = DB::transaction(function () use ($case, $offer, $actor): bool {
+            // Re-read under an exclusive lock and bail if the offer is no longer open — a
+            // manual Assign (which withdraws the case's pendings) may have raced this accept.
+            // Returning here commits a no-op; nothing has mutated yet (the #73 rule that an
+            // early return from a transaction closure commits, so guards must run first).
+            $fresh = AssignmentOffer::query()->whereKey($offer->id)->lockForUpdate()->first();
+
+            if ($fresh === null || $fresh->status !== AssignmentOffer::STATUS_PENDING) {
+                return false;
+            }
+
             $offer->update([
                 'status' => AssignmentOffer::STATUS_ACCEPTED,
                 'response' => AssignmentOffer::STATUS_ACCEPTED,
@@ -200,9 +210,13 @@ class MatchDispatchService
                 'current_match_provider_id' => null,
                 'assigned_at' => now(),
             ]);
+
+            return true;
         });
 
-        $this->notifyStaff($case, MatchNotificationService::EVENT_ACCEPTED, __('Match accepted'), __('A provider accepted and is now the lead clinician.'));
+        if ($accepted) {
+            $this->notifyStaff($case, MatchNotificationService::EVENT_ACCEPTED, __('Match accepted'), __('A provider accepted and is now the lead clinician.'));
+        }
     }
 
     /**
