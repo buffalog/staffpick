@@ -42,3 +42,9 @@ Schedule::job(new ProcessMatchTimeouts)
     ->everyFiveMinutes()
     ->name('staffpick-process-match-timeouts')
     ->withoutOverlapping();
+
+// StaffPick: prune inbound Slack webhook audit logs (raw payload = referral PHI) past retention.
+Schedule::command('staffpick:prune-slack-webhook-logs')
+    ->dailyAt('02:30')
+    ->name('staffpick-prune-slack-webhook-logs')
+    ->withoutOverlapping();
