@@ -14,6 +14,29 @@
 @endphp
 
 <div class="space-y-4 text-sm">
+    @if (isset($this) && $this->offerConfirmation)
+        <div class="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 dark:border-amber-400/30 dark:bg-amber-400/10">
+            <p class="text-sm font-semibold text-amber-800 dark:text-amber-300">{{ __('Provider already has an open offer') }}</p>
+            <p class="mt-1 text-sm text-amber-700 dark:text-amber-300/80">
+                {{ __(':name has a live offer out on case :ref. If both are accepted they\'ll be committed to two cases. Send this offer anyway?', [
+                    'name' => $this->offerConfirmation['providerName'],
+                    'ref' => $this->offerConfirmation['conflictReference'],
+                ]) }}
+            </p>
+            <div class="mt-2 flex items-center gap-2">
+                <button type="button"
+                    wire:click="dispatchOfferToProvider({{ $this->offerConfirmation['intakeRequestId'] }}, {{ $this->offerConfirmation['providerId'] }}, true)"
+                    class="rounded-md bg-amber-600 px-3 py-1 text-xs font-medium text-white hover:bg-amber-500">
+                    {{ __('Send offer anyway') }}
+                </button>
+                <button type="button" wire:click="cancelOfferConfirmation"
+                    class="rounded-md px-3 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 dark:text-gray-300 dark:ring-gray-600">
+                    {{ __('Cancel') }}
+                </button>
+            </div>
+        </div>
+    @endif
+
     @if ($record->is_partial_staffing)
         <div class="rounded-lg border border-indigo-300 bg-indigo-50 px-4 py-3 text-indigo-800 dark:border-indigo-400/30 dark:bg-indigo-400/10 dark:text-indigo-200">
             <span class="font-semibold">{{ __('Partial staffing') }}</span> —
