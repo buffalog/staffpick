@@ -27,6 +27,10 @@ class SubjectResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUser;
 
+    // Patient last name (PHI). Safe ONLY because the dashboard panel ships no analytics —
+    // nothing sends document.title to a third party (see DashboardPanelProvider). Subjects
+    // have no non-PHI reference number to use instead. If analytics is ever re-added to this
+    // (or any PHI-rendering) panel, move this off 'last_name' in the same change.
     protected static ?string $recordTitleAttribute = 'last_name';
 
     public static function form(Schema $schema): Schema

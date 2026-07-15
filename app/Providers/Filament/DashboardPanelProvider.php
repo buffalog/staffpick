@@ -128,9 +128,11 @@ class DashboardPanelProvider extends PanelProvider
                 DispatchServingFilamentEvent::class,
                 UpdateUserLastSeenAt::class,
             ])
-            ->renderHook('panels::head.start', function () {
-                return view('components.layouts.partials.analytics');
-            })
+            // No analytics on this panel: it renders Subjects/IntakeRequests (PHI), and gtag
+            // ships document.title — the patient last_name (SubjectResource's record title) —
+            // to Google, which has no BAA. Analytics stays on the PUBLIC marketing layout
+            // (tail.blade.php) only. If analytics is ever re-added to any PHI-rendering panel,
+            // SubjectResource::$recordTitleAttribute must also move off 'last_name' first.
             ->renderHook(
                 PanelsRenderHook::HEAD_END,
                 fn (): string => view('filament.dashboard.partials.leaflet-assets')->render(),
