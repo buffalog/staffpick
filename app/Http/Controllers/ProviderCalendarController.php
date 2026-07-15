@@ -11,8 +11,11 @@ use Illuminate\Http\Response;
 /**
  * Public iCal feed of a provider's active, scheduled cases. Authenticated by the
  * provider's calendar_token (no login) and scoped to the token's tenant — an invalid,
- * revoked, or wrong-tenant token 404s. Carries no PHI beyond the cases the provider is
- * already assigned to.
+ * revoked, or wrong-tenant token 404s.
+ *
+ * This feed is served to THIRD-PARTY calendar apps (Google, Apple, Outlook), which cache
+ * and sync it outside our control, so it must NEVER contain a patient identifier. Events
+ * are reference-number only — no subject name anywhere in the payload.
  */
 class ProviderCalendarController extends Controller
 {
@@ -31,7 +34,6 @@ class ProviderCalendarController extends Controller
             ->where('lead_clinician_id', $provider->id)
             ->where('status', 'matched')
             ->whereNotNull('evaluation_date')
-            ->with('subject')
             ->get();
 
         // ponytail: no 75-octet line folding — ref/name/status values are short. Add
@@ -53,14 +55,13 @@ class ProviderCalendarController extends Controller
         foreach ($cases as $case) {
             $date = Carbon::parse($case->evaluation_date)->format('Ymd');
             $ref = $case->reference_number ?: 'case-'.$case->id;
-            $subjectName = trim("{$case->subject?->first_name} {$case->subject?->last_name}");
 
             $lines[] = 'BEGIN:VEVENT';
             $lines[] = 'UID:'.$ref.'@staffpick';
             $lines[] = 'DTSTAMP:'.$stamp;
             $lines[] = 'DTSTART;VALUE=DATE:'.$date;
             $lines[] = 'DTEND;VALUE=DATE:'.$date;
-            $lines[] = 'SUMMARY:'.$this->escapeText($ref.' · '.($subjectName !== '' ? $subjectName : $ref));
+            $lines[] = 'SUMMARY:'.$this->escapeText($ref);
             $lines[] = 'DESCRIPTION:'.$this->escapeText("Provider: {$provider->full_name}\nStatus: {$case->status}\nRef: {$ref}");
             $lines[] = 'URL:'.route('filament.dashboard.resources.intake-requests.view', [
                 'tenant' => $tenant->uuid,

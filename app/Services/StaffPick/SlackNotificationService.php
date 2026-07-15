@@ -21,14 +21,15 @@ use Throwable;
 class SlackNotificationService
 {
     /**
-     * Event (a): a new intake request was received. Patient first name only (HIPAA).
+     * Event (a): a new intake request was received. Carries NO patient identifier — the
+     * card is reference/discipline/referral-source only; staff click through to the
+     * dashboard (behind login) for anything patient-level. The subject is not even loaded.
      */
     public function notifyIntakeReceived(IntakeRequest $intake): void
     {
-        $intake->loadMissing(['subject', 'discipline', 'referralSource']);
+        $intake->loadMissing(['discipline', 'referralSource']);
 
         $reference = $intake->reference_number ?? '—';
-        $patient = $intake->subject?->first_name ?? __('Unknown');
         $discipline = $intake->discipline?->name ?? __('Unspecified');
         $source = $intake->referralSource?->name ?? __('Unknown');
 
@@ -36,7 +37,6 @@ class SlackNotificationService
             $this->header(__('New intake request')),
             $this->fields([
                 __('Reference') => $reference,
-                __('Patient') => $patient,
                 __('Discipline') => $discipline,
                 __('Referral source') => $source,
             ]),
