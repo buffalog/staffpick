@@ -6,6 +6,7 @@ use App\Mail\StaffPick\ProviderSurveyRequest;
 use App\Models\StaffPick\Assignment;
 use App\Models\StaffPick\ProviderSurvey;
 use App\Services\StaffPick\SmsService;
+use App\Services\StaffPick\TenantContext;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Mail;
@@ -21,60 +22,65 @@ class SendProviderSurvey implements ShouldQueue
 
     public function __construct(public int $assignmentId) {}
 
-    public function handle(SmsService $sms): void
+    public function handle(SmsService $sms, TenantContext $context): void
     {
-        $assignment = Assignment::with('intakeRequest.subject')->find($this->assignmentId);
+        // Unscoped find is safe — assignment id is globally unique. Everything after it
+        // (survey lookup + create) runs in the assignment's tenant context so those scoped
+        // queries can't touch another tenant's rows.
+        $assignment = Assignment::with(['tenant', 'intakeRequest.subject'])->find($this->assignmentId);
 
-        if ($assignment === null) {
+        if ($assignment === null || $assignment->tenant === null) {
             return;
         }
 
-        // One survey per assignment, even if completion fires more than once.
-        if (ProviderSurvey::query()->where('assignment_id', $assignment->id)->exists()) {
-            return;
-        }
+        $context->run($assignment->tenant, function () use ($sms, $assignment): void {
+            // One survey per assignment, even if completion fires more than once.
+            if (ProviderSurvey::query()->where('assignment_id', $assignment->id)->exists()) {
+                return;
+            }
 
-        $subject = $assignment->intakeRequest?->subject;
+            $subject = $assignment->intakeRequest?->subject;
 
-        if ($subject === null) {
-            return;
-        }
+            if ($subject === null) {
+                return;
+            }
 
-        $channel = match (true) {
-            filled($subject->phone) => ProviderSurvey::CHANNEL_SMS,
-            filled($subject->email) => ProviderSurvey::CHANNEL_EMAIL,
-            default => null,
-        };
+            $channel = match (true) {
+                filled($subject->phone) => ProviderSurvey::CHANNEL_SMS,
+                filled($subject->email) => ProviderSurvey::CHANNEL_EMAIL,
+                default => null,
+            };
 
-        $survey = ProviderSurvey::create([
-            'tenant_id' => $assignment->tenant_id,
-            'assignment_id' => $assignment->id,
-            'provider_id' => $assignment->provider_id,
-            'subject_id' => $subject->id,
-            'delivery_channel' => $channel,
-            'status' => ProviderSurvey::STATUS_PENDING,
-            'token' => Str::random(48),
-        ]);
-
-        if ($channel === ProviderSurvey::CHANNEL_SMS) {
-            $sent = $sms->send($subject->phone, $this->message($survey));
-            $survey->update([
-                'status' => $sent ? ProviderSurvey::STATUS_SENT : ProviderSurvey::STATUS_BOUNCED,
-                'sent_at' => now(),
+            $survey = ProviderSurvey::create([
+                'tenant_id' => $assignment->tenant_id, // belt + suspenders; context would auto-fill too
+                'assignment_id' => $assignment->id,
+                'provider_id' => $assignment->provider_id,
+                'subject_id' => $subject->id,
+                'delivery_channel' => $channel,
+                'status' => ProviderSurvey::STATUS_PENDING,
+                'token' => Str::random(48),
             ]);
 
-            return;
-        }
+            if ($channel === ProviderSurvey::CHANNEL_SMS) {
+                $sent = $sms->send($subject->phone, $this->message($survey));
+                $survey->update([
+                    'status' => $sent ? ProviderSurvey::STATUS_SENT : ProviderSurvey::STATUS_BOUNCED,
+                    'sent_at' => now(),
+                ]);
 
-        if ($channel === ProviderSurvey::CHANNEL_EMAIL) {
-            Mail::to($subject->email)->send(new ProviderSurveyRequest($survey));
-            $survey->update(['status' => ProviderSurvey::STATUS_SENT, 'sent_at' => now()]);
+                return;
+            }
 
-            return;
-        }
+            if ($channel === ProviderSurvey::CHANNEL_EMAIL) {
+                Mail::to($subject->email)->send(new ProviderSurveyRequest($survey));
+                $survey->update(['status' => ProviderSurvey::STATUS_SENT, 'sent_at' => now()]);
 
-        // No contact method on file — nothing to deliver to.
-        $survey->update(['status' => ProviderSurvey::STATUS_BOUNCED]);
+                return;
+            }
+
+            // No contact method on file — nothing to deliver to.
+            $survey->update(['status' => ProviderSurvey::STATUS_BOUNCED]);
+        });
     }
 
     private function message(ProviderSurvey $survey): string
