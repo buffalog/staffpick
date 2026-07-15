@@ -188,8 +188,8 @@ class DisciplineSpecialtyTest extends FeatureTest
     public function test_a_submission_persists_requested_specialties(): void
     {
         Mail::fake();
-        Http::fake(['nominatim.openstreetmap.org/*' => Http::response([
-            ['lat' => '26.8205600', 'lon' => '-80.0533670'],
+        Http::fake(['atlas.microsoft.com/*' => Http::response([
+            'features' => [['geometry' => ['coordinates' => [-80.0533670, 26.8205600]]]],
         ])]);
         RateLimiter::clear('intake-submit:127.0.0.1');
 

@@ -29,8 +29,8 @@ class ProviderProfilePageTest extends FeatureTest
 
     private function fakeGeocodeSuccess(): void
     {
-        Http::fake(['nominatim.openstreetmap.org/*' => Http::response([
-            ['lat' => '26.8205600', 'lon' => '-80.0533670'],
+        Http::fake(['atlas.microsoft.com/*' => Http::response([
+            'features' => [['geometry' => ['coordinates' => [-80.0533670, 26.8205600]]]],
         ])]);
     }
 
@@ -133,7 +133,7 @@ class ProviderProfilePageTest extends FeatureTest
 
     public function test_a_failed_geocode_flags_the_address_warning_without_setting_coordinates(): void
     {
-        Http::fake(['nominatim.openstreetmap.org/*' => Http::response([])]); // no match
+        Http::fake(['atlas.microsoft.com/*' => Http::response(['features' => []])]); // no match
 
         Livewire::test(ProviderProfile::class)
             ->set('data.address', '999 Nonexistent Road')

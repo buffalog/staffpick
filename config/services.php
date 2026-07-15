@@ -135,4 +135,12 @@ return [
         'sms_type' => env('PINGRAM_SMS_TYPE', 'staffpick_sms'),
     ],
 
+    'geocoding' => [
+        // Addresses are PHI. 'none' (the default) geocodes NOTHING — fail closed, no egress.
+        // 'azure' requires a confirmed Azure Maps HIPAA BAA scope + AZURE_MAPS_KEY. Never add
+        // a public/free geocoder here without a signed BAA.
+        'driver' => env('GEOCODING_DRIVER', 'none'),
+        'azure_maps_key' => env('AZURE_MAPS_KEY'),
+    ],
+
 ];
