@@ -5,9 +5,11 @@ use App\Http\Middleware\Sitemapped;
 use App\Http\Middleware\TrackCouponCode;
 use App\Http\Middleware\TrackReferralCode;
 use App\Http\Middleware\UpdateUserLastSeenAt;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Support\Facades\Log;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
 
@@ -46,4 +48,21 @@ return Application::configure(basePath: dirname(__DIR__))
             'webhooks/slack/*',
         ]);
     })
-    ->withExceptions(function (Exceptions $exceptions) {})->create();
+    ->withExceptions(function (Exceptions $exceptions) {
+        // PHI safety: QueryException::getMessage() interpolates the query bindings — patient
+        // name, notes, address — into the string, so the default reporter would write that PHI
+        // to laravel.log in cleartext, outside Azure SQL. Log a redacted record with only the
+        // PARAMETERIZED sql (? placeholders, no values) and suppress the default (return false).
+        // Never log getMessage(), getRawSql(), or getBindings(). Universal — local uses
+        // synthetic data, but the guarantee should not depend on the environment.
+        $exceptions->report(function (QueryException $e): bool {
+            Log::error('Database query failed', [
+                'sqlstate' => $e->getCode(),
+                'connection' => $e->getConnectionName(),
+                'exception' => $e::class,
+                'sql' => $e->getSql(),
+            ]);
+
+            return false;
+        });
+    })->create();
