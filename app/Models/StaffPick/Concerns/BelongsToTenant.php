@@ -2,6 +2,7 @@
 
 namespace App\Models\StaffPick\Concerns;
 
+use App\Models\StaffPick\Contracts\BearsTenantPhi;
 use App\Models\Tenant;
 use App\Services\StaffPick\TenantContext;
 use Filament\Facades\Filament;
@@ -34,6 +35,17 @@ trait BelongsToTenant
                     $query->getModel()->qualifyColumn('tenant_id'),
                     $tenant->getKey(),
                 );
+
+                return;
+            }
+
+            // No tenant context. A patient-PHI model fails CLOSED — reading it unscoped would
+            // silently return every tenant's rows. Wrap the read in TenantContext::run(), or
+            // call ->crossTenant() to opt into a cross-tenant read explicitly. Non-PHI models
+            // keep H3a's silent no-op (the deliberate cross-tenant sweep).
+            if ($query->getModel() instanceof BearsTenantPhi) {
+                throw new RuntimeException(static::class.': PHI read with no tenant context. Wrap the '
+                    .'read in TenantContext::run(), or call ->crossTenant() to read across tenants explicitly.');
             }
         });
 

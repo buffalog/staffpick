@@ -3,12 +3,13 @@
 namespace App\Models\StaffPick;
 
 use App\Models\StaffPick\Concerns\BelongsToTenant;
+use App\Models\StaffPick\Contracts\BearsTenantPhi;
 use Database\Factories\StaffPick\ProviderSurveyFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ProviderSurvey extends Model
+class ProviderSurvey extends Model implements BearsTenantPhi
 {
     /** @use HasFactory<ProviderSurveyFactory> */
     use BelongsToTenant, HasFactory;

@@ -3,6 +3,7 @@
 namespace App\Models\StaffPick;
 
 use App\Models\StaffPick\Concerns\BelongsToTenant;
+use App\Models\StaffPick\Contracts\BearsTenantPhi;
 use App\Observers\StaffPick\AssignmentObserver;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[ObservedBy(AssignmentObserver::class)]
-class Assignment extends Model
+class Assignment extends Model implements BearsTenantPhi
 {
     use BelongsToTenant, HasFactory;
 
