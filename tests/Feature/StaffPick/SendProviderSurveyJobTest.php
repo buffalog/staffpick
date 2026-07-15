@@ -67,6 +67,29 @@ class SendProviderSurveyJobTest extends FeatureTest
         $this->assertNotEmpty(ProviderSurvey::where('assignment_id', $assignment->id)->value('token'));
     }
 
+    public function test_the_sms_copy_reveals_no_treatment_fact(): void
+    {
+        $tenant = $this->createTenant();
+        $assignment = $this->assignment($tenant, ['phone' => '5615551234']);
+
+        $captured = null;
+        $sms = Mockery::mock(SmsService::class);
+        $sms->shouldReceive('send')->once()->andReturnUsing(function (string $phone, string $message) use (&$captured): bool {
+            $captured = $message;
+
+            return true;
+        });
+
+        (new SendProviderSurvey($assignment->id))->handle($sms, app(TenantContext::class));
+
+        // This SMS transits the vendor (no BAA): no treatment fact, but the survey link stays.
+        $this->assertStringNotContainsStringIgnoringCase('therapy', $captured);
+        $this->assertStringContainsString(
+            ProviderSurvey::where('assignment_id', $assignment->id)->first()->responseUrl(),
+            $captured,
+        );
+    }
+
     public function test_falls_back_to_email_when_there_is_no_phone(): void
     {
         Mail::fake();

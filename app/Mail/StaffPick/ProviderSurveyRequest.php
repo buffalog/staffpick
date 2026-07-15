@@ -18,7 +18,7 @@ class ProviderSurveyRequest extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: __('How was your recent therapy visit?'),
+            subject: __('Please rate your recent visit'),
         );
     }
 

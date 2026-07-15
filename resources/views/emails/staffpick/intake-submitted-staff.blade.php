@@ -5,7 +5,6 @@
 
 - **{{ __('Reference') }}:** {{ $intake->reference_number }}
 - **{{ __('Referral source') }}:** {{ $intake->referralSource?->name }}
-- **{{ __('Case') }}:** {{ trim("{$intake->subject?->first_name} {$intake->subject?->last_name}") }}
 @if ($intake->discipline)
 - **{{ __('Discipline') }}:** {{ $intake->discipline->name }}
 @endif

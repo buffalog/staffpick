@@ -9,8 +9,6 @@
 {{ $intake->reference_number }}
 </x-mail::panel>
 
-{{ __('Case') }}: {{ trim("{$intake->subject?->first_name} {$intake->subject?->last_name}") }}
-
 {{ __('Thank you,') }}<br>
 {{ config('app.name') }}
 </x-mail::message>
