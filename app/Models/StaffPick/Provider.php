@@ -121,7 +121,7 @@ class Provider extends Model
         // Geocode a provider's address on save so matching always has coordinates.
         // Mirrors the Subject hook: only on an interactive web save (dashboard form /
         // wizard), never in console — imports and seeders supply coordinates directly
-        // and must not fire a Nominatim call per row.
+        // and must not fire a geocoder call per row.
         static::saving(function (Provider $provider): void {
             if (app()->runningInConsole()) {
                 return;

@@ -36,8 +36,8 @@ class ProviderProfileServiceTest extends FeatureTest
     {
         parent::setUp();
 
-        Http::fake(['nominatim.openstreetmap.org/*' => Http::response([
-            ['lat' => '26.8205600', 'lon' => '-80.0533670'],
+        Http::fake(['atlas.microsoft.com/*' => Http::response([
+            'features' => [['geometry' => ['coordinates' => [-80.0533670, 26.8205600]]]],
         ])]);
 
         $this->tenant = $this->createTenant();
@@ -113,7 +113,7 @@ class ProviderProfileServiceTest extends FeatureTest
         $this->assertSame('Dana', $provider->first_name);
         $this->assertSame(8, $provider->years_experience);
         $this->assertNotNull($provider->submitted_at);
-        // Geocoded from the address via the faked Nominatim response.
+        // Geocoded from the address via the faked Azure Maps response.
         $this->assertSame(26.82056, (float) $provider->latitude);
         $this->assertSame(-80.053367, (float) $provider->longitude);
     }

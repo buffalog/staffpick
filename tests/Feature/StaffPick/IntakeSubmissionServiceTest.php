@@ -31,8 +31,8 @@ class IntakeSubmissionServiceTest extends FeatureTest
         parent::setUp();
 
         Mail::fake();
-        Http::fake(['nominatim.openstreetmap.org/*' => Http::response([
-            ['lat' => '26.8205600', 'lon' => '-80.0533670'],
+        Http::fake(['atlas.microsoft.com/*' => Http::response([
+            'features' => [['geometry' => ['coordinates' => [-80.0533670, 26.8205600]]]],
         ])]);
 
         $this->tenant = $this->createTenant();
@@ -119,14 +119,14 @@ class IntakeSubmissionServiceTest extends FeatureTest
         $this->assertSame('Casey', $subject->first_name);
         $this->assertSame($this->tenant->id, (int) $subject->tenant_id);
         $this->assertSame('Post-surgical rehab', $subject->diagnosis);
-        // Geocoded from the faked Nominatim response.
+        // Geocoded from the faked Azure Maps response.
         $this->assertSame(26.82056, (float) $subject->latitude);
         $this->assertSame(-80.053367, (float) $subject->longitude);
     }
 
     public function test_submit_uses_supplied_coordinates_without_geocoding(): void
     {
-        Http::fake(['nominatim.openstreetmap.org/*' => Http::response([], 500)]);
+        Http::fake(['atlas.microsoft.com/*' => Http::response([], 500)]);
 
         $intake = $this->service()->submit($this->source, $this->intakeData([
             'latitude' => 26.7153,

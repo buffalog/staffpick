@@ -43,5 +43,9 @@
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
+        <!-- Exercise the covered geocoding path (Azure, with faked HTTP) rather than the
+             fail-closed no-op, so the on-save geocoding tests still assert real resolution. -->
+        <env name="GEOCODING_DRIVER" value="azure"/>
+        <env name="AZURE_MAPS_KEY" value="test-key"/>
     </php>
 </phpunit>

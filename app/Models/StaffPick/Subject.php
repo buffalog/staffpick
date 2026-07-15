@@ -69,7 +69,7 @@ class Subject extends Model
             // Only auto-geocode interactive web saves (dashboard form, inline
             // create-from-intake). Console contexts — seeders, queue, tests — either
             // supply coordinates directly or backfill via GeocoordinateSeeder, and must
-            // not fire a live Nominatim call per row on every boot.
+            // not fire a live geocoder call per row on every boot.
             // ponytail: runningInConsole() also skips queue workers; no subject-save
             // queue path needs geocoding today. Add a targeted flag if that changes.
             if (app()->runningInConsole()) {
@@ -91,7 +91,7 @@ class Subject extends Model
      * — the decimal:7 cast makes the Filament form's echoed lat/long read as dirty even
      * when untouched, which previously suppressed the re-geocode on address edits.
      *
-     * ponytail: synchronous Nominatim call on save (matches the other on-save
+     * ponytail: synchronous geocoder call on save (matches the other on-save
      * geocoders). Move to a queued job if subject write volume ever spikes.
      */
     public function geocodeAddressIfNeeded(): void

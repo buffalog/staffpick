@@ -31,8 +31,8 @@ class PublicIntakeFormTest extends FeatureTest
         parent::setUp();
 
         Mail::fake();
-        Http::fake(['nominatim.openstreetmap.org/*' => Http::response([
-            ['lat' => '26.8205600', 'lon' => '-80.0533670'],
+        Http::fake(['atlas.microsoft.com/*' => Http::response([
+            'features' => [['geometry' => ['coordinates' => [-80.0533670, 26.8205600]]]],
         ])]);
 
         $this->tenant = $this->createTenant();
