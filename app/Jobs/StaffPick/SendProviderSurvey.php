@@ -85,7 +85,9 @@ class SendProviderSurvey implements ShouldQueue
 
     private function message(ProviderSurvey $survey): string
     {
-        return __('How was your recent therapy visit? Please rate your provider here: :url', [
+        // No PHI, no treatment fact: "visit" is generic (not health info) and the real
+        // survey sits behind the token link. This text transits the SMS vendor (no BAA).
+        return __('Please rate your recent visit: :url', [
             'url' => $survey->responseUrl(),
         ]);
     }
