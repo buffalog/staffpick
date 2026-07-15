@@ -10,6 +10,7 @@ use App\Models\StaffPick\ProviderTier;
 use App\Models\StaffPick\TenantConfig;
 use App\Models\Tenant;
 use App\Services\StaffPick\ProviderRatingAggregator;
+use App\Services\StaffPick\TenantContext;
 use Carbon\CarbonImmutable;
 use Tests\Feature\FeatureTest;
 
@@ -26,6 +27,12 @@ class ProviderRatingAggregatorTest extends FeatureTest
     private function aggregator(): ProviderRatingAggregator
     {
         return app(ProviderRatingAggregator::class);
+    }
+
+    /** Aggregate in the provider's tenant context — it reads ProviderSurvey (PHI). */
+    private function aggregateScoped(Provider $provider): void
+    {
+        app(TenantContext::class)->run($provider->tenant, fn () => $this->aggregator()->aggregateProvider($provider, $this->asOf));
     }
 
     private function provider(Tenant $tenant, array $attributes = []): Provider
@@ -61,7 +68,7 @@ class ProviderRatingAggregatorTest extends FeatureTest
         $this->survey($provider, 3, 100); // in 180 only
         $this->survey($provider, 1, 200); // outside both
 
-        $this->aggregator()->aggregateProvider($provider, $this->asOf);
+        $this->aggregateScoped($provider);
         $provider->refresh();
 
         $this->assertSame(4.5, (float) $provider->rating_90day_avg);
@@ -78,7 +85,7 @@ class ProviderRatingAggregatorTest extends FeatureTest
         $this->survey($provider, 5, 10);
         $this->survey($provider, 1, 10, ProviderSurvey::STATUS_PENDING); // pending: ignored
 
-        $this->aggregator()->aggregateProvider($provider, $this->asOf);
+        $this->aggregateScoped($provider);
         $provider->refresh();
 
         $this->assertSame(5.0, (float) $provider->rating_90day_avg);
@@ -100,7 +107,7 @@ class ProviderRatingAggregatorTest extends FeatureTest
         $this->survey($provider, 5, 5);
         $this->survey($provider, 5, 8);
 
-        $this->aggregator()->aggregateProvider($provider, $this->asOf);
+        $this->aggregateScoped($provider);
 
         $review = ProviderRatingReview::where('provider_id', $provider->id)->first();
         $this->assertNotNull($review);
@@ -125,7 +132,7 @@ class ProviderRatingAggregatorTest extends FeatureTest
         $this->survey($provider, 2, 5);
         $this->survey($provider, 3, 8);
 
-        $this->aggregator()->aggregateProvider($provider, $this->asOf);
+        $this->aggregateScoped($provider);
 
         $review = ProviderRatingReview::where('provider_id', $provider->id)->first();
         $this->assertNotNull($review);
@@ -147,7 +154,7 @@ class ProviderRatingAggregatorTest extends FeatureTest
         $this->survey($provider, 5, 5);
         $this->survey($provider, 5, 8); // only 2 < min 10
 
-        $this->aggregator()->aggregateProvider($provider, $this->asOf);
+        $this->aggregateScoped($provider);
 
         $this->assertSame(0, ProviderRatingReview::where('provider_id', $provider->id)->count());
     }
@@ -167,8 +174,8 @@ class ProviderRatingAggregatorTest extends FeatureTest
         $this->survey($provider, 5, 5);
         $this->survey($provider, 5, 8);
 
-        $this->aggregator()->aggregateProvider($provider, $this->asOf);
-        $this->aggregator()->aggregateProvider($provider, $this->asOf);
+        $this->aggregateScoped($provider);
+        $this->aggregateScoped($provider);
 
         $this->assertSame(1, ProviderRatingReview::where('provider_id', $provider->id)->count());
     }

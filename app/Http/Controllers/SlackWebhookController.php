@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\StaffPick\SlackWebhookLog;
 use App\Models\StaffPick\TenantConfig;
+use App\Models\Tenant;
 use App\Services\StaffPick\SlackInboundService;
 use App\Services\StaffPick\SlackNotificationService;
+use App\Services\StaffPick\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -82,7 +84,14 @@ class SlackWebhookController extends Controller
                 $text = (string) ($event['text'] ?? '');
                 $channel = $event['channel'] ?? null;
 
-                $intake = $inbound->createDraftFromMessage($config, $text, $channel);
+                // Public webhook: no Filament tenant. Resolve it from the token's config and
+                // create the draft intake (PHI) inside that tenant's context so the scoped
+                // writes/reads fail closed against another tenant.
+                $tenant = Tenant::find($config->tenant_id);
+                $intake = $tenant === null ? null : app(TenantContext::class)->run(
+                    $tenant,
+                    fn () => $inbound->createDraftFromMessage($config, $text, $channel),
+                );
 
                 if ($intake !== null) {
                     $log->update(['intake_request_id' => $intake->id]);

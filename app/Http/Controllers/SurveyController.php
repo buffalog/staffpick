@@ -50,9 +50,10 @@ class SurveyController extends Controller
 
     private function resolveSurvey(string $token): ProviderSurvey
     {
-        // No Filament tenant in a public request, so the BelongsToTenant scope is a
-        // no-op and the token resolves across tenants.
-        $survey = ProviderSurvey::query()->where('token', $token)->first();
+        // Public request, no tenant context. The opaque token is the cross-tenant credential —
+        // ->crossTenant() opts the PHI read out of the fail-closed scope explicitly. (The only
+        // relation the view reads is $survey->provider, which is clinician data, not PHI.)
+        $survey = ProviderSurvey::query()->crossTenant()->where('token', $token)->first();
 
         abort_if($survey === null, 404);
 

@@ -9,6 +9,7 @@ use App\Models\StaffPick\Provider;
 use App\Models\StaffPick\ProviderTier;
 use App\Models\StaffPick\Subject;
 use App\Models\Tenant;
+use App\Services\StaffPick\TenantContext;
 use App\Services\StaffPick\TierResponseScorer;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -32,6 +33,10 @@ class TierResponseScorerTest extends FeatureTest
         $this->discipline = Discipline::create(['tenant_id' => $this->tenant->id, 'name' => 'Physical Therapy']);
         $this->platinum = ProviderTier::create(['tenant_id' => $this->tenant->id, 'name' => 'Platinum', 'priority' => 1]);
         $this->gold = ProviderTier::create(['tenant_id' => $this->tenant->id, 'name' => 'Gold', 'priority' => 2]);
+
+        // The scorer reads AssignmentOffer (PHI); it always runs inside a tenant context in
+        // production. All fixtures here belong to $this->tenant.
+        app(TenantContext::class)->set($this->tenant);
     }
 
     private function scorer(): TierResponseScorer

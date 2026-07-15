@@ -8,6 +8,7 @@ use App\Models\StaffPick\Provider;
 use App\Models\StaffPick\ProviderTier;
 use App\Models\StaffPick\Subject;
 use App\Models\Tenant;
+use App\Services\StaffPick\TenantContext;
 use Database\Seeders\TenantTaxonomySeeder;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Collection;
@@ -44,9 +45,13 @@ class DemoDataSeeder extends Seeder
         $disciplines = Discipline::query()->where('tenant_id', $tenant->id)->get()->keyBy('abbreviation');
         $tiers = ProviderTier::query()->where('tenant_id', $tenant->id)->get()->keyBy('name');
 
-        $this->seedProviders($tenant, $disciplines, $tiers);
-        $subjects = $this->seedSubjects($tenant);
-        $this->seedIntakeRequests($tenant, $subjects, $disciplines);
+        // Subjects/IntakeRequests are PHI; a seeder has no Filament tenant, so run the writes in
+        // the demo tenant's context to satisfy the fail-closed scope (and auto-fill tenant_id).
+        app(TenantContext::class)->run($tenant, function () use ($tenant, $disciplines, $tiers): void {
+            $this->seedProviders($tenant, $disciplines, $tiers);
+            $subjects = $this->seedSubjects($tenant);
+            $this->seedIntakeRequests($tenant, $subjects, $disciplines);
+        });
 
         $this->command?->info('Seeded 15 demo providers, 5 subjects, and 5 intake requests for North Palm Beach, FL.');
     }

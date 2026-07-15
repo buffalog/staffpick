@@ -63,6 +63,7 @@ class ProcessMatchTimeoutsJobTest extends FeatureTest
         // processed A without reaching into B.
         $this->assertSame(AssignmentOffer::STATUS_EXPIRED, $staleOffer->refresh()->status);
         $this->assertSame(AssignmentOffer::STATUS_PENDING, $freshOffer->refresh()->status);
-        $this->assertSame(IntakeRequest::STATUS_MATCH_SENT, $freshOffer->intakeRequest->refresh()->status);
+        // Two-tenant assertion, no single context — read the case explicitly cross-tenant.
+        $this->assertSame(IntakeRequest::STATUS_MATCH_SENT, $freshOffer->intakeRequest()->crossTenant()->first()->status);
     }
 }

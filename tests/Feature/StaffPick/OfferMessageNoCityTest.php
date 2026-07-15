@@ -15,6 +15,7 @@ use App\Services\StaffPick\MatchingEngine;
 use App\Services\StaffPick\MatchingResult;
 use App\Services\StaffPick\MatchNotificationService;
 use App\Services\StaffPick\SmsService;
+use App\Services\StaffPick\TenantContext;
 use App\Services\StaffPick\TierResponseScorer;
 use Illuminate\Support\Str;
 use Mockery;
@@ -38,6 +39,11 @@ class OfferMessageNoCityTest extends FeatureTest
 
         $this->tenant = $this->createTenant();
         $this->discipline = Discipline::create(['tenant_id' => $this->tenant->id, 'name' => 'Physical Therapy']);
+
+        // Rendering the offer email + dispatching the offer read the case's PHI; production
+        // does so inside a tenant context (Filament request / scoped job). All fixtures here
+        // belong to $this->tenant.
+        app(TenantContext::class)->set($this->tenant);
     }
 
     private function offerWithCity(): AssignmentOffer
