@@ -11,7 +11,6 @@ use App\Filament\Dashboard\Resources\Providers\Schemas\ProviderInfolist;
 use App\Filament\Dashboard\Resources\Providers\Tables\ProvidersTable;
 use App\Filament\Dashboard\Support\SpRoleAccess;
 use App\Models\StaffPick\Provider;
-use App\Models\StaffPick\ProviderApplication;
 use App\Models\StaffPick\TenantConfig;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -113,12 +112,23 @@ class ProviderResource extends Resource
         return static::getPluralModelLabel();
     }
 
+    /**
+     * Providers awaiting credentialing/activation (status = pending), tenant-scoped. This is the
+     * onboarding backlog: it ticks down as staff credential and activate each provider. NOT a
+     * count of submitted applications, which was the prior bug (this badge queried
+     * ProviderApplication, so "Providers [N]" meant N applications, never the provider roster).
+     */
     public static function getNavigationBadge(): ?string
     {
-        $count = ProviderApplication::query()
-            ->where('status', ProviderApplication::STATUS_SUBMITTED)
+        $count = Provider::query()
+            ->where('status', Provider::STATUS_PENDING)
             ->count();
 
         return $count > 0 ? (string) $count : null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'warning';
     }
 }
