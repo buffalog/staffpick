@@ -136,9 +136,13 @@ return [
     ],
 
     'geocoding' => [
-        // Addresses are PHI. 'none' (the default) geocodes NOTHING — fail closed, no egress.
-        // 'azure' requires a confirmed Azure Maps HIPAA BAA scope + AZURE_MAPS_KEY. Never add
-        // a public/free geocoder here without a signed BAA.
+        // Addresses are PHI. 'none' (the default) geocodes NOTHING: fail closed, no egress.
+        // 'centroid' resolves the address ZIP to lat/lng from the local sp_zip_centroids table
+        //   (public Census + GeoNames data, in-DB, NO network, NO egress). Safe for PHI with no
+        //   BAA and the intended multi-tenant default once seeded. ZIP-level precision, which is
+        //   what straight-line match distance needs.
+        // 'azure' requires a confirmed Azure Maps HIPAA BAA scope + AZURE_MAPS_KEY. Never add a
+        //   public/free NETWORK geocoder here without a signed BAA.
         'driver' => env('GEOCODING_DRIVER', 'none'),
         'azure_maps_key' => env('AZURE_MAPS_KEY'),
     ],
