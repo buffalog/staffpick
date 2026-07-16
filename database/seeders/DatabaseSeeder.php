@@ -28,5 +28,10 @@ class DatabaseSeeder extends Seeder
         // taxonomy rows must land on every boot. Idempotent, and preserves admin-tuned
         // credential-type fields (see TenantTaxonomySeeder).
         $this->call(TenantTaxonomySeeder::class);
+
+        // Load/refresh the global ZIP-centroid table for the self-hosted geocoder. Idempotent
+        // upsert from the committed CSV, no egress. Not in TestingDatabaseSeeder (the suite
+        // seeds its own sentinel centroids).
+        $this->call(ZipCentroidSeeder::class);
     }
 }
