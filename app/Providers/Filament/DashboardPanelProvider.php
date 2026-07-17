@@ -156,6 +156,10 @@ class DashboardPanelProvider extends PanelProvider
                     ->collapsed(),
                 NavigationGroup::make()
                     ->label(__('Administration')),
+                // Admin/super-admin only (the HIPAA audit-log viewer). Placed with the other
+                // admin-level groups, above the bottom-pinned Support.
+                NavigationGroup::make()
+                    ->label(__('Compliance')),
                 // Listed last so Help is pinned to the bottom of the sidebar (Filament
                 // renders truly-ungrouped items at the top, so a trailing group is the
                 // only way to bottom-pin it).

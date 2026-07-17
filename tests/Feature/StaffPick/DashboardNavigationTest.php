@@ -51,6 +51,7 @@ class DashboardNavigationTest extends FeatureTest
             'Our Providers',
             'Settings',
             'Administration',
+            'Compliance',
             'Support',
         ], $order);
         $this->assertSame('Support', end($order));
@@ -74,6 +75,8 @@ class DashboardNavigationTest extends FeatureTest
         foreach (['Users', 'Invitations'] as $item) {
             $this->assertContains($item, $items['Administration']);
         }
+        // The HIPAA audit-log viewer (admin/super-admin only).
+        $this->assertContains('Audit Log', $items['Compliance']);
         $this->assertSame(['Help'], $items['Support']);
 
         // Settings starts collapsed; Cases and Administration stay expanded.
