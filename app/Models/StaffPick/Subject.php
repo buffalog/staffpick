@@ -3,6 +3,7 @@
 namespace App\Models\StaffPick;
 
 use App\Models\StaffPick\Concerns\BelongsToTenant;
+use App\Models\StaffPick\Concerns\RecordsPhiAudit;
 use App\Models\StaffPick\Contracts\BearsTenantPhi;
 use App\Services\StaffPick\GeocodingService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Subject extends Model implements BearsTenantPhi
 {
-    use BelongsToTenant, HasFactory, SoftDeletes;
+    use BelongsToTenant, HasFactory, RecordsPhiAudit, SoftDeletes;
 
     protected $table = 'sp_subjects';
 

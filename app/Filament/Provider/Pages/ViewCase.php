@@ -5,6 +5,7 @@ namespace App\Filament\Provider\Pages;
 use App\Filament\Dashboard\Resources\IntakeRequests\IntakeRequestResource;
 use App\Models\StaffPick\Assignment;
 use App\Models\StaffPick\IntakeRequest;
+use App\Services\StaffPick\AuditLogger;
 use Filament\Facades\Filament;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Pages\Page;
@@ -61,6 +62,9 @@ class ViewCase extends Page
         abort_unless($assignedToProvider, 403);
 
         $this->record = $intake;
+
+        // HIPAA read audit: a clinician opened this specific case (record-level, once per open).
+        app(AuditLogger::class)->record('viewed', $intake);
     }
 
     public function getTitle(): string|Htmlable

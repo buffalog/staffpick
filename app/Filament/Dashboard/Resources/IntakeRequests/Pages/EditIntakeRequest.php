@@ -2,6 +2,7 @@
 
 namespace App\Filament\Dashboard\Resources\IntakeRequests\Pages;
 
+use App\Filament\Concerns\LogsRecordView;
 use App\Filament\Dashboard\Resources\IntakeRequests\IntakeRequestResource;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
@@ -12,6 +13,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditIntakeRequest extends EditRecord
 {
+    use LogsRecordView;
+
     protected static string $resource = IntakeRequestResource::class;
 
     /**

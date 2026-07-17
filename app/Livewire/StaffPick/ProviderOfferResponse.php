@@ -6,6 +6,7 @@ use App\Models\StaffPick\AssignmentOffer;
 use App\Models\StaffPick\DeclineReason;
 use App\Models\StaffPick\Provider;
 use App\Models\Tenant;
+use App\Services\StaffPick\AuditLogger;
 use App\Services\StaffPick\MatchDispatchService;
 use App\Services\StaffPick\TenantContext;
 use Closure;
@@ -43,6 +44,14 @@ class ProviderOfferResponse extends Component
 
         $this->offerId = $offer->id;
         $this->syncState($offer);
+
+        // HIPAA read audit: this token opened a case (record-level). Run inside the offer's tenant
+        // context so the event is tenant-stamped and the subject resolves; the signed-in provider
+        // is the actor.
+        $this->inOfferTenant($offer, function () use ($offer): void {
+            $offer->loadMissing('intakeRequest');
+            app(AuditLogger::class)->record('viewed', $offer->intakeRequest, ['actor_label' => 'offer-token']);
+        });
     }
 
     /**
