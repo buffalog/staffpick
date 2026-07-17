@@ -2,6 +2,7 @@
 
 namespace App\Filament\Dashboard\Resources\IntakeRequests\Pages;
 
+use App\Filament\Concerns\LogsRecordView;
 use App\Filament\Dashboard\Resources\IntakeRequests\Actions\DispatchOffersAction;
 use App\Filament\Dashboard\Resources\IntakeRequests\Actions\FindMatchesAction;
 use App\Filament\Dashboard\Resources\IntakeRequests\Actions\RetriggerMatchingAction;
@@ -13,6 +14,7 @@ use Filament\Resources\Pages\ViewRecord;
 class ViewIntakeRequest extends ViewRecord
 {
     use AssignsMatchedProviders;
+    use LogsRecordView;
 
     protected static string $resource = IntakeRequestResource::class;
 

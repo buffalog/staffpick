@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\StaffPick\ProviderSurvey;
+use App\Models\Tenant;
+use App\Services\StaffPick\AuditLogger;
+use App\Services\StaffPick\TenantContext;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 
@@ -17,11 +20,32 @@ class SurveyController extends Controller
     {
         $survey = $this->resolveSurvey($token);
 
+        $this->auditView($survey);
+
         if ($survey->isResponded()) {
             return view('staffpick.survey.thanks', ['alreadyResponded' => true]);
         }
 
         return view('staffpick.survey.show', ['survey' => $survey]);
+    }
+
+    /**
+     * HIPAA read audit for a public survey open: unauthenticated token holder (user_id null),
+     * stamped with the survey's own tenant so the event is tenant-scoped; the subject resolves
+     * from the survey's subject_id.
+     */
+    private function auditView(ProviderSurvey $survey): void
+    {
+        $tenant = Tenant::find($survey->tenant_id);
+
+        if ($tenant === null) {
+            return;
+        }
+
+        app(TenantContext::class)->run(
+            $tenant,
+            fn () => app(AuditLogger::class)->record('viewed', $survey, ['actor_label' => 'survey-token']),
+        );
     }
 
     public function submit(Request $request, string $token): View

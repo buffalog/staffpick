@@ -3,6 +3,7 @@
 namespace App\Models\StaffPick;
 
 use App\Models\StaffPick\Concerns\BelongsToTenant;
+use App\Models\StaffPick\Concerns\RecordsPhiAudit;
 use App\Models\StaffPick\Contracts\BearsTenantPhi;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class IntakeRequestHistory extends Model implements BearsTenantPhi
 {
-    use BelongsToTenant, HasFactory;
+    use BelongsToTenant, HasFactory, RecordsPhiAudit;
 
     protected $table = 'sp_intake_request_history';
 

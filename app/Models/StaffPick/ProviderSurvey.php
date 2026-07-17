@@ -3,6 +3,7 @@
 namespace App\Models\StaffPick;
 
 use App\Models\StaffPick\Concerns\BelongsToTenant;
+use App\Models\StaffPick\Concerns\RecordsPhiAudit;
 use App\Models\StaffPick\Contracts\BearsTenantPhi;
 use Database\Factories\StaffPick\ProviderSurveyFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class ProviderSurvey extends Model implements BearsTenantPhi
 {
     /** @use HasFactory<ProviderSurveyFactory> */
-    use BelongsToTenant, HasFactory;
+    use BelongsToTenant, HasFactory, RecordsPhiAudit;
 
     public const STATUS_PENDING = 'pending';
 

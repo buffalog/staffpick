@@ -9,6 +9,7 @@ use App\Services\PaymentProviders\Paddle\PaddleProvider;
 use App\Services\PaymentProviders\PaymentService;
 use App\Services\PaymentProviders\Polar\PolarProvider;
 use App\Services\PaymentProviders\Stripe\StripeProvider;
+use App\Services\StaffPick\AuditLogger;
 use App\Services\StaffPick\ProviderScorer;
 use App\Services\StaffPick\TenantContext;
 use App\Services\StaffPick\TierResponseScorer;
@@ -18,7 +19,11 @@ use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
 use Filament\Support\Facades\FilamentView;
 use Filament\View\PanelsRenderHook;
+use Illuminate\Auth\Events\Failed;
+use Illuminate\Auth\Events\Login;
+use Illuminate\Auth\Events\Logout;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -73,6 +78,15 @@ class AppServiceProvider extends ServiceProvider
         // global scope so a BearsTenantPhi model can be read cross-tenant without tripping the
         // fail-closed guard (metrics, infra sweeps, super-admin). See BelongsToTenant.
         Builder::macro('crossTenant', fn () => $this->withoutGlobalScope('tenant'));
+
+        // HIPAA auth audit stream. tenant_id is null at auth time (no panel/context yet), which
+        // is expected. auth()->user() is set when Login and Logout fire, so the actor resolves.
+        Event::listen(Login::class, fn () => app(AuditLogger::class)->record('login'));
+        Event::listen(Logout::class, fn () => app(AuditLogger::class)->record('logout'));
+        Event::listen(Failed::class, fn (Failed $event) => app(AuditLogger::class)->record(
+            'login_failed',
+            context: ['email' => $event->credentials['email'] ?? null],
+        ));
 
         FilamentAsset::register([
             Js::make('components-script', __DIR__.'/../../resources/js/components.js'),
