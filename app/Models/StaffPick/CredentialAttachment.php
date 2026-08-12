@@ -2,7 +2,7 @@
 
 namespace App\Models\StaffPick;
 
-use App\Models\StaffPick\Concerns\StoresSqlServerBlob;
+use App\Models\StaffPick\Concerns\StoresBinaryContent;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -20,7 +20,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class CredentialAttachment extends Model
 {
-    use HasFactory, SoftDeletes, StoresSqlServerBlob;
+    use HasFactory, SoftDeletes, StoresBinaryContent;
 
     /** Accepted upload extensions (final list — enforced server-side, not just client accept). */
     public const ACCEPTED_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png', 'heic', 'docx', 'doc'];
