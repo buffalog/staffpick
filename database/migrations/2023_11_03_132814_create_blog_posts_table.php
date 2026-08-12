@@ -16,13 +16,12 @@ return new class extends Migration
             $table->boolean('is_published')->default(false);
             $table->timestamp('published_at')->nullable();
             $table->foreignId('user_id')->constrained();
-            // SQL Server rejects two FKs to the same table — store as plain integer
+            // Second FK to users, left unconstrained to match author_id's original shape
             $table->unsignedBigInteger('author_id')->nullable();
             $table->foreignId('blog_post_category_id')->nullable()->constrained();
 
-            // fulltext index not supported by sqlsrv driver
-            $db = config('database.default');
-            if ($db !== 'sqlite' && $db !== 'sqlsrv') {
+            // fulltext index not supported by the sqlite driver
+            if (config('database.default') !== 'sqlite') {
                 $table->fullText(['title', 'body']);
             }
 
