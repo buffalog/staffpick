@@ -15,17 +15,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
 
-    # Real SQL Server (Azure SQL Edge) — the same engine as Railway/production, so the
-    # sp_* migrations and their SQL-Server-specific DDL are exercised faithfully.
+    # Real Postgres, major version 18 — pinned to match the Railway deploy target
+    # (ghcr.io/railwayapp-templates/postgres-ssl:18), so the partial unique indexes and the
+    # rest of the Postgres-specific DDL are exercised faithfully.
     services:
-      sqlsrv:
-        image: mcr.microsoft.com/azure-sql-edge:latest
+      postgres:
+        image: postgres:18
         env:
-          ACCEPT_EULA: "1"
-          MSSQL_SA_PASSWORD: "StaffPick_CI_2026!"
-          MSSQL_PID: Developer
+          POSTGRES_PASSWORD: StaffPick_CI_2026!
+          POSTGRES_DB: staffpick
         ports:
-          - 1433:1433
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
 
     env:
       DB_PASSWORD: "StaffPick_CI_2026!"
@@ -33,18 +36,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Microsoft ODBC Driver 18
-        run: |
-          curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo tee /etc/apt/trusted.gpg.d/microsoft.asc > /dev/null
-          curl -fsSL "https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/prod.list" | sudo tee /etc/apt/sources.list.d/mssql-release.list > /dev/null
-          sudo apt-get update -y
-          sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18 unixodbc-dev
-
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: sqlsrv, pdo_sqlsrv, bcmath, exif, intl, pcntl, sockets, xml, zip, mbstring, gd, imagick, dom
+          extensions: pdo_pgsql, pgsql, bcmath, exif, intl, pcntl, sockets, xml, zip, mbstring, gd, imagick, dom
           tools: composer:v2
           coverage: none
 
@@ -54,29 +50,6 @@ jobs:
           node-version: '22'
           cache: npm
 
-      - name: Wait for SQL Server
-        run: |
-          docker ps -a
-          for i in $(seq 1 60); do
-            if php -r 'new PDO("sqlsrv:Server=127.0.0.1,1433;Database=master;TrustServerCertificate=1","sa",getenv("DB_PASSWORD"));' 2>/tmp/pdoerr; then
-              echo "SQL Server ready"; exit 0
-            fi
-            echo "attempt $i: $(head -1 /tmp/pdoerr)"
-            sleep 3
-          done
-          echo "=== azure-sql-edge container logs ==="
-          docker logs "$(docker ps -aq --filter ancestor=mcr.microsoft.com/azure-sql-edge:latest | head -1)" 2>&1 | tail -50
-          echo "SQL Server never became ready"; exit 1
-
-      - name: Create isolated test database
-        run: |
-          php <<'PHP'
-          <?php
-          $pdo = new PDO("sqlsrv:Server=127.0.0.1,1433;Database=master;TrustServerCertificate=1", "sa", getenv("DB_PASSWORD"));
-          $pdo->exec("IF DB_ID('staffpick_test') IS NULL CREATE DATABASE [staffpick_test]");
-          echo "test database ready\n";
-          PHP
-
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
@@ -85,14 +58,15 @@ jobs:
           cp .env.example .env
           php artisan key:generate
           php artisan key:generate --env=testing
-          # Point the testing env at the isolated SQL Server DB (the committed .env.testing
-          # targets a local MySQL; CI runs against real SQL Server instead).
+          # Point the testing env at the service-container Postgres. The committed
+          # .env.testing targets a local Postgres 18 container on 5433 (so it does not
+          # collide with a developer's own Postgres on 5432); CI has the port to itself.
           sed -i \
-            -e 's#^DB_CONNECTION=.*#DB_CONNECTION=sqlsrv#' \
+            -e 's#^DB_CONNECTION=.*#DB_CONNECTION=pgsql#' \
             -e 's#^DB_HOST=.*#DB_HOST=127.0.0.1#' \
-            -e 's#^DB_PORT=.*#DB_PORT=1433#' \
-            -e 's#^DB_DATABASE=.*#DB_DATABASE=staffpick_test#' \
-            -e 's#^DB_USERNAME=.*#DB_USERNAME=sa#' \
+            -e 's#^DB_PORT=.*#DB_PORT=5432#' \
+            -e 's#^DB_DATABASE=.*#DB_DATABASE=staffpick#' \
+            -e 's#^DB_USERNAME=.*#DB_USERNAME=postgres#' \
             -e 's#^DB_PASSWORD=.*#DB_PASSWORD=StaffPick_CI_2026!#' \
             .env.testing
 
