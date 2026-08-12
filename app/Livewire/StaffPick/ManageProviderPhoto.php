@@ -12,7 +12,7 @@ use Livewire\Component;
 use Livewire\WithFileUploads;
 
 /**
- * Upload / replace a provider's profile photo (BLOB in Azure SQL). Reused on the staff
+ * Upload / replace a provider's profile photo (BLOB in the database). Reused on the staff
  * provider view and the provider's own "My Provider Profile" self-service page. One row per
  * provider, replace-in-place; there is no history and no required-photo constraint.
  *

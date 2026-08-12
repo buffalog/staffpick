@@ -311,8 +311,8 @@ class TenantService
         $tenantUserCount = $tenant->users->count();
 
         foreach ($tenantSubscriptions as $subscription) {
-            // Cast rather than trust the model: pdo_sqlsrv hands back integer columns as
-            // strings, and a strict `!== 0` sentinel check against "0" is always true.
+            // Cast rather than trust the model, so the "0 = unlimited" sentinel cannot be
+            // defeated by an un-cast read.
             // Mirrors TenantCreationService::filterTenantsByPlanMaxUsers().
             $maxUsersPerTenant = (int) $subscription->plan->max_users_per_tenant;
 

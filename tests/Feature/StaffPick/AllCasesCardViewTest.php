@@ -12,8 +12,7 @@ use Tests\Feature\FeatureTest;
 
 /**
  * Smoke + toggle test for the All Cases card view (PR G). Pure presentation, so the real risk
- * is a blade/render error and the toggle wiring. Date columns left null — the local dblib
- * driver can't parse SQL Server `date` values (real pdo_sqlsrv on CI is fine).
+ * is a blade/render error and the toggle wiring.
  */
 class AllCasesCardViewTest extends FeatureTest
 {

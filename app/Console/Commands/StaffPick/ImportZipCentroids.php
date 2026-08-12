@@ -16,7 +16,8 @@ class ImportZipCentroids extends Command
 
     protected $description = 'Load/refresh sp_zip_centroids from the committed public-domain + CC-BY CSV (no egress).';
 
-    // SQL Server caps a statement at 2100 bind params. 400 rows x 4 cols = 1600, safely under.
+    // Chunked so a single INSERT stays well inside any driver's bind-parameter ceiling.
+    // 400 rows x 4 cols = 1600 binds.
     private const CHUNK = 400;
 
     public function handle(): int

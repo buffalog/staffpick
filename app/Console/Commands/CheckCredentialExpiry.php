@@ -18,7 +18,7 @@ use Illuminate\Database\Eloquent\Builder;
  *     type's own warning_days window (expiry_warning_days) rather than one flat value.
  *
  * Selection stays in SQL (date-string comparisons); the only date cast read happens in
- * the notifier/service, kept safe for the local FreeTDS driver.
+ * the notifier/service.
  */
 class CheckCredentialExpiry extends Command
 {

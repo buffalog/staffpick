@@ -8,7 +8,7 @@ use Illuminate\Http\Response;
 use Symfony\Component\HttpFoundation\HeaderUtils;
 
 /**
- * Streams credential attachment BLOBs out of Azure SQL to authenticated users. Runs outside
+ * Streams credential attachment BLOBs out of the database to authenticated users. Runs outside
  * any Filament panel, so authorization is computed from the record's own tenant via
  * ProviderCredential::isAccessibleBy — the same visible_to_scheduler gate that governs
  * seeing, uploading, and verifying the parent credential.

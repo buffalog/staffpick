@@ -52,8 +52,8 @@ class ViewCase extends Page
 
         abort_if($intake === null, 404);
 
-        // Must be assigned to THIS provider (non-cancelled). Compared in SQL to avoid
-        // the dblib/sqlsrv string-vs-int strict-compare pitfall.
+        // Must be assigned to THIS provider (non-cancelled). Compared in SQL so the check
+        // cannot be defeated by a type mismatch in PHP.
         $assignedToProvider = $intake->assignments()
             ->where('provider_id', $provider->id)
             ->where('status', '!=', Assignment::STATUS_CANCELLED)

@@ -50,7 +50,7 @@ class SchedulerNotificationService
 
     /**
      * Alert tenant admins (Filament bell + Slack) that a provider credential is
-     * expiring soon. Reads expires_at, so call only where pdo_sqlsrv is available.
+     * expiring soon.
      */
     public function credentialExpiring(ProviderCredential $credential): void
     {
@@ -75,8 +75,7 @@ class SchedulerNotificationService
 
     /**
      * Tell tenant admins a provider was auto-deactivated for an expired credential.
-     * The expiry date is pre-formatted by the caller so this never reads the date cast
-     * (which throws on the local FreeTDS driver).
+     * The expiry date is pre-formatted by the caller so this never reads the date cast.
      */
     public function providerAutoDeactivated(Provider $provider, string $credentialType, string $expiry): void
     {

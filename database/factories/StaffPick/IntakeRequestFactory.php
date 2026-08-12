@@ -24,8 +24,6 @@ class IntakeRequestFactory extends Factory
             'subject_id' => fn (array $attributes) => Subject::factory()->create([
                 'tenant_id' => $attributes['tenant_id'] ?? Tenant::factory(),
             ])->id,
-            // Date columns left null: the local FreeTDS (pdo_dblib) driver returns
-            // SQL Server date columns unparseably; Railway's pdo_sqlsrv is fine.
         ];
     }
 }

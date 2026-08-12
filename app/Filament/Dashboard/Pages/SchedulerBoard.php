@@ -114,9 +114,8 @@ class SchedulerBoard extends Page
             ->where('tenant_id', Filament::getTenant()?->id)
             ->whereIn('status', array_keys(self::COLUMNS))
             ->with(['subject', 'referralSource', 'discipline', 'leadClinician'])
-            // withCount (a scalar count subquery), not withExists — SQL Server rejects a
-            // bare `exists(...)` in the SELECT list, so we count flagged offers and treat
-            // any positive count as a warning.
+            // withCount (a scalar count subquery): count flagged offers and treat any
+            // positive count as a warning.
             ->withCount(['assignmentOffers as language_warning_count' => fn (Builder $query) => $query->where('language_warning', true)])
             ->orderByDesc('updated_at')
             ->get()

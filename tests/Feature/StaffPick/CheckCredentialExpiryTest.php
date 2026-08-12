@@ -58,8 +58,8 @@ class CheckCredentialExpiryTest extends FeatureTest
         $this->credential($active, now()->addDays(200)->toDateString(), $this->otherType);                  // excluded: not soon
         $this->credential($inactive, now()->addDays(5)->toDateString());                                    // excluded: provider inactive
 
-        // Mock the notifier so the command's selection is asserted without the notifier
-        // reading the date cast (which the local FreeTDS driver can't parse).
+        // Mock the notifier so the command's selection is asserted in isolation from what
+        // the notifier then does with the credential.
         $mock = $this->mock(SchedulerNotificationService::class);
         $mock->shouldReceive('credentialExpiring')
             ->once()

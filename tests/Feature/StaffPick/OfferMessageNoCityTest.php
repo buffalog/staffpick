@@ -23,7 +23,7 @@ use Tests\Feature\FeatureTest;
 
 /**
  * Offer notifications reach the provider through the mail/SMS vendor (no BAA), so they must
- * carry no patient city. The in-app bell (Azure SQL) keeps it; these two vendor paths don't.
+ * carry no patient city. The in-app bell keeps it; these two vendor paths don't.
  */
 class OfferMessageNoCityTest extends FeatureTest
 {

@@ -150,10 +150,10 @@ class PolarProviderTest extends FeatureTest
     public function test_report_usage_ingests_polar_event_with_customer_and_value(): void
     {
         // Polar is seeded inactive, and reportUsage() runs assertProviderIsActive(). This
-        // activation was missing but went unnoticed: PaymentProvider::$is_active was un-cast,
-        // so on pdo_sqlsrv the guard compared "0" === false and never fired. With the column
-        // cast the guard works, and the provider has to actually be active — as every other
-        // test in this file already does.
+        // activation was missing but went unnoticed while PaymentProvider::$is_active was
+        // un-cast and the guard compared a string against false. With the column cast the
+        // guard works, and the provider has to actually be active — as every other test in
+        // this file already does.
         $this->paymentProvider->update(['is_active' => true]);
 
         $tenant = $this->createTenant();

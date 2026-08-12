@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Schema;
  * Match/dispatch cascade state on a case (see MatchDispatchService).
  *
  * current_match_provider_id is the provider holding the in-flight offer; it's plain
- * unsignedBigInteger with no FK per the Azure SQL cascade-path convention. On
+ * unsignedBigInteger with no FK per the sp_* tenancy convention. On
  * acceptance the engine promotes it to lead_clinician_id.
  */
 return new class extends Migration

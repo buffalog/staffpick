@@ -22,9 +22,7 @@ class SubjectFactory extends Factory
             'city' => fake()->city(),
             'state' => fake()->stateAbbr(),
             'zip' => fake()->postcode(),
-            // Left null by default: the local FreeTDS (pdo_dblib) driver returns
-            // SQL Server `date` columns in a format Carbon can't parse, which
-            // breaks rendering in tests. Railway's pdo_sqlsrv handles them fine.
+            // Left null by default so tests opt in to a DOB only where it matters.
             'date_of_birth' => null,
             'gender' => fake()->randomElement(['male', 'female', 'non_binary', 'other']),
             'is_active' => true,

@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * A provider's profile photo, stored as a VARBINARY(MAX) BLOB in Azure SQL (see
+ * A provider's profile photo, stored as a bytea BLOB in the database (see
  * {@see StoresBinaryContent}). One row per provider, replace-in-place. Inherits tenancy
  * transitively through its provider; not directly tenant-scoped. `content` is never
  * fillable or SELECTed by default — bytes go through storeContent()/readContent().

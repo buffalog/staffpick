@@ -86,7 +86,7 @@ class MyCases extends Page implements HasTable
         return $table
             ->query($query)
             // Sort in SQL — evaluation_date is intentionally uncast, so never read it
-            // into PHP for sorting (dblib throws on populated date-cast reads).
+            // into PHP for sorting.
             ->defaultSort('evaluation_date', 'desc')
             ->columns([
                 TextColumn::make('subject_name')

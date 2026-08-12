@@ -13,8 +13,7 @@ return new class extends Migration
     {
         Schema::table('sp_provider_surveys', function (Blueprint $table) {
             // Opaque token for the public survey-response link. A plain (non-unique)
-            // index — a 48-char random token makes collisions negligible and avoids
-            // SQL Server's one-NULL-only UNIQUE-nullable constraint.
+            // index — a 48-char random token makes collisions negligible.
             $table->string('token')->nullable();
             $table->index('token');
         });

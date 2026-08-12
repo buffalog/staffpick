@@ -71,8 +71,8 @@ class ProviderRatingAggregator
     {
         $since = $asOf->subDays($days);
 
-        // Average in PHP, not via SQL AVG(): SQL Server's AVG() on an integer
-        // column does integer division (AVG(5,4) = 4, not 4.5).
+        // Average in PHP, not via SQL AVG(): the rows are already loaded for the count
+        // and distribution below, and PHP keeps the divide-by-zero and rounding in one place.
         $ratings = ProviderSurvey::query()
             ->where('provider_id', $provider->id)
             ->where('status', ProviderSurvey::STATUS_RESPONDED)

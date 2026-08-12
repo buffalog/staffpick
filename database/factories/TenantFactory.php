@@ -21,9 +21,9 @@ class TenantFactory extends Factory
         return [
             'name' => fake()->name(),
             'uuid' => fake()->uuid(),
-            // A distinct domain per tenant: the tenants_domain_unique index allows
-            // only one NULL on SQL Server, so factories must not leave it NULL when
-            // multiple tenants are created in a run.
+            // A distinct domain per tenant. tenants_domain_unique is partial (WHERE domain
+            // IS NOT NULL) so NULLs would be fine, but a real value keeps factory-made
+            // tenants distinguishable.
             'domain' => Str::uuid()->toString().'.test',
         ];
     }

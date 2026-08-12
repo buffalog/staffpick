@@ -6,8 +6,8 @@ use App\Support\StaffPick\ProviderNotesPromotion;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Pure string parsing — no app boot / DB, so it runs anywhere (the sp_* tables and
- * SQL Server container aren't needed to prove the regex logic).
+ * Pure string parsing — no app boot / DB, so it runs anywhere (the sp_* tables aren't
+ * needed to prove the regex logic).
  */
 class ProviderNotesPromotionTest extends TestCase
 {

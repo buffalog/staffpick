@@ -19,8 +19,8 @@ class QueryExceptionLoggingTest extends TestCase
 
         // Bindings carry the PHI; getMessage() would interpolate 'Zzyxpatient' into the string.
         $exception = new QueryException(
-            'sqlsrv',
-            'insert into [sp_subjects] ([last_name]) values (?)',
+            'pgsql',
+            'insert into "sp_subjects" ("last_name") values (?)',
             ['Zzyxpatient'],
             new \Exception('SQLSTATE[23000]: integrity constraint violation'),
         );

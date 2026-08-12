@@ -110,8 +110,6 @@ class ProviderCredential extends Model
      * the panel and on the standalone attachment-streaming route where no panel tenant is
      * resolved. super-admin passes for every type; sp_admin/sp_hr (canSeeAllCredentials)
      * pass for every type; sp_staff passes only for types flagged visible_to_scheduler.
-     *
-     * pdo_sqlsrv returns tenant_id as a string, so it is cast to int for the role lookup.
      */
     public function isAccessibleBy(User $user): bool
     {

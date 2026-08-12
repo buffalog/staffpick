@@ -17,10 +17,8 @@ class SetupTenantTest extends FeatureTest
     {
         parent::setUp();
 
-        // staffpick_test keeps the plain tenants_domain_unique index — the
-        // filtered-index migration self-skips on the local dblib driver — so only
-        // one null-domain tenant can exist at a time. Reset tenant state between
-        // tests so each creates its own. Not needed on Railway's filtered index.
+        // The suite shares one database that is never rolled back, so reset tenant state
+        // between tests and let each one create its own.
         DB::table('tenant_user')->delete();
         Tenant::query()->delete();
     }

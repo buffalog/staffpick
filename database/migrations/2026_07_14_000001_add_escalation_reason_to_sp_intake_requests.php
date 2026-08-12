@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Schema;
  * discipline. Staff went hunting for provider availability when the fix was the address.
  *
  * Read only while status = escalated, and escalate() always overwrites it, so it can never
- * go stale. No ->after(): column ordering is a MySQL-ism and the DB is Azure SQL.
+ * go stale. No ->after(): column ordering is a MySQL-ism and the DB is Postgres.
  */
 return new class extends Migration
 {

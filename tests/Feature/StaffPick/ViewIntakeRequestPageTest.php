@@ -13,8 +13,7 @@ use Tests\Feature\FeatureTest;
 /**
  * Smoke test for the merged-card + accordion View layout (PR F). Pure presentation, so the
  * real risk is a blade/render error — this drives the page and asserts the hero and accordion
- * scaffolding actually render. Date columns are left null: the local dblib driver can't parse
- * SQL Server `date` values (real pdo_sqlsrv on CI is fine).
+ * scaffolding actually render.
  */
 class ViewIntakeRequestPageTest extends FeatureTest
 {

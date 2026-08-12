@@ -32,7 +32,7 @@ class LicenseVerificationServiceTest extends FeatureTest
 
         $provider = Provider::factory()->create(['tenant_id' => $this->tenant->id, 'state' => 'FL']);
 
-        // No expires_at — local FreeTDS can't read populated SQL Server date columns.
+        // No expires_at — this case is about verification, not expiry.
         return ProviderCredential::create(array_merge([
             'provider_id' => $provider->id,
             'document_type_id' => $type->id,
