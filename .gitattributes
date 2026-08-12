@@ -1,5 +1,13 @@
 * text=auto eol=lf
 
+# Byte-exactness fixtures for the blob round-trip test. `text=auto` decides binary-ness by
+# sniffing for NUL bytes and would normally get these right, but a heuristic is not a
+# guarantee and eol=lf mangling would corrupt them silently. Say it explicitly.
+*.pdf binary
+*.jpg binary
+*.jpeg binary
+*.png binary
+
 *.blade.php diff=html
 *.css diff=css
 *.html diff=html
