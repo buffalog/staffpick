@@ -21,7 +21,7 @@
         </div>
     @elseif ($responded && $outcome === 'accepted')
         <div class="{{ $card }} text-center">
-            <h1 class="text-xl font-semibold text-success-600 dark:text-success-400">{{ __('Offer accepted') }}</h1>
+            <h1 class="text-xl font-semibold text-emerald-600 dark:text-emerald-400">{{ __('Offer accepted') }}</h1>
             <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
                 {{ __('Thank you. Our team will follow up with scheduling details shortly.') }}
             </p>
@@ -92,7 +92,7 @@
         <div class="{{ $card }} space-y-4">
             <div class="flex flex-wrap items-center gap-3">
                 <button type="button" wire:click="accept" wire:loading.attr="disabled"
-                        class="rounded-lg bg-success-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-success-700 disabled:opacity-50">
+                        class="rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">
                     {{ __('Accept offer') }}
                 </button>
                 <button type="button" x-data x-on:click="$wire.decexpanded = true"
