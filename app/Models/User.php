@@ -274,17 +274,36 @@ class User extends Authenticatable implements FilamentUser, HasTenants, MustVeri
         return false;
     }
 
+    /**
+     * The panel a user lands in for a given tenant.
+     *
+     * sp_hr is staff-side: it has no portal of its own but works out of the dashboard panel
+     * (provider records, credentials, verification), so it groups with admin/staff. It used
+     * to fall through to the referrer panel, which User::canAccessTenant() then 403'd —
+     * a dead end for anyone accepting an HR invitation.
+     *
+     * The unknown-role fallback is 'dashboard' for the same reason: that panel's landing page
+     * forwards whoever cannot use it (their own portal, the provider roster, or the role
+     * picker), where the provider and referrer panels just 403 an unexpected role.
+     */
     public function defaultSpPanel(int $tenantId): string
     {
         $roles = $this->spRolesForTenant($tenantId);
-        if (array_intersect([TenancyPermissionConstants::ROLE_SP_ADMIN, TenancyPermissionConstants::ROLE_SP_STAFF], $roles)) {
+        if (array_intersect([
+            TenancyPermissionConstants::ROLE_SP_ADMIN,
+            TenancyPermissionConstants::ROLE_SP_STAFF,
+            TenancyPermissionConstants::ROLE_SP_HR,
+        ], $roles)) {
             return 'dashboard';
         }
         if (in_array(TenancyPermissionConstants::ROLE_SP_PROVIDER, $roles, true)) {
             return 'provider';
         }
+        if (in_array(TenancyPermissionConstants::ROLE_SP_REFERRER, $roles, true)) {
+            return 'referrer';
+        }
 
-        return 'referrer';
+        return 'dashboard';
     }
 
     public function getTenants(Panel $panel): Collection
