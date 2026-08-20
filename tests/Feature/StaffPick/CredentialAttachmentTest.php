@@ -161,7 +161,7 @@ class CredentialAttachmentTest extends FeatureTest
             ->get(route('staffpick.credential-attachments.download', $attachment));
 
         $response->assertOk()->assertHeader('content-type', 'application/pdf');
-        // Proves the hex CONVERT write/read roundtrips the exact bytes through VARBINARY(MAX).
+        // Proves the hex encode/decode write/read roundtrips the exact bytes through bytea.
         $this->assertSame('the-file-bytes', $response->getContent());
     }
 

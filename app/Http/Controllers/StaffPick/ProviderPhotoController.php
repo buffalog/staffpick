@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Serves a provider's profile photo from its VARBINARY(MAX) BLOB. This asset is fetched far
+ * Serves a provider's profile photo from its bytea BLOB. This asset is fetched far
  * more often than a credential document — every card in every list view — so it is cached
  * aggressively: a versioned URL (?v=updated_at, minted by the avatar component) lets the
  * response stay cacheable for a week while a replacement still busts the cache, and an ETag

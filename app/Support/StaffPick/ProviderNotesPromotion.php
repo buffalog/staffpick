@@ -6,8 +6,8 @@ namespace App\Support\StaffPick;
  * Extracts the two legacy free-text facts staff used to type into a provider's Notes
  * ("Languages Spoken: Spanish. Can Adjust Own Service Zones: Yes.") so they can be
  * promoted into the structured `languages` pivot and `can_adjust_own_service_zones`
- * column. Pure string logic — no DB — so the risky parsing is unit-tested without the
- * SQL Server container. Taxonomy matching + persistence live in the data migration.
+ * column. Pure string logic — no DB — so the risky parsing is unit-tested without a
+ * database at all. Taxonomy matching + persistence live in the data migration.
  */
 class ProviderNotesPromotion
 {

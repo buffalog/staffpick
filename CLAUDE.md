@@ -245,44 +245,48 @@ This application is deployed on **Railway**, not Laravel Cloud or Deployer.
 
 ### How deployment works
 
-Pushes to `main` trigger a Railway build. The Dockerfile builds the image (PHP 8.4, sqlsrv extension, Node 22 for Vite assets). On container start, `start.sh` runs:
-1. Creates the `staffpick` database if it doesn't exist (via sqlcmd)
-2. Clears config cache
-3. Runs `php artisan migrate --force`
-4. Runs each seeder individually (RolesAndPermissions suppresses duplicate key errors on subsequent boots)
-5. Caches routes and views
-6. Starts `php artisan serve` on `$PORT`
+Pushes to `main` trigger a Railway build. The Dockerfile builds the image (PHP 8.4, `pdo_pgsql`, Node 22 for Vite assets). On container start, `start.sh` runs:
+1. Clears config cache
+2. Runs `php artisan migrate --force`
+3. Runs each seeder individually (RolesAndPermissions suppresses duplicate key errors on subsequent boots)
+4. Caches routes and views
+5. Starts `php artisan serve` on `$PORT`
 
-### Database: Azure SQL (SQL Server) — CRITICAL
+Railway's managed Postgres provisions the database itself, so there is no create-if-missing step.
 
-The database is **Azure SQL Edge** via the `sqlsrv` Laravel driver at `db.railway.internal:1433`. This is locked in for HIPAA BAA coverage and is **not changing**.
+### Database: PostgreSQL 18
 
-**SQL Server constraints already handled in all existing migrations — do not violate these:**
+The database is Railway managed Postgres (`ghcr.io/railwayapp-templates/postgres-ssl:18`) via the `pgsql` driver. Railway injects `DATABASE_URL` plus the `PG*` vars, and the `pgsql` connection reads `DATABASE_URL`, which takes precedence over the discrete `DB_*` values. **Railway names the database `railway`, not `staffpick` — never hardcode a database name.**
 
-1. **Cascade cycles** — SQL Server rejects ANY FK that creates multiple cascade paths to the same ancestor table, regardless of action type. All `sp_*` models use plain `unsignedBigInteger` for `tenant_id` — no FK constraint. Do NOT add constrained FKs that create multiple cascade paths back to `users` or `tenants`.
+Migrated off Azure SQL Edge in the postgres-migration PR. Prod and staging held no patient data, so it was an engine swap plus a re-provision rather than a data migration.
 
-2. **Index-dependent ALTER COLUMN** — SQL Server blocks `ALTER COLUMN` on any column with a dependent index. Pattern: drop index → alter column → recreate index. See `2024_04_09_095954_table_roadmap_items_adjust_slug_type.php` and `2026_02_21_141433_change_versionable_id_to_integer_in_version_tables.php` for reference implementations.
+**Constraints that apply to new migrations — do not violate these:**
 
-3. **No fulltext index via Blueprint** — `$table->fullText()` is unsupported by the `sqlsrv` driver. Guard with `if (config('database.default') !== 'sqlsrv')`.
+1. **Never guard DDL behind a driver check that can silently no-op.** Eleven migrations once opened with `if (... getDriverName() !== 'sqlsrv') { return; }`, which creates nothing while reporting SUCCESS. That silently dropped 16 unique constraints and CI stayed green, because nothing asserted an index existed. `tests/Feature/StaffPick/UniqueIndexEnforcementTest.php` now asserts every one of them exists AND rejects a duplicate. Add a case there whenever you add a unique index.
 
-4. **No `dropColumn` inside `Schema::create`** — invalid on any DB, crashes on SQL Server.
+2. **Partial unique indexes are raw DDL.** `$table->unique()` on Postgres emits `ADD CONSTRAINT`, so the backing index is constraint-owned and `DROP INDEX` refuses it — drop the constraint instead. The collision-hardening indexes are free-standing `CREATE UNIQUE INDEX ... WHERE ...` and are dropped with `DROP INDEX IF EXISTS` (no `ON table` clause; that is SQL Server syntax).
 
-5. **No local migration runs** — PHP 8.5 on the dev machine seg faults with the `sqlsrv` extension. Migrations are validated via Railway deploys. Write and validate against migration files as source of truth.
+3. **Boolean predicates take no comparison.** Write `WHERE is_active`, never `WHERE is_active = 1` — `$table->boolean()` is a real Postgres boolean and `boolean = integer` has no operator.
+
+4. **`ALTER COLUMN` takes two statements.** `ALTER COLUMN y TYPE varchar(n)` and `ALTER COLUMN y SET NOT NULL` are separate, and a cross-family cast needs an explicit `USING`.
+
+5. **JSON columns must be declared `$table->json()`, not `$table->text()`.** A JSON-path `where('data->key', ...)` compiles to the native `->>` operator, which has no `text` overload. A text column throws "operator does not exist" at query time.
+
+6. **Cascade cycles** — a historical SQL Server restriction, but all `sp_*` tables still use plain `unsignedBigInteger` for `tenant_id` with no FK constraint, and the unique-index tests insert arbitrary tenant ids on that assumption. Adding FKs on `tenant_id` is a deliberate, separate change.
+
+7. **No `dropColumn` inside `Schema::create`** — invalid on any DB.
 
 ### Local development vs Railway
 
-- The local environment uses Laravel Herd and a local MySQL/SQLite DB for general Laravel work
-- The `sp_*` (StaffPick domain) tables only exist on Railway — they are NOT in the local database
-- For StaffPick-specific feature tests requiring `sp_*` tables, use a local Azure SQL Edge container:
+- **Migrations run locally now.** Use a Postgres 18 container on 5433, so it does not collide with a Homebrew Postgres already on 5432:
   ```bash
-  docker run -e 'ACCEPT_EULA=1' -e 'MSSQL_SA_PASSWORD=StaffPick_Dev_2026!' \
-    -e 'MSSQL_PID=Developer' -p 1433:1433 --name staffpick-db \
-    -d mcr.microsoft.com/azure-sql-edge:latest
-  sleep 20 && sqlcmd -S 127.0.0.1 -U sa -P 'StaffPick_Dev_2026!' -C -Q "CREATE DATABASE staffpick_test;"
+  docker run -d --name staffpick-pg -e POSTGRES_PASSWORD='StaffPick_Dev_2026!' \
+    -e POSTGRES_DB=staffpick_test -p 5433:5432 postgres:18
   ```
-  Then set `.env.testing` to use `DB_CONNECTION=sqlsrv` pointing at `127.0.0.1:1433`.
-- SQLite in-memory is NOT a valid substitute for StaffPick feature tests — SQL Server has different DDL constraints that SQLite does not enforce.
-- **`pdo_sqlsrv` (Railway) returns integer/bigint columns as PHP strings; the local FreeTDS `dblib` driver returns ints.** So a raw, un-cast column read (`$offer->provider_id`) is `"28"` in production but `28` locally. A **strict comparison passes locally and fails on Railway** — e.g. `$provider->id !== $offer->provider_id` 403'd the legitimate owner of `/offers/{token}` because `28 !== "28"`. Tests on the dblib container can't catch this. Rules: cast both sides (`(int) $a !== (int) $b`), or compare loosely (`==`), or push the check into a query `where()` instead of comparing in PHP. Eloquent `$casts`/`$fillable` fix declared model attributes, but **un-cast FK columns and any `DB::`-facade results are returned as strings** — never strict-compare those against an int.
+  The committed `.env.testing` already points at it; CI overrides host/port/database.
+- `php artisan test` can exhaust the default 128M `memory_limit` locally. Run `php -d memory_limit=-1 vendor/bin/phpunit` instead.
+- SQLite in-memory is NOT a valid substitute for StaffPick feature tests — Postgres enforces DDL rules and predicate typing that SQLite does not.
+- `pdo_pgsql` returns integer-family columns as PHP `int` and booleans as `bool`; only `numeric`/`decimal` come back as strings. The old pdo_sqlsrv string-coercion trap (`28 !== "28"` 403'ing the legitimate owner of `/offers/{token}`) is therefore gone. Model `$casts` and `ModelCastCoverageTest` are kept regardless, because `pluck()` bypasses casts on any driver.
 
 === foundation rules ===
 

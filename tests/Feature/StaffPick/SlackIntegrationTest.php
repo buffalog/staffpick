@@ -158,7 +158,7 @@ class SlackIntegrationTest extends FeatureTest
         $type = CredentialDocumentType::create(['tenant_id' => $this->tenant->id, 'name' => 'State License']);
 
         // In-memory (not reloaded) so expires_at stays a Carbon — avoids the local
-        // FreeTDS date-parse quirk on reading SQL Server `date` columns.
+        // Dates are irrelevant to the Slack payload asserted here.
         $credential = new ProviderCredential([
             'provider_id' => $provider->id,
             'document_type_id' => $type->id,

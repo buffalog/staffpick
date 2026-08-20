@@ -15,7 +15,10 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->string('type');
             $table->morphs('notifiable');
-            $table->text('data');
+            // json, not text: Filament's notification-bell badge filters on data->format,
+            // which Postgres compiles to the native ->> operator. ->> has no text overload,
+            // so a text column makes every panel render throw "operator does not exist".
+            $table->json('data');
             $table->timestamp('read_at')->nullable();
             $table->timestamps();
         });

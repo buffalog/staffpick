@@ -55,8 +55,7 @@ class MatchDispatchService
 
         // (2) Skip providers tied up with an open offer on a different case.
         // map to int explicitly: these lists are strict-compared against $provider->id
-        // below, and pdo_sqlsrv would otherwise leak raw strings through a future
-        // un-cast read (see AssignmentOffer::casts()).
+        // below, and pluck() bypasses the model's casts (see AssignmentOffer::casts()).
         $busyProviderIds = AssignmentOffer::query()
             ->where('status', AssignmentOffer::STATUS_PENDING)
             ->whereNotNull('offered_at')
@@ -253,7 +252,7 @@ class MatchDispatchService
         $languageWarning = $this->languageWarning($case, $provider);
 
         $offer = DB::transaction(function () use ($case, $provider, $tier, $windowMinutes, $languageWarning, $guarded): ?AssignmentOffer {
-            // Take an exclusive lock on the provider row (SQL Server UPDLOCK) so two
+            // Take an exclusive lock on the provider row (SELECT ... FOR UPDATE) so two
             // concurrent dispatches can't both read "free" and both offer them, then
             // re-validate under it: the busy/open-offer reads dispatch() made are stale
             // the moment another cascade commits an offer.
@@ -372,7 +371,7 @@ class MatchDispatchService
         }
 
         $discipline = $intake?->discipline?->name ?? __('Unspecified');
-        // City is fine in the in-app bell (Azure SQL), but NOT in the vendor-delivered SMS/email
+        // City is fine in the in-app bell, but NOT in the vendor-delivered SMS/email
         // below — a patient city there is PHI transiting a non-BAA vendor.
         $city = $intake?->subject?->city ?? __('your area');
         $url = route('staffpick.offer.respond', ['token' => $offer->token]);

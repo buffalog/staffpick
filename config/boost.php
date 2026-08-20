@@ -17,8 +17,8 @@ return [
     'guidelines' => [
         /*
          | Suppress Boost's generic built-in "deploy with Laravel Cloud"
-         | guideline. The project's real deployment + Azure SQL / dblib
-         | constraints live in .ai/guidelines/deployment-railway.md, which
+         | guideline. The project's real deployment + Postgres constraints
+         | live in .ai/guidelines/deployment-railway.md, which
          | Boost composes in but never overwrites. Without this exclude,
          | boost:install would re-emit the contradictory generic line.
          */

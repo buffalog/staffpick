@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Schema;
  * the table has no soft deletes, so a plain unique index is correct — no filter
  * needed. The app-layer firstOrCreate guards (ManualCredential::create,
  * ProviderApplicationReviewService::importCredentials) avoid hitting this; the
- * index is the backstop. Blueprint unique is portable, so no dblib guard.
+ * index is the backstop.
  */
 return new class extends Migration
 {

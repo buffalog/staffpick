@@ -14,7 +14,7 @@ use Livewire\WithFileUploads;
 /**
  * Attachment manager for a single provider credential, hosted inside the "Attachments"
  * modal on the Credentials relation manager. Lists live (non-tombstoned) attachments newest
- * first, uploads new proof files as BLOBs into Azure SQL, and lets sp_admin / super-admin
+ * first, uploads new proof files as BLOBs into the database, and lets sp_admin / super-admin
  * tombstone a file. View/Download are plain links to the streaming routes.
  *
  * Extension → MIME is resolved from a fixed map (not the temp file's guessed type, which is
@@ -73,8 +73,8 @@ class ManageCredentialAttachments extends Component
 
         $extension = strtolower($this->upload->getClientOriginalExtension());
 
-        // Metadata via Eloquent; the BLOB via storeContent() (VARBINARY needs hex, not a
-        // plain string bind). Never overwrites an older file — this is always a new row.
+        // Metadata via Eloquent; the BLOB via storeContent(), which carries the bytes as
+        // hex. Never overwrites an older file — this is always a new row.
         $attachment = $this->credential->attachments()->create([
             'original_filename' => $this->upload->getClientOriginalName(),
             'mime_type' => self::MIME_BY_EXTENSION[$extension] ?? 'application/octet-stream',

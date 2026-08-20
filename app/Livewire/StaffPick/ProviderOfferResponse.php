@@ -68,8 +68,8 @@ class ProviderOfferResponse extends Component
             ->where('user_id', auth()->id())
             ->first();
 
-        // Cast both sides: pdo_sqlsrv (Railway) returns bigint columns as strings,
-        // so a strict !== would reject the legitimate owner.
+        // Cast both sides so an un-cast column read can never make the strict compare
+        // reject the legitimate owner.
         abort_if($provider === null || (int) $provider->id !== (int) $offer->provider_id, 403);
 
         return $offer;
@@ -166,8 +166,8 @@ class ProviderOfferResponse extends Component
             ->where('user_id', auth()->id())
             ->first();
 
-        // Cast both sides: pdo_sqlsrv (Railway) returns bigint columns as strings,
-        // so a strict !== would reject the legitimate owner.
+        // Cast both sides so an un-cast column read can never make the strict compare
+        // reject the legitimate owner.
         abort_if($provider === null || (int) $provider->id !== (int) $offer->provider_id, 403);
 
         $this->syncState($offer);

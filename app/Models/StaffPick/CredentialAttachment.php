@@ -2,7 +2,7 @@
 
 namespace App\Models\StaffPick;
 
-use App\Models\StaffPick\Concerns\StoresSqlServerBlob;
+use App\Models\StaffPick\Concerns\StoresBinaryContent;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
- * A proof-of-credential document stored as a BLOB (VARBINARY(MAX)) in Azure SQL. Inherits
+ * A proof-of-credential document stored as a BLOB (bytea) in the database. Inherits
  * tenancy transitively through its provider credential; not directly tenant-scoped.
  *
  * Soft delete is a tombstone (see the migration): the row and metadata persist while the
@@ -20,7 +20,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class CredentialAttachment extends Model
 {
-    use HasFactory, SoftDeletes, StoresSqlServerBlob;
+    use HasFactory, SoftDeletes, StoresBinaryContent;
 
     /** Accepted upload extensions (final list — enforced server-side, not just client accept). */
     public const ACCEPTED_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png', 'heic', 'docx', 'doc'];
@@ -45,9 +45,8 @@ class CredentialAttachment extends Model
 
     protected $table = 'sp_credential_attachments';
 
-    // `content` is deliberately NOT fillable: pdo_sqlsrv rejects a plain string bound into
-    // VARBINARY(MAX), so bytes must go through storeContent()/readContent(), never mass
-    // assignment.
+    // `content` is deliberately NOT fillable: bytes go through storeContent()/readContent()
+    // so the blob never rides along in a mass assignment or a default SELECT.
     protected $fillable = [
         'provider_credential_id',
         'original_filename',

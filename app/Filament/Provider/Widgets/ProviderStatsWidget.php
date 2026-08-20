@@ -94,7 +94,7 @@ class ProviderStatsWidget extends BaseWidget
     /**
      * Credentials that are expired or within their type's warning window. expires_at is
      * a 'date'-cast column, so it's read via getRawOriginal() (raw string) + Carbon to
-     * stay off the cast (dblib-safe).
+     * stay off the cast.
      */
     private function credentialAlertCount(Provider $provider): int
     {

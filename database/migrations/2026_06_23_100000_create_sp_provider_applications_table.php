@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Schema;
  * is a draft that a guest fills in over several steps (resumable via application_token)
  * and submits for staff review; on approval it's mapped into a real sp_providers row.
  *
- * tenant_id and reviewed_by are plain unsignedBigInteger (no FK) per the Azure SQL
+ * tenant_id and reviewed_by are plain unsignedBigInteger (no FK) per the sp_* tenancy
  * cascade-path rules followed across the sp_* schema.
  */
 return new class extends Migration

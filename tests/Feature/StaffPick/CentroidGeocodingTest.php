@@ -11,7 +11,7 @@ use Tests\Feature\FeatureTest;
 /**
  * The self-hosted 'centroid' geocoding driver: resolves an address ZIP to a local centroid with
  * NO network and NO egress, so it is PHI-safe with no BAA. Rows are seeded idempotently because
- * the suite shares one never-rolled-back SQL Server DB.
+ * the suite shares one never-rolled-back database.
  */
 class CentroidGeocodingTest extends FeatureTest
 {

@@ -4,13 +4,14 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Block duplicate active taxonomy names within a tenant. Each of the nine sp_*
- * taxonomy tables gets a filtered unique index on (tenant_id, name) WHERE
- * is_active = 1 — so two active entries can't share a name, but inactive
- * (logically deleted) rows don't permanently claim a name slot. Filament
- * surfaces the DB violation as a validation error, so no app-layer guard.
+ * Block duplicate active taxonomy names within a tenant. Each of the nine sp_* taxonomy
+ * tables gets a partial unique index on (tenant_id, name) WHERE is_active — so two active
+ * entries can't share a name, but inactive (logically deleted) rows don't permanently claim
+ * a name slot. Filament surfaces the DB violation as a validation error, so no app-layer
+ * guard.
  *
- * Filtered-index DDL: see the dblib guard note below. Railway-validated only.
+ * The predicate is bare `WHERE is_active`, not `WHERE is_active = 1`: the column is a real
+ * Postgres boolean and `boolean = integer` has no operator.
  */
 return new class extends Migration
 {
@@ -29,33 +30,15 @@ return new class extends Migration
 
     public function up(): void
     {
-        if ($this->isLocalFreeTds() || DB::connection()->getDriverName() !== 'sqlsrv') {
-            return;
-        }
-
         foreach ($this->indexes as $table => $index) {
-            DB::statement("CREATE UNIQUE INDEX {$index} ON {$table} (tenant_id, name) WHERE is_active = 1");
+            DB::statement("CREATE UNIQUE INDEX {$index} ON {$table} (tenant_id, name) WHERE is_active");
         }
     }
 
     public function down(): void
     {
-        if ($this->isLocalFreeTds() || DB::connection()->getDriverName() !== 'sqlsrv') {
-            return;
+        foreach ($this->indexes as $index) {
+            DB::statement("DROP INDEX IF EXISTS {$index}");
         }
-
-        foreach ($this->indexes as $table => $index) {
-            DB::statement("DROP INDEX IF EXISTS {$index} ON {$table}");
-        }
-    }
-
-    /**
-     * The local sqlsrv connection runs through FreeTDS (pdo_dblib), which segfaults
-     * on filtered-index DDL. Railway runs real pdo_sqlsrv. Reading the PDO driver
-     * name is a cheap metadata call and does not trigger the crash.
-     */
-    private function isLocalFreeTds(): bool
-    {
-        return DB::connection()->getPdo()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'dblib';
     }
 };

@@ -2,21 +2,21 @@
 
 namespace App\Models\StaffPick;
 
-use App\Models\StaffPick\Concerns\StoresSqlServerBlob;
+use App\Models\StaffPick\Concerns\StoresBinaryContent;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * A provider's profile photo, stored as a VARBINARY(MAX) BLOB in Azure SQL (see
- * {@see StoresSqlServerBlob}). One row per provider, replace-in-place. Inherits tenancy
+ * A provider's profile photo, stored as a bytea BLOB in the database (see
+ * {@see StoresBinaryContent}). One row per provider, replace-in-place. Inherits tenancy
  * transitively through its provider; not directly tenant-scoped. `content` is never
  * fillable or SELECTed by default — bytes go through storeContent()/readContent().
  */
 class ProviderPhoto extends Model
 {
-    use HasFactory, StoresSqlServerBlob;
+    use HasFactory, StoresBinaryContent;
 
     /** Accepted upload extensions — images only (a photo is never a PDF/Word doc). */
     public const ACCEPTED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'heic'];

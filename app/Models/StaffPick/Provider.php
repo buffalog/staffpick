@@ -362,8 +362,7 @@ class Provider extends Model
      * gate for both the streaming route and the upload control. Staff/HR/admin/super-admin
      * in the tenant may act on any provider; a provider may act on their OWN record (the
      * self-service dimension). Computed from the record's own tenant so it holds outside the
-     * Filament panel (the photo route resolves no ambient tenant). tenant_id/user_id are
-     * cast to int for the pdo_sqlsrv string-column comparison.
+     * Filament panel (the photo route resolves no ambient tenant).
      */
     public function isPhotoAccessibleBy(User $user): bool
     {
@@ -417,7 +416,8 @@ class Provider extends Model
      * Count of credentials that are expired or within their type's own
      * expiry_warning_days window — the single source of the credential-attention
      * threshold, shared by the compliance sweep, the stats widget, and the detail-page
-     * dot. expires_at is a date cast, so it's read via getRawOriginal (dblib-safe).
+     * dot. expires_at is read via getRawOriginal so the comparison stays on the stored
+     * date string rather than round-tripping through the cast.
      */
     public function credentialAlertCount(): int
     {

@@ -140,7 +140,7 @@ class DisciplineSpecialtyTest extends FeatureTest
 
     private function legacyCredential(Provider $provider, CredentialDocumentType $legacy): ProviderCredential
     {
-        // Null expires_at — local FreeTDS can't read populated SQL Server date columns.
+        // Null expires_at — this case is about discipline/specialty wiring, not expiry.
         return ProviderCredential::create([
             'provider_id' => $provider->id,
             'document_type_id' => $legacy->id,

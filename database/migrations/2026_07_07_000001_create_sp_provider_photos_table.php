@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Provider profile photos stored as BLOBs in Azure SQL (VARBINARY(MAX)), the same
+ * Provider profile photos stored as BLOBs in the database (bytea), the same
  * mechanism as credential attachments — kept inside the database's HIPAA BAA boundary
  * rather than the filesystem or an object store.
  *
@@ -23,7 +23,7 @@ return new class extends Migration
         Schema::create('sp_provider_photos', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('provider_id');
-            $table->binary('content')->nullable(); // VARBINARY(MAX)
+            $table->binary('content')->nullable(); // bytea
             $table->string('mime_type');
             $table->unsignedBigInteger('file_size'); // bytes
             $table->unsignedBigInteger('updated_by_user_id')->nullable();

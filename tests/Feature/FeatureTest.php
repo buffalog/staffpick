@@ -23,8 +23,7 @@ class FeatureTest extends TestCase
      *
      * Tests used to mint these as 'existing'.rand(1, 10000).'@example.com'. The suite shares
      * ONE database that is never rolled back (see setUp below — migrate:fresh once per
-     * process, no RefreshDatabase, which is a documented pdo_sqlsrv deadlock landmine), and
-     * users.email is UNIQUE. Roughly a dozen tests drew from that 10,000-value space, so a
+     * process, no RefreshDatabase), and users.email is UNIQUE. Roughly a dozen tests drew from that 10,000-value space, so a
      * birthday collision blew up a random test on ~1% of runs.
      *
      * Worse, it was not stably random: Faker draws from PHP's global mt_rand, so ANY change

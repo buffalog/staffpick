@@ -87,8 +87,8 @@ class TierResponseScorer implements ProviderScorer
     }
 
     /**
-     * 1 for the referral-requested provider, else 0. Cast both sides — the pdo_sqlsrv
-     * driver returns FK columns as strings, so a strict === would miss the match on Railway.
+     * 1 for the referral-requested provider, else 0. Cast both sides so the strict compare
+     * cannot be defeated by an un-cast column read.
      */
     private function requestedRank(Provider $provider, IntakeRequest $case): int
     {
@@ -122,7 +122,8 @@ class TierResponseScorer implements ProviderScorer
      * rate for something that isn't their doing. Cold start (no resolved offers) is handled at
      * read in rateOf(): absent from the map => 1.0.
      *
-     * pdo_sqlsrv returns aggregates as STRINGS — cast every count to int before dividing.
+     * Aggregates belong to no model and so carry no cast — every count is cast to int
+     * before dividing.
      *
      * @param  Collection<int, Provider>  $eligible
      * @return array<int, float> provider id => response rate

@@ -29,10 +29,10 @@ class Plan extends Model
     ];
 
     /**
-     * pdo_sqlsrv returns integer and bit columns as PHP strings, so every int/bool column
-     * that is ever compared (especially with === / !==) must be cast. Without this,
-     * `max_users_per_tenant` reads back as the string "0" on SQL Server and its
-     * "0 = unlimited" sentinel check silently inverts.
+     * Explicit int/bool casts. Postgres hands these back as native PHP types, so they are
+     * no longer load-bearing the way they were under pdo_sqlsrv. They stay because the
+     * sentinel checks that read them — `max_users_per_tenant`'s "0 = unlimited" — are
+     * strict comparisons, and a declared cast is cheap insurance for them.
      *
      * @return array<string, string>
      */

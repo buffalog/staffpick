@@ -12,14 +12,7 @@ RUN apt-get update && apt-get install -y \
     libpng-dev libzip-dev libicu-dev libxml2-dev libexif-dev \
     libjpeg62-turbo-dev libfreetype6-dev libwebp-dev \
     libmagickwand-dev \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# Microsoft ODBC driver for SQL Server (required for pdo_sqlsrv)
-RUN curl -sSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg \
-    && curl -sSL https://packages.microsoft.com/config/debian/12/prod.list \
-        -o /etc/apt/sources.list.d/mssql-release.list \
-    && apt-get update \
-    && ACCEPT_EULA=Y apt-get install -y msodbcsql18 mssql-tools18 unixodbc-dev \
+    libpq-dev \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # PHP extensions
@@ -29,6 +22,8 @@ RUN docker-php-ext-install \
     intl \
     pcntl \
     pdo \
+    pdo_pgsql \
+    pgsql \
     sockets \
     xml \
     zip
@@ -41,10 +36,6 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
 # huge photos from OOM-killing the container the way a full GD decode would.
 RUN pecl install imagick \
     && docker-php-ext-enable imagick
-
-# sqlsrv and pdo_sqlsrv via PECL
-RUN pecl install sqlsrv pdo_sqlsrv \
-    && docker-php-ext-enable sqlsrv pdo_sqlsrv
 
 # Node.js 22 for Vite assets
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \

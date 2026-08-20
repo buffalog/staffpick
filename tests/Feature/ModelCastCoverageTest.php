@@ -9,10 +9,11 @@ use ReflectionClass;
 /**
  * Guard against the missing-$casts family of bugs.
  *
- * pdo_sqlsrv (Railway/CI) returns integer-family and bit columns as PHP *strings*, while
- * the local FreeTDS/dblib driver returns real ints. An un-cast attribute is therefore "0"
- * in production and 0 locally, so any strict comparison (===, !==, in_array(..., true))
- * or Eloquent pluck() against it silently misbehaves — and every test still passes locally.
+ * Under pdo_sqlsrv these casts were load-bearing: integer-family and bit columns came back
+ * as PHP *strings*, so an un-cast attribute broke every strict comparison in production
+ * while passing locally. pdo_pgsql returns native ints and bools, so that specific trap is
+ * gone — but the invariant is still worth asserting cheaply. pluck() bypasses casts
+ * regardless of driver, and a declared cast is what documents a column's intended PHP type.
  *
  * This has bitten us twice already:
  *   - TenantService: `max_users_per_tenant !== 0` skipped the "unlimited" sentinel (latent).
@@ -31,18 +32,24 @@ use ReflectionClass;
 class ModelCastCoverageTest extends FeatureTest
 {
     /**
-     * SQL Server type names that come back from pdo_sqlsrv as strings. Decimal/numeric and
-     * money columns are deliberately absent: they are not integer-family, the guard must not
-     * push them toward an integer cast, and their existing decimal:N casts stay as they are.
+     * Postgres internal type names, as Schema::getColumns() reports them — int8/int4/int2
+     * and bool, NOT the bigint/integer/smallint/boolean spellings. Getting this wrong makes
+     * the whole guard match nothing and pass vacuously, which is precisely what happened on
+     * the SQL Server -> Postgres swap: the list still held ['int','bigint','smallint',
+     * 'tinyint','bit'] and covered exactly zero columns. Hence the coverage assertion below.
+     *
+     * numeric/decimal and money columns are deliberately absent: they are not
+     * integer-family, the guard must not push them toward an integer cast, and their
+     * existing decimal:N casts stay as they are.
      *
      * @var array<int, string>
      */
-    private const STRINGY_TYPES = ['int', 'bigint', 'smallint', 'tinyint', 'bit'];
+    private const INTEGER_AND_BOOLEAN_TYPES = ['int8', 'int4', 'int2', 'bool'];
 
     /**
      * Deliberate per-column exemptions, as `Model::column => why`. Empty on purpose — every
      * integer/boolean column in the schema is currently cast. Add an entry here (with a
-     * reason) rather than silently widening STRINGY_TYPES.
+     * reason) rather than silently narrowing INTEGER_AND_BOOLEAN_TYPES.
      *
      * @var array<string, string>
      */
@@ -52,6 +59,7 @@ class ModelCastCoverageTest extends FeatureTest
     {
         $violations = [];
         $modelsChecked = 0;
+        $columnsChecked = 0;
 
         foreach ($this->eloquentModels() as $class) {
             $model = new $class;
@@ -67,9 +75,11 @@ class ModelCastCoverageTest extends FeatureTest
                 $name = $column['name'];
                 $type = strtolower($column['type_name'] ?? $column['type']);
 
-                if (! in_array($type, self::STRINGY_TYPES, true)) {
+                if (! in_array($type, self::INTEGER_AND_BOOLEAN_TYPES, true)) {
                     continue;
                 }
+
+                $columnsChecked++;
 
                 if (array_key_exists(class_basename($class).'::'.$name, self::EXEMPT)) {
                     continue;
@@ -81,13 +91,20 @@ class ModelCastCoverageTest extends FeatureTest
             }
         }
 
-        // Sanity check: if discovery silently returned nothing, the assertion below would
-        // pass vacuously and the guard would be worthless.
+        // Sanity checks: if discovery silently returned nothing, or if the type names stopped
+        // matching the engine's spelling, the assertion below would pass vacuously and the
+        // guard would be worthless. The second one is not hypothetical — see the note on
+        // INTEGER_AND_BOOLEAN_TYPES.
         $this->assertGreaterThan(50, $modelsChecked, 'Model discovery found suspiciously few models.');
+        $this->assertGreaterThan(200, $columnsChecked, sprintf(
+            'Only %d integer/boolean columns matched. INTEGER_AND_BOOLEAN_TYPES no longer '.
+            'matches how this database spells its types, so this guard is inspecting nothing.',
+            $columnsChecked,
+        ));
 
         $this->assertSame([], $violations, sprintf(
-            '%d integer/boolean column(s) are not cast on their model. On pdo_sqlsrv these read back as strings, '.
-            "so any === / !== / in_array(..., true) / pluck() against them breaks silently in production.\n\n%s\n\n".
+            '%d integer/boolean column(s) are not cast on their model, so pluck() and any '.
+            "=== / !== / in_array(..., true) against them can disagree with the model's type.\n\n%s\n\n".
             "Fix: add the column to the model's casts() (integer or boolean).",
             count($violations),
             implode("\n", $violations),

@@ -182,9 +182,8 @@ class ProviderProfileServiceTest extends FeatureTest
 
     public function test_resubmitting_updates_the_same_profile_without_duplicating_children(): void
     {
-        // Null expiry: re-reading a populated SQL Server date column via the local
-        // FreeTDS driver yields an unparseable format (see staffpick-sqlserver-testing
-        // memory). Railway's real pdo_sqlsrv is fine; the write path is covered above.
+        // Null expiry: this case is about not duplicating children on resubmit, and the
+        // populated-expiry write path is already covered above.
         $credentials = [
             ['document_type_id' => $this->documentTypeIds[0], 'file_path' => 'credentials/license.pdf', 'document_number' => 'PT-123', 'expires_at' => null],
         ];

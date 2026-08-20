@@ -18,9 +18,8 @@ use Throwable;
  * is auto-reactivated. Notifications go to tenant admins (bell + email + Slack) and
  * to the provider on their preferred channel.
  *
- * Selection stays in SQL (date-string comparisons) and the only place a date cast is
- * read is {@see formatExpiry()}, which is guarded — the local FreeTDS driver throws
- * on populated date columns, Railway's pdo_sqlsrv does not.
+ * Selection stays in SQL (date-string comparisons); {@see formatExpiry()} is the only
+ * place a date cast is read, and it falls back to the raw stored value.
  */
 class CredentialComplianceService
 {
@@ -159,8 +158,8 @@ class CredentialComplianceService
     }
 
     /**
-     * Format a credential's expiry. Reading the date cast throws on the local FreeTDS
-     * driver (Railway's pdo_sqlsrv is fine), so fall back to the raw stored value.
+     * Format a credential's expiry, falling back to the raw stored value if the date cast
+     * cannot be parsed.
      */
     private function formatExpiry(ProviderCredential $credential): string
     {
