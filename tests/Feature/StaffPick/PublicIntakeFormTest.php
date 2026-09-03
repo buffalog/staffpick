@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\StaffPick;
 
+use App\Filament\Dashboard\Resources\IntakeRequests\Pages\ListIntakeRequests;
 use App\Livewire\StaffPick\PublicIntakeForm;
 use App\Models\StaffPick\Discipline;
 use App\Models\StaffPick\IntakeRequest;
@@ -10,6 +11,7 @@ use App\Models\StaffPick\ReferralSource;
 use App\Models\StaffPick\Subject;
 use App\Models\Tenant;
 use App\Services\StaffPick\SlackNotificationService;
+use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
@@ -89,7 +91,7 @@ class PublicIntakeFormTest extends FeatureTest
             ]);
     }
 
-    public function test_a_valid_submission_creates_a_pending_intake_and_shows_the_reference(): void
+    public function test_a_valid_submission_creates_an_unmatched_intake_and_shows_the_reference(): void
     {
         $component = Livewire::test(PublicIntakeForm::class, ['token' => $this->source->intake_token])
             ->set('data', [
@@ -112,9 +114,51 @@ class PublicIntakeFormTest extends FeatureTest
             ->first();
 
         $this->assertNotNull($intake);
-        $this->assertSame('pending', $intake->status);
+        $this->assertSame(IntakeRequest::STATUS_UNMATCHED, $intake->status);
         $this->assertSame($this->tenant->id, (int) $intake->tenant_id);
         $component->assertSet('referenceNumber', $intake->reference_number);
+    }
+
+    /**
+     * The assertion none of the five status tests ever made.
+     *
+     * Every one of them asserted the VALUE the writer produced and stopped there, so all five
+     * stayed green for two months while a real referral was invisible: 'pending' is in none of
+     * ListIntakeRequests::STATUSES, so a submission never reached Pending Cases, the dashboard
+     * counts or the oldest-pending alert. It surfaced only on All Cases, which does not scope
+     * by status.
+     *
+     * This drives the whole path a referral source actually takes (public form -> submit ->
+     * staff opens Pending Cases) and asserts what a scheduler would observe.
+     */
+    public function test_a_publicly_submitted_referral_appears_on_pending_cases(): void
+    {
+        Livewire::test(PublicIntakeForm::class, ['token' => $this->source->intake_token])
+            ->set('data', [
+                'first_name' => 'Rowan',
+                'last_name' => 'Delacroix',
+                'address' => '340 US-1',
+                'city' => 'North Palm Beach',
+                'state' => 'FL',
+                'zip' => '33408',
+                'discipline_id' => $this->discipline->id,
+            ])
+            ->call('submit')
+            ->assertHasNoErrors()
+            ->assertSet('submitted', true);
+
+        $intake = IntakeRequest::withoutGlobalScopes()
+            ->where('referral_source_id', $this->source->id)
+            ->firstOrFail();
+
+        // Now look at it the way the scheduler does.
+        $this->actingAs($this->createTenantAdmin($this->tenant));
+        Filament::setCurrentPanel(Filament::getPanel('dashboard'));
+        Filament::setTenant($this->tenant);
+
+        Livewire::test(ListIntakeRequests::class)
+            ->assertOk()
+            ->assertCanSeeTableRecords([$intake]);
     }
 
     public function test_the_provider_language_options_come_from_sp_languages_ordered_by_name(): void

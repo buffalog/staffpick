@@ -21,9 +21,15 @@ use Illuminate\Support\Facades\Mail;
 use Throwable;
 
 /**
- * Turns a referral source's public intake submission into a pending IntakeRequest
+ * Turns a referral source's public intake submission into an unmatched IntakeRequest
  * (plus its Subject) and notifies staff and the referrer. The public Livewire
  * form is a thin UI over this service so the logic stays testable.
+ *
+ * The status MUST come from an IntakeRequest::STATUS_* constant. This used to write the
+ * literal 'pending', which the 2026-06-25 vocabulary remap retired: the migration rewrote
+ * existing rows but not this writer, so every public submission landed in a status that no
+ * case-list page, dashboard count or oldest-pending alert matches on. The write succeeded,
+ * nothing threw, and the referral was invisible everywhere but All Cases.
  *
  * Data contract (flat array, as the form collects it):
  *  - Subject: first_name, last_name, date_of_birth, gender, email, phone,
@@ -37,9 +43,6 @@ use Throwable;
  */
 class IntakeSubmissionService
 {
-    /** Crockford-style base32 without ambiguous chars (no I/O/0/1). */
-    private const REFERENCE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-
     public function __construct(
         private GeocodingService $geocoder,
         private TenantPermissionService $permissions,
@@ -56,11 +59,10 @@ class IntakeSubmissionService
 
             $intake = IntakeRequest::create([
                 'tenant_id' => $source->tenant_id,
-                'reference_number' => $this->generateReferenceNumber((int) $source->tenant_id),
                 'subject_id' => $subject->id,
                 'referral_source_id' => $source->id,
                 'discipline_id' => $data['discipline_id'] ?? null,
-                'status' => 'pending',
+                'status' => IntakeRequest::STATUS_UNMATCHED,
                 'visit_type' => $data['visit_type'] ?? null,
                 'frequency' => $data['frequency'] ?? null,
                 'start_date' => $data['start_date'] ?? null,
@@ -191,26 +193,6 @@ class IntakeSubmissionService
         $result = $this->geocoder->geocode($address);
 
         return [$result['lat'] ?? null, $result['lng'] ?? null];
-    }
-
-    /**
-     * A short, professional reference (R-XXXXXX) that does not leak intake volume.
-     * Uniqueness is checked per tenant; the alphabet excludes ambiguous glyphs.
-     */
-    public function generateReferenceNumber(int $tenantId): string
-    {
-        do {
-            $candidate = 'R-'.collect(range(1, 6))
-                ->map(fn (): string => self::REFERENCE_ALPHABET[random_int(0, strlen(self::REFERENCE_ALPHABET) - 1)])
-                ->implode('');
-        } while (
-            IntakeRequest::withoutGlobalScopes()
-                ->where('tenant_id', $tenantId)
-                ->where('reference_number', $candidate)
-                ->exists()
-        );
-
-        return $candidate;
     }
 
     /**

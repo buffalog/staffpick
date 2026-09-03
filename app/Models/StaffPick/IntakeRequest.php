@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use InvalidArgumentException;
 
 class IntakeRequest extends Model implements BearsTenantPhi
 {
@@ -45,6 +46,27 @@ class IntakeRequest extends Model implements BearsTenantPhi
 
     public const STATUS_CANCELLED = 'cancelled';
 
+    /**
+     * The complete vocabulary, in pipeline order. Kept as an array so both the write-time
+     * guard in booted() and the consumers that filter on status have one list to read;
+     * IntakeStatusVocabularyTest asserts it stays in step with the STATUS_* constants.
+     *
+     * @var array<int, string>
+     */
+    public const STATUSES = [
+        self::STATUS_DRAFT,
+        self::STATUS_UNMATCHED,
+        self::STATUS_MATCH_MADE,
+        self::STATUS_MATCH_SENT,
+        self::STATUS_MATCH_ACCEPTED,
+        self::STATUS_MATCHED,
+        self::STATUS_MATCH_REJECTED,
+        self::STATUS_ESCALATED,
+        self::STATUS_ON_HOLD,
+        self::STATUS_COMPLETED,
+        self::STATUS_CANCELLED,
+    ];
+
     // Why a case escalated. POOL_EXHAUSTED is the genuine "we tried everyone" case; the
     // rest are structural — a missing prerequisite no amount of provider availability fixes.
     public const ESCALATION_POOL_EXHAUSTED = 'pool_exhausted';
@@ -54,6 +76,9 @@ class IntakeRequest extends Model implements BearsTenantPhi
     public const ESCALATION_NO_DISCIPLINE = 'no_discipline';
 
     public const ESCALATION_NO_SUBJECT = 'no_subject';
+
+    /** Crockford-style base32 for reference numbers, minus the ambiguous glyphs I/O/0/1. */
+    private const REFERENCE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
     protected $fillable = [
         'tenant_id',
@@ -108,6 +133,83 @@ class IntakeRequest extends Model implements BearsTenantPhi
             self::ESCALATION_NO_SUBJECT => __('No subject on file — add the subject, then re-run matching.'),
             default => __('Provider pool exhausted — manual intervention required.'),
         };
+    }
+
+    /**
+     * Every intake gets a human-readable reference, whatever created it.
+     *
+     * This lives on the model rather than in IntakeSubmissionService because the reference is
+     * an invariant of the record, not of one writer. Only the public and Slack paths called the
+     * generator; the staff Filament form did not, so a staff-created case carried NULL and then
+     * rendered as a blank Reference column, a blank board card, an ICS UID of "case-{id}", an em
+     * dash on the Slack card, and three mail subject lines ending in a bare colon.
+     *
+     * Registered in booted(), which runs after bootTraits(), so BelongsToTenant's own creating
+     * listener has already resolved and stamped tenant_id (or thrown) by the time this fires.
+     * That ordering is what makes the per-tenant uniqueness check below meaningful.
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (self $intake): void {
+            if (blank($intake->reference_number)) {
+                $intake->reference_number = self::generateReferenceNumber((int) $intake->tenant_id);
+            }
+        });
+
+        // Fail closed on a status outside the vocabulary.
+        //
+        // `status` is a plain varchar, so an unrecognised value used to save cleanly and then
+        // vanish: every case-list page, dashboard count and alert filters on the defined set,
+        // so the row surfaced only on All Cases. That is how public referrals sat in 'pending'
+        // for two months after the 2026-06-25 remap retired it, with five green tests.
+        //
+        // This mirrors BelongsToTenant's write guard, and for the same reason: silence is the
+        // dangerous outcome. A referral nobody can see is worse than a 500 at the write.
+        //
+        // Guarded on isDirty() so a legacy row holding a retired value can still be updated
+        // (or corrected) rather than becoming permanently unsaveable. Absent on create, the
+        // column default applies, which the same-day migration set to a real status.
+        static::saving(function (self $intake): void {
+            if (! $intake->isDirty('status')) {
+                return;
+            }
+
+            if (! in_array($intake->status, self::STATUSES, true)) {
+                throw new InvalidArgumentException(sprintf(
+                    "'%s' is not an IntakeRequest status. Use one of the STATUS_* constants: %s. ".
+                    'An unrecognised value saves without error and is then invisible to every '.
+                    'case-list page, dashboard count and alert.',
+                    (string) $intake->status,
+                    implode(', ', self::STATUSES),
+                ));
+            }
+        });
+    }
+
+    /**
+     * A short, professional reference (R-XXXXXX) that does not leak intake volume.
+     *
+     * Deliberately more conservative than sp_intake_requests_reference_unique, whose predicate
+     * is `WHERE reference_number IS NOT NULL AND deleted_at IS NULL`: withoutGlobalScopes()
+     * drops the SoftDeletes scope as well as the tenant scope, so this also refuses a candidate
+     * held by a soft-deleted row that the index would in fact permit. Erring that way can only
+     * cost an extra loop; erring the other way would hand back a value the index rejects.
+     * The index remains the arbiter under concurrency, which this loop cannot see.
+     */
+    public static function generateReferenceNumber(int $tenantId): string
+    {
+        do {
+            $candidate = 'R-'.collect(range(1, 6))
+                ->map(fn (): string => self::REFERENCE_ALPHABET[random_int(0, strlen(self::REFERENCE_ALPHABET) - 1)])
+                ->implode('');
+        } while (
+            self::withoutGlobalScopes()
+                ->where('tenant_id', $tenantId)
+                ->where('reference_number', $candidate)
+                ->exists()
+        );
+
+        return $candidate;
     }
 
     protected function casts(): array

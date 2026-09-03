@@ -52,7 +52,7 @@ class SchedulerNoClinicianAlertTest extends FeatureTest
         ]);
         $intake = IntakeRequest::factory()->create([
             'tenant_id' => $this->tenant->id,
-            'status' => 'no_clinicians_available',
+            'status' => IntakeRequest::STATUS_ESCALATED,
             'reference_number' => 'R-NOCLIN1',
             'discipline_id' => $discipline->id,
             'referral_source_id' => $source->id,

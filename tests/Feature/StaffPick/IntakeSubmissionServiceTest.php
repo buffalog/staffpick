@@ -79,11 +79,11 @@ class IntakeSubmissionServiceTest extends FeatureTest
         ], $overrides);
     }
 
-    public function test_submit_creates_a_pending_intake_attributed_to_the_source(): void
+    public function test_submit_creates_an_unmatched_intake_attributed_to_the_source(): void
     {
         $intake = $this->service()->submit($this->source, $this->intakeData());
 
-        $this->assertSame('pending', $intake->status);
+        $this->assertSame(IntakeRequest::STATUS_UNMATCHED, $intake->status);
         $this->assertSame($this->tenant->id, $intake->tenant_id);
         $this->assertSame($this->source->id, $intake->referral_source_id);
         $this->assertSame($this->discipline->id, $intake->discipline_id);
@@ -170,8 +170,6 @@ class IntakeSubmissionServiceTest extends FeatureTest
 
     public function test_reference_numbers_are_unique_within_a_tenant(): void
     {
-        $service = $this->service();
-
         $subject = Subject::create([
             'tenant_id' => $this->tenant->id,
             'first_name' => 'Ref',
@@ -179,15 +177,15 @@ class IntakeSubmissionServiceTest extends FeatureTest
             'is_active' => true,
         ]);
 
-        $a = $service->generateReferenceNumber((int) $this->tenant->id);
+        $a = IntakeRequest::generateReferenceNumber((int) $this->tenant->id);
         IntakeRequest::create([
             'tenant_id' => $this->tenant->id,
             'reference_number' => $a,
             'subject_id' => $subject->id,
-            'status' => 'pending',
+            'status' => IntakeRequest::STATUS_UNMATCHED,
         ]);
 
-        $b = $service->generateReferenceNumber((int) $this->tenant->id);
+        $b = IntakeRequest::generateReferenceNumber((int) $this->tenant->id);
 
         $this->assertNotSame($a, $b);
     }

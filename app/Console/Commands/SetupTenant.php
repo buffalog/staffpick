@@ -65,6 +65,20 @@ class SetupTenant extends Command
             return self::FAILURE;
         }
 
+        // Seeded by migration 2026_06_22_000001_seed_sp_tenant_roles. Checked up front so a
+        // half-migrated database fails with a hint instead of an InvalidArgumentException from
+        // deep inside assignTenantUserRoles().
+        $spAdminRoleExists = Role::query()
+            ->where('name', TenancyPermissionConstants::ROLE_SP_ADMIN)
+            ->where('is_tenant_role', true)
+            ->exists();
+
+        if (! $spAdminRoleExists) {
+            $this->error("The '".TenancyPermissionConstants::ROLE_SP_ADMIN."' tenant role was not found. Run `php artisan migrate --force` first.");
+
+            return self::FAILURE;
+        }
+
         // 1. Admin user.
         $newPassword = null;
         $user = User::query()->where('email', $email)->first();
@@ -107,13 +121,23 @@ class SetupTenant extends Command
             ? "Created tenant '{$tenant->name}' (/{$tenant->uuid})."
             : "Found existing tenant '{$tenant->name}' (/{$tenant->uuid}).");
 
-        // 3. Associate the user with the tenant and grant the tenant admin role.
+        // 3. Associate the user with the tenant and grant the tenant roles.
+        //
+        // BOTH roles are required and they do separate work. TENANT_CREATOR_ROLE (the SaaSykit
+        // tenancy 'admin') carries the tenancy:* permissions. ROLE_SP_ADMIN is what every
+        // StaffPick gate actually reads: SpRoleAccess::isAdmin(), isAdminOrStaff(),
+        // canEditProviders() and canSeeAllCredentials() all resolve through hasSpRole(), which
+        // knows nothing about the tenancy role. Provisioning only the tenancy role produced an
+        // "admin" who reached the panel and then failed every StaffPick gate in it, landing on a
+        // nav containing Dashboard and Help and nothing else.
+        //
+        // assignTenantUserRoles() REPLACES the pivot's roles, so both must be passed in one
+        // call; two singular calls would leave only the second.
         $tenant->users()->syncWithoutDetaching([$user->id]);
-        $tenantPermissionService->assignTenantUserRole(
-            $tenant,
-            $user,
+        $tenantPermissionService->assignTenantUserRoles($tenant, $user, [
             TenancyPermissionConstants::TENANT_CREATOR_ROLE,
-        );
+            TenancyPermissionConstants::ROLE_SP_ADMIN,
+        ]);
 
         // 4. Ensure the tenant has a config row (default entity labels + matching
         //    engine defaults come from the column defaults).
