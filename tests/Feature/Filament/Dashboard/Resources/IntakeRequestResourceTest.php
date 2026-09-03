@@ -99,6 +99,58 @@ class IntakeRequestResourceTest extends FeatureTest
         ]);
     }
 
+    /**
+     * A staff-created case must carry a reference number.
+     *
+     * The form field is an optional bare TextInput with no default, and CreateIntakeRequest
+     * mutates only the status, so a staff-created case used to persist with NULL here while
+     * the public and Slack paths (which called the generator explicitly) did not. NULL renders
+     * as a blank Reference column, a blank board card, an ICS UID of "case-{id}", an em dash on
+     * the Slack card, and three mail subject lines ending in a bare colon.
+     *
+     * The fix is a creating hook on the model, so this asserts the observable result of leaving
+     * the field empty rather than that any particular writer remembered to call the generator.
+     */
+    public function test_a_staff_created_case_gets_a_reference_number_without_typing_one(): void
+    {
+        $tenant = $this->createTenant();
+        $this->actAsTenant($tenant);
+
+        $subject = Subject::factory()->create(['tenant_id' => $tenant->id]);
+
+        Livewire::test(CreateIntakeRequest::class)
+            ->fillForm(['subject_id' => $subject->id]) // reference_number deliberately left blank
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $case = IntakeRequest::where('subject_id', $subject->id)->firstOrFail();
+
+        $this->assertMatchesRegularExpression(
+            '/^R-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/',
+            (string) $case->reference_number,
+            'A case created through the staff form carries no usable reference number.',
+        );
+    }
+
+    /** A reference the user did type must survive; the hook fills blanks, it does not overwrite. */
+    public function test_an_explicit_reference_number_is_not_overwritten(): void
+    {
+        $tenant = $this->createTenant();
+        $this->actAsTenant($tenant);
+
+        $subject = Subject::factory()->create(['tenant_id' => $tenant->id]);
+
+        Livewire::test(CreateIntakeRequest::class)
+            ->fillForm(['subject_id' => $subject->id, 'reference_number' => 'EMR-4417'])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame(
+            'EMR-4417',
+            IntakeRequest::where('subject_id', $subject->id)->firstOrFail()->reference_number,
+        );
+    }
+
     public function test_create_page_exposes_actions_as_header_actions(): void
     {
         $tenant = $this->createTenant();

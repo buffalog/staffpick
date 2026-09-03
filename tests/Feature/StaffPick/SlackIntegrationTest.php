@@ -89,7 +89,7 @@ class SlackIntegrationTest extends FeatureTest
             'subject_id' => $subject->id,
             'referral_source_id' => $source->id,
             'discipline_id' => $this->discipline->id,
-            'status' => 'pending',
+            'status' => IntakeRequest::STATUS_UNMATCHED,
         ]);
 
         $this->service()->notifyIntakeReceived($intake);
@@ -116,7 +116,7 @@ class SlackIntegrationTest extends FeatureTest
             'reference_number' => 'R-NOPE12',
             'subject_id' => $subject->id,
             'discipline_id' => $this->discipline->id,
-            'status' => 'pending',
+            'status' => IntakeRequest::STATUS_UNMATCHED,
         ]);
 
         $this->service()->notifyIntakeReceived($intake);

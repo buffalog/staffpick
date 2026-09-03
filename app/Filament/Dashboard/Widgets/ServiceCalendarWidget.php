@@ -113,7 +113,7 @@ class ServiceCalendarWidget extends CalendarWidget
     {
         return IntakeRequest::query()
             ->where('tenant_id', Filament::getTenant()?->id)
-            ->where('status', 'matched')
+            ->where('status', IntakeRequest::STATUS_MATCHED)
             ->whereNotNull('evaluation_date');
     }
 

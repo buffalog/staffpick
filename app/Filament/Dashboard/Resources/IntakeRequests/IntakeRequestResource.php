@@ -39,17 +39,17 @@ class IntakeRequestResource extends Resource
     public static function statusOptions(): array
     {
         return [
-            'draft' => __('Draft'),
-            'unmatched' => __('Unmatched'),
-            'match_made' => __('Match Made'),
-            'match_sent' => __('Match Sent'),
-            'match_accepted' => __('Match Accepted'),
-            'matched' => __('Matched'),
-            'match_rejected' => __('Match Rejected'),
-            'escalated' => __('Escalated'),
-            'on_hold' => __('On Hold'),
-            'completed' => __('Completed'),
-            'cancelled' => __('Cancelled'),
+            IntakeRequest::STATUS_DRAFT => __('Draft'),
+            IntakeRequest::STATUS_UNMATCHED => __('Unmatched'),
+            IntakeRequest::STATUS_MATCH_MADE => __('Match Made'),
+            IntakeRequest::STATUS_MATCH_SENT => __('Match Sent'),
+            IntakeRequest::STATUS_MATCH_ACCEPTED => __('Match Accepted'),
+            IntakeRequest::STATUS_MATCHED => __('Matched'),
+            IntakeRequest::STATUS_MATCH_REJECTED => __('Match Rejected'),
+            IntakeRequest::STATUS_ESCALATED => __('Escalated'),
+            IntakeRequest::STATUS_ON_HOLD => __('On Hold'),
+            IntakeRequest::STATUS_COMPLETED => __('Completed'),
+            IntakeRequest::STATUS_CANCELLED => __('Cancelled'),
         ];
     }
 

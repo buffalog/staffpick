@@ -17,10 +17,6 @@ use Illuminate\Support\Str;
  */
 class SlackInboundService
 {
-    public function __construct(
-        private IntakeSubmissionService $intakeSubmissions,
-    ) {}
-
     /**
      * Create a draft intake from an inbound message, or return null if the message
      * doesn't contain the trigger keyword.
@@ -43,9 +39,8 @@ class SlackInboundService
 
             return IntakeRequest::create([
                 'tenant_id' => $tenantId,
-                'reference_number' => $this->intakeSubmissions->generateReferenceNumber($tenantId),
                 'subject_id' => $subject->id,
-                'status' => 'draft',
+                'status' => IntakeRequest::STATUS_DRAFT,
                 'slack_channel_id' => $channel,
                 'notes' => $text,
             ]);

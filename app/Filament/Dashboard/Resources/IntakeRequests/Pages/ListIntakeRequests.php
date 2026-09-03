@@ -6,6 +6,7 @@ use App\Filament\Dashboard\Resources\IntakeRequests\Concerns\AssignsMatchedProvi
 use App\Filament\Dashboard\Resources\IntakeRequests\IntakeRequestResource;
 use App\Filament\Dashboard\Resources\IntakeRequests\Tables\IntakeRequestsTable;
 use App\Filament\Dashboard\Support\HelpHeaderAction;
+use App\Models\StaffPick\IntakeRequest;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -21,7 +22,11 @@ class ListIntakeRequests extends ListRecords
     protected static string $resource = IntakeRequestResource::class;
 
     /** In-flight statuses shown in the dispatch queue (pre-matched). */
-    public const STATUSES = ['unmatched', 'match_sent', 'escalated'];
+    public const STATUSES = [
+        IntakeRequest::STATUS_UNMATCHED,
+        IntakeRequest::STATUS_MATCH_SENT,
+        IntakeRequest::STATUS_ESCALATED,
+    ];
 
     public function getTitle(): string
     {

@@ -88,7 +88,7 @@ class StandalonePageStylingTest extends FeatureTest
             'tenant_id' => $this->tenant->id,
             'subject_id' => Subject::factory()->create(['tenant_id' => $this->tenant->id])->id,
             'discipline_id' => $this->discipline->id,
-            'status' => 'offered',
+            'status' => IntakeRequest::STATUS_MATCH_SENT,
         ]);
 
         return AssignmentOffer::create([

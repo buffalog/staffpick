@@ -5,6 +5,7 @@ namespace App\Filament\Dashboard\Resources\IntakeRequests\Pages;
 use App\Filament\Dashboard\Resources\IntakeRequests\IntakeRequestResource;
 use App\Filament\Dashboard\Resources\IntakeRequests\Tables\IntakeRequestsTable;
 use App\Filament\Dashboard\Support\HelpHeaderAction;
+use App\Models\StaffPick\IntakeRequest;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -16,7 +17,7 @@ class Cases extends ListRecords
 {
     protected static string $resource = IntakeRequestResource::class;
 
-    public const STATUSES = ['matched'];
+    public const STATUSES = [IntakeRequest::STATUS_MATCHED];
 
     public function getTitle(): string
     {

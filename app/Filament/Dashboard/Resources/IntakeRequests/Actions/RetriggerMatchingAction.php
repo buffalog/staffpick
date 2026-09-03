@@ -23,7 +23,7 @@ class RetriggerMatchingAction
             ->label(__('Force Match'))
             ->icon(Heroicon::OutlinedArrowPath)
             ->color('warning')
-            ->visible(fn (IntakeRequest $record): bool => $record->status === 'escalated')
+            ->visible(fn (IntakeRequest $record): bool => $record->status === IntakeRequest::STATUS_ESCALATED)
             ->requiresConfirmation()
             ->modalDescription(__('Re-runs matching with relaxed criteria to reach providers outside the normal eligible pool.'))
             ->action(function (IntakeRequest $record): void {

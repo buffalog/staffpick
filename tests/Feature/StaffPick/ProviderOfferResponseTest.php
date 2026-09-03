@@ -56,7 +56,7 @@ class ProviderOfferResponseTest extends FeatureTest
             'tenant_id' => $this->tenant->id,
             'subject_id' => $subject->id,
             'discipline_id' => $this->discipline->id,
-            'status' => 'offered',
+            'status' => IntakeRequest::STATUS_MATCH_SENT,
             'start_date' => null,
         ]);
 
