@@ -2,6 +2,7 @@
 
 namespace App\Filament\Dashboard\Widgets;
 
+use App\Filament\Concerns\LogsRecordList;
 use App\Filament\Dashboard\Resources\IntakeRequests\IntakeRequestResource;
 use App\Filament\Dashboard\Support\SpRoleAccess;
 use App\Models\StaffPick\IntakeRequest;
@@ -28,6 +29,8 @@ use Illuminate\Database\Eloquent\Builder;
  */
 class ServiceCalendarWidget extends CalendarWidget
 {
+    use LogsRecordList;
+
     protected CalendarViewType $calendarView = CalendarViewType::DayGridMonth;
 
     protected bool $eventClickEnabled = true;
@@ -59,10 +62,21 @@ class ServiceCalendarWidget extends CalendarWidget
      */
     protected function getEvents(FetchInfo $info): array
     {
-        return $this->activeScheduledCases()
+        $cases = $this->activeScheduledCases()
             ->whereBetween('evaluation_date', [$info->start, $info->end])
             ->with(['subject', 'leadClinician'])
-            ->get()
+            ->get();
+
+        // caseTitle() puts the patient's full name in the event title, so every fetched window
+        // is a disclosure. The window bounds go in the context: "saw these patients for the week
+        // of X" is the question an incident review actually asks of a calendar.
+        $this->logListedRecords($cases, [
+            'scope' => 'calendar_events',
+            'window_start' => (string) $info->start,
+            'window_end' => (string) $info->end,
+        ]);
+
+        return $cases
             ->map(fn (IntakeRequest $case): CalendarEvent => CalendarEvent::make($case)
                 ->title($this->caseTitle($case))
                 ->start($case->evaluation_date)

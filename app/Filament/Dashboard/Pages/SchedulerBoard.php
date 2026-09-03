@@ -2,6 +2,7 @@
 
 namespace App\Filament\Dashboard\Pages;
 
+use App\Filament\Concerns\LogsRecordList;
 use App\Filament\Dashboard\Support\HelpHeaderAction;
 use App\Filament\Dashboard\Support\SpRoleAccess;
 use App\Models\StaffPick\IntakeRequest;
@@ -29,6 +30,11 @@ use Illuminate\Support\Collection;
  */
 class SchedulerBoard extends Page
 {
+    use LogsRecordList;
+
+    /** @var array{board: array<string, Collection<int, IntakeRequest>>, needs: array{escalated: Collection<int, IntakeRequest>, cancelled: Collection<int, IntakeRequest>}}|null */
+    private ?array $renderedCases = null;
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedViewColumns;
 
     protected static ?string $slug = 'board';
@@ -110,6 +116,26 @@ class SchedulerBoard extends Page
      */
     public function getBoard(): array
     {
+        return $this->renderedCases()['board'];
+    }
+
+    /**
+     * Both halves of the board, built once per render.
+     *
+     * The blade calls getBoard() and getNeedsAttention() separately, but they are one screen and
+     * one disclosure: board-card.blade.php renders a patient name in both. Loading them through
+     * a single memoized call is what lets the 'listed' audit event name every patient actually
+     * on screen instead of only the ones above the fold, and it drops the repeat queries the two
+     * separate accessors used to issue.
+     *
+     * @return array{board: array<string, Collection<int, IntakeRequest>>, needs: array{escalated: Collection<int, IntakeRequest>, cancelled: Collection<int, IntakeRequest>}}
+     */
+    private function renderedCases(): array
+    {
+        if ($this->renderedCases !== null) {
+            return $this->renderedCases;
+        }
+
         $grouped = IntakeRequest::query()
             ->where('tenant_id', Filament::getTenant()?->id)
             ->whereIn('status', array_keys(self::COLUMNS))
@@ -129,7 +155,26 @@ class SchedulerBoard extends Page
             $board[$status] = $grouped->get($status, collect());
         }
 
-        return $board;
+        $load = fn (string $status): Collection => IntakeRequest::query()
+            ->where('tenant_id', Filament::getTenant()?->id)
+            ->where('status', $status)
+            ->with(['subject', 'referralSource', 'discipline', 'leadClinician'])
+            ->orderByDesc('updated_at')
+            ->get();
+
+        $needs = [
+            'escalated' => $load(IntakeRequest::STATUS_ESCALATED),
+            'cancelled' => $load(IntakeRequest::STATUS_CANCELLED),
+        ];
+
+        $this->renderedCases = ['board' => $board, 'needs' => $needs];
+
+        $this->logListedRecords(
+            collect($board)->flatten()->merge($needs['escalated'])->merge($needs['cancelled']),
+            ['scope' => 'board+needs_attention'],
+        );
+
+        return $this->renderedCases;
     }
 
     /**
@@ -139,17 +184,7 @@ class SchedulerBoard extends Page
      */
     public function getNeedsAttention(): array
     {
-        $load = fn (string $status): Collection => IntakeRequest::query()
-            ->where('tenant_id', Filament::getTenant()?->id)
-            ->where('status', $status)
-            ->with(['subject', 'referralSource', 'discipline', 'leadClinician'])
-            ->orderByDesc('updated_at')
-            ->get();
-
-        return [
-            'escalated' => $load('escalated'),
-            'cancelled' => $load('cancelled'),
-        ];
+        return $this->renderedCases()['needs'];
     }
 
     /**

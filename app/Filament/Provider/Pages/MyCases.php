@@ -2,6 +2,7 @@
 
 namespace App\Filament\Provider\Pages;
 
+use App\Filament\Concerns\LogsTableRecordList;
 use App\Filament\Dashboard\Resources\IntakeRequests\IntakeRequestResource;
 use App\Models\StaffPick\Assignment;
 use App\Models\StaffPick\IntakeRequest;
@@ -29,6 +30,7 @@ use Illuminate\Database\Eloquent\Builder;
 class MyCases extends Page implements HasTable
 {
     use InteractsWithTable;
+    use LogsTableRecordList;
 
     protected static ?string $slug = 'my-cases';
 

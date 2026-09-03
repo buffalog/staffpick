@@ -2,6 +2,7 @@
 
 namespace App\Filament\Provider\Pages;
 
+use App\Filament\Concerns\LogsTableRecordList;
 use App\Filament\Dashboard\Resources\IntakeRequests\IntakeRequestResource;
 use App\Filament\Provider\Widgets\ProviderStatsWidget;
 use App\Models\StaffPick\Assignment;
@@ -30,6 +31,7 @@ use Illuminate\Database\Eloquent\Builder;
 class ProviderHome extends Page implements HasTable
 {
     use InteractsWithTable;
+    use LogsTableRecordList;
 
     protected static ?string $slug = 'dashboard';
 
