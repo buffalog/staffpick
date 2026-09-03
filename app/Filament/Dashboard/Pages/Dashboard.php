@@ -2,9 +2,11 @@
 
 namespace App\Filament\Dashboard\Pages;
 
+use App\Constants\TenancyPermissionConstants;
 use App\Filament\Dashboard\Resources\IntakeRequests\IntakeRequestResource;
 use App\Filament\Dashboard\Resources\Providers\ProviderResource;
 use App\Filament\Dashboard\Resources\ReferralSources\ReferralSourceResource;
+use App\Filament\Dashboard\Support\SpRoleAccess;
 use App\Models\StaffPick\IntakeRequest;
 use App\Models\StaffPick\Provider;
 use App\Models\StaffPick\ProviderCredential;
@@ -30,6 +32,76 @@ class Dashboard extends BaseDashboard
     public const COMPLETED = ['completed', 'cancelled', 'on_hold'];
 
     protected string $view = 'filament.dashboard.pages.staff-dashboard';
+
+    /**
+     * Staff only. Everything on this page is tenant-wide — the banner names the oldest
+     * pending case's subject, the roster names every provider — so a provider or referrer
+     * seeing it is a minimum-necessary breach, not a cosmetic one. Every other page in this
+     * panel already gates this way; this one is the panel's landing route, so it was missed.
+     */
+    public static function canAccess(): bool
+    {
+        return SpRoleAccess::isAdminOrStaff();
+    }
+
+    /**
+     * Replaces the CanAuthorizeAccess trait's flat abort(403) so a non-staff user who lands
+     * here (bookmark, tenant switcher, stale link) is sent to the portal they actually belong
+     * in. Anyone with nowhere better to go still 403s, and the trait's untouched
+     * hydrateCanAuthorizeAccess() keeps 403ing on every later Livewire request.
+     */
+    public function mountCanAuthorizeAccess(): void
+    {
+        if (static::canAccess()) {
+            return;
+        }
+
+        $home = $this->portalHomeUrl();
+
+        abort_if($home === null, 403);
+
+        $this->redirect($home);
+    }
+
+    /**
+     * Where a non-staff member of this tenant belongs: the provider roster for sp_hr (which
+     * has no portal of its own but works out of this panel), their own portal for a provider
+     * or referrer, or the role picker if they hold no SP role yet. Precedence mirrors
+     * {@see User::defaultSpPanel()}, which routes people here in the first place. Null only
+     * when there is no resolved tenant or user.
+     */
+    private function portalHomeUrl(): ?string
+    {
+        $tenant = Filament::getTenant();
+        $user = auth()->user();
+
+        if (! $tenant instanceof Tenant || $user === null) {
+            return null;
+        }
+
+        $roles = $user->spRolesForTenant($tenant->id);
+
+        if ($roles === []) {
+            return RoleSelection::getUrl();
+        }
+
+        // sp_hr: staff-side but not isAdminOrStaff, so this page is closed to them. The
+        // provider roster is the one staff surface they do hold (SpRoleAccess::canEditProviders).
+        if (SpRoleAccess::canEditProviders()) {
+            return ProviderResource::getUrl('index');
+        }
+
+        foreach ([
+            'provider' => TenancyPermissionConstants::ROLE_SP_PROVIDER,
+            'referrer' => TenancyPermissionConstants::ROLE_SP_REFERRER,
+        ] as $panel => $role) {
+            if (in_array($role, $roles, true)) {
+                return route("filament.{$panel}.pages.dashboard", ['tenant' => $tenant->uuid]);
+            }
+        }
+
+        return null;
+    }
 
     /** No header/footer widgets — the custom view renders everything inline. */
     public function getWidgets(): array
