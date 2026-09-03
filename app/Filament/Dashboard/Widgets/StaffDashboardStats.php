@@ -4,6 +4,7 @@ namespace App\Filament\Dashboard\Widgets;
 
 use App\Filament\Dashboard\Pages\Dashboard;
 use App\Filament\Dashboard\Resources\IntakeRequests\IntakeRequestResource;
+use App\Filament\Dashboard\Support\SpRoleAccess;
 use App\Models\StaffPick\IntakeRequest;
 use App\Models\Tenant;
 use Filament\Facades\Filament;
@@ -17,6 +18,16 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 class StaffDashboardStats extends BaseWidget
 {
     protected ?string $pollingInterval = null;
+
+    /**
+     * Matches the Dashboard page that embeds it. Filament only enforces this on hydrate, so
+     * the page gate is what stops the initial render — this closes the Livewire update
+     * endpoint behind it. Same gate as the other staff widgets in this panel.
+     */
+    public static function canView(): bool
+    {
+        return SpRoleAccess::isAdminOrStaff();
+    }
 
     protected function getStats(): array
     {
