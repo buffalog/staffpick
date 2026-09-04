@@ -166,6 +166,12 @@ class AuditEventResource extends Resource
                 SelectFilter::make('auditable_type')
                     ->label(__('Record type'))
                     ->options(collect(self::AUDITABLE_TYPES)->mapWithKeys(fn (string $c): array => [$c => class_basename($c)])->all()),
+                // One control, both halves of the trail. subject_id is a scalar and is NULL on
+                // every 'listed' row (a list discloses many patients at once), so filtering on it
+                // alone answered "this patient's complete access history" with single-record
+                // views only, silently omitting every time they appeared in a list. The second
+                // clause is a jsonb containment probe against context->subject_ids, served by
+                // sp_audit_events_context_gin.
                 Filter::make('subject')
                     ->schema([
                         TextInput::make('subject_id')
@@ -174,7 +180,11 @@ class AuditEventResource extends Resource
                     ])
                     ->query(fn (Builder $query, array $data): Builder => $query->when(
                         filled($data['subject_id'] ?? null),
-                        fn (Builder $q): Builder => $q->where('subject_id', $data['subject_id']),
+                        fn (Builder $q): Builder => $q->where(
+                            fn (Builder $inner): Builder => $inner
+                                ->where('subject_id', $data['subject_id'])
+                                ->orWhereRaw('context @> ?', [json_encode(['subject_ids' => [(int) $data['subject_id']]])]),
+                        ),
                     )),
                 Filter::make('occurred_at')
                     ->schema([
