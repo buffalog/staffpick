@@ -22,7 +22,7 @@ jobs:
       postgres:
         image: postgres:18
         env:
-          POSTGRES_PASSWORD: StaffPick_CI_2026!
+          POSTGRES_PASSWORD: ${{ secrets.CI_DB_PASSWORD }}
           POSTGRES_DB: staffpick
         ports:
           - 5432:5432
@@ -30,8 +30,11 @@ jobs:
           --health-cmd pg_isready --health-interval 10s
           --health-timeout 5s --health-retries 5
 
+    # Inherited by every step, and Laravel's env repository is immutable
+    # (Env::getRepository() builds with ->immutable()), so this real environment variable
+    # takes precedence over whatever DB_PASSWORD sits in .env.testing.
     env:
-      DB_PASSWORD: "StaffPick_CI_2026!"
+      DB_PASSWORD: ${{ secrets.CI_DB_PASSWORD }}
 
     steps:
       - uses: actions/checkout@v4
@@ -67,8 +70,15 @@ jobs:
             -e 's#^DB_PORT=.*#DB_PORT=5432#' \
             -e 's#^DB_DATABASE=.*#DB_DATABASE=staffpick#' \
             -e 's#^DB_USERNAME=.*#DB_USERNAME=postgres#' \
-            -e 's#^DB_PASSWORD=.*#DB_PASSWORD=StaffPick_CI_2026!#' \
             .env.testing
+          # The password is rewritten separately, and deliberately not with sed: the value is a
+          # secret chosen outside this file, and sed would interpret '#' (the delimiter here),
+          # '&' and '\' inside it. Deleting the line and appending it with printf treats the
+          # value as literal text whatever it contains. It is also read from the job env rather
+          # than interpolated as a GitHub expression into a shell script, per GitHub's
+          # script-injection guidance.
+          sed -i '/^DB_PASSWORD=/d' .env.testing
+          printf 'DB_PASSWORD=%s\n' "$DB_PASSWORD" >> .env.testing
 
       - name: Build front-end assets
         run: |
