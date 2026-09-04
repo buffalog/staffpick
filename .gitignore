@@ -10,7 +10,13 @@
 /vendor
 .env
 .env.backup
+.env.local
 .env.production
+# Tracked today, listed here deliberately. Ignoring a file git already tracks has NO effect
+# until it is untracked, so this line does nothing on its own: it is here so that the day
+# .env.testing is removed from the index, it stays out. Untracking it is a separate decision
+# because the committed file is currently the local-setup path (see the PR that added this).
+.env.testing
 .phpunit.result.cache
 Homestead.json
 Homestead.yaml
