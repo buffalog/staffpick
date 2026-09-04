@@ -49,7 +49,11 @@ class AuditLoggingTest extends FeatureTest
         $this->assertNotNull($updated);
         $this->assertSame($subject->id, (int) $updated->subject_id);
         $this->assertSame($this->tenant->id, (int) $updated->tenant_id);
-        $this->assertSame(['old' => 'Alba', 'new' => 'Bianca'], $updated->context['changes']['first_name']);
+        // Asserted field by field, not as a whole array: context is jsonb now, and jsonb does
+        // not preserve key insertion order, so ['old' => ..., 'new' => ...] can come back the
+        // other way round. The order was never the thing under test.
+        $this->assertSame('Alba', $updated->context['changes']['first_name']['old']);
+        $this->assertSame('Bianca', $updated->context['changes']['first_name']['new']);
         // Exactly one update event added.
         $this->assertSame($creatingEvents + 1, $this->eventsFor(Subject::class, $subject->id)->count());
     }
