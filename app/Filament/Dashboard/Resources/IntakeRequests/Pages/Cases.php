@@ -2,6 +2,7 @@
 
 namespace App\Filament\Dashboard\Resources\IntakeRequests\Pages;
 
+use App\Filament\Concerns\LogsTableRecordList;
 use App\Filament\Dashboard\Resources\IntakeRequests\IntakeRequestResource;
 use App\Filament\Dashboard\Resources\IntakeRequests\Tables\IntakeRequestsTable;
 use App\Filament\Dashboard\Support\HelpHeaderAction;
@@ -15,6 +16,8 @@ use Illuminate\Database\Eloquent\Builder;
  */
 class Cases extends ListRecords
 {
+    use LogsTableRecordList;
+
     protected static string $resource = IntakeRequestResource::class;
 
     public const STATUSES = [IntakeRequest::STATUS_MATCHED];

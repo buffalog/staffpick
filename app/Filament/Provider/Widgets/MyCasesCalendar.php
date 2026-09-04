@@ -2,6 +2,7 @@
 
 namespace App\Filament\Provider\Widgets;
 
+use App\Filament\Concerns\LogsRecordList;
 use App\Filament\Dashboard\Resources\IntakeRequests\IntakeRequestResource;
 use App\Models\StaffPick\Assignment;
 use App\Models\StaffPick\IntakeRequest;
@@ -20,6 +21,8 @@ use Illuminate\Support\Carbon;
  */
 class MyCasesCalendar extends Widget
 {
+    use LogsRecordList;
+
     protected string $view = 'filament.provider.widgets.my-cases-calendar';
 
     protected int|string|array $columnSpan = 'full';
@@ -45,14 +48,20 @@ class MyCasesCalendar extends Widget
 
         $today = now()->startOfDay();
 
-        return IntakeRequest::query()
+        $cases = IntakeRequest::query()
             ->where('tenant_id', Filament::getTenant()?->id)
             ->whereNotNull('evaluation_date')
             ->whereHas('assignments', fn (Builder $sub): Builder => $sub
                 ->where('provider_id', $provider->id)
                 ->where('status', '!=', Assignment::STATUS_CANCELLED))
             ->with('subject')
-            ->get()
+            ->get();
+
+        // Each event title is "<patient name> — <status>", so the fetch discloses every patient
+        // on this clinician's calendar.
+        $this->logListedRecords($cases, ['scope' => 'provider_calendar_events']);
+
+        return $cases
             ->map(function (IntakeRequest $intake) use ($today): ?array {
                 $date = $intake->evaluation_date;
 

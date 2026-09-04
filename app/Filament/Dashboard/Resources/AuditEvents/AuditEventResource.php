@@ -59,6 +59,7 @@ class AuditEventResource extends Resource
         'updated' => 'Updated',
         'deleted' => 'Deleted',
         'viewed' => 'Viewed',
+        'listed' => 'Listed',
         'login' => 'Login',
         'logout' => 'Logout',
         'login_failed' => 'Login failed',
@@ -138,6 +139,8 @@ class AuditEventResource extends Resource
                         'created' => 'success',
                         'updated' => 'warning',
                         'viewed' => 'info',
+                        // 'listed' deliberately falls through to gray: it is the highest-volume
+                        // action by far and should read as low-signal next to writes and views.
                         default => 'gray',
                     }),
                 TextColumn::make('auditable_type')

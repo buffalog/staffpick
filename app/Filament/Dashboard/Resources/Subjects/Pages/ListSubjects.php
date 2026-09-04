@@ -2,12 +2,15 @@
 
 namespace App\Filament\Dashboard\Resources\Subjects\Pages;
 
+use App\Filament\Concerns\LogsTableRecordList;
 use App\Filament\Dashboard\Resources\Subjects\SubjectResource;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 
 class ListSubjects extends ListRecords
 {
+    use LogsTableRecordList;
+
     protected static string $resource = SubjectResource::class;
 
     protected function getHeaderActions(): array

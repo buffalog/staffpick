@@ -2,6 +2,7 @@
 
 namespace App\Filament\Dashboard\Resources\IntakeRequests\Pages;
 
+use App\Filament\Concerns\LogsTableRecordList;
 use App\Filament\Dashboard\Resources\IntakeRequests\Concerns\AssignsMatchedProviders;
 use App\Filament\Dashboard\Resources\IntakeRequests\IntakeRequestResource;
 use App\Filament\Dashboard\Resources\IntakeRequests\Tables\IntakeRequestsTable;
@@ -18,6 +19,7 @@ use Illuminate\Database\Eloquent\Builder;
 class ListIntakeRequests extends ListRecords
 {
     use AssignsMatchedProviders;
+    use LogsTableRecordList;
 
     protected static string $resource = IntakeRequestResource::class;
 

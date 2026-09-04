@@ -3,6 +3,7 @@
 namespace App\Filament\Dashboard\Pages;
 
 use App\Constants\TenancyPermissionConstants;
+use App\Filament\Concerns\LogsRecordList;
 use App\Filament\Dashboard\Resources\IntakeRequests\IntakeRequestResource;
 use App\Filament\Dashboard\Resources\Providers\ProviderResource;
 use App\Filament\Dashboard\Resources\ReferralSources\ReferralSourceResource;
@@ -24,6 +25,8 @@ use Illuminate\Support\Collection;
  */
 class Dashboard extends BaseDashboard
 {
+    use LogsRecordList;
+
     /** Dispatch-queue statuses (per the dashboard spec). */
     public const PENDING = ['unmatched', 'match_sent', 'escalated'];
 
@@ -133,10 +136,18 @@ class Dashboard extends BaseDashboard
 
     public function oldestPending(): ?IntakeRequest
     {
-        return $this->scoped(self::PENDING)
+        $oldest = $this->scoped(self::PENDING)
             ->with(['subject', 'discipline', 'referralSource'])
             ->orderBy('created_at')
             ->first();
+
+        // staff-dashboard.blade.php:16 prints this patient's surname in the alert banner. One
+        // patient is a smaller disclosure than a full list, not a different kind of one.
+        if ($oldest !== null) {
+            $this->logListedRecords([$oldest], ['scope' => 'oldest_pending_banner']);
+        }
+
+        return $oldest;
     }
 
     public function daysWaiting(?IntakeRequest $intake): int

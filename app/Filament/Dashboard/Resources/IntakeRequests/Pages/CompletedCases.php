@@ -2,6 +2,7 @@
 
 namespace App\Filament\Dashboard\Resources\IntakeRequests\Pages;
 
+use App\Filament\Concerns\LogsTableRecordList;
 use App\Filament\Dashboard\Resources\IntakeRequests\IntakeRequestResource;
 use App\Filament\Dashboard\Resources\IntakeRequests\Tables\IntakeRequestsTable;
 use App\Filament\Dashboard\Support\HelpHeaderAction;
@@ -15,6 +16,8 @@ use Illuminate\Database\Eloquent\Builder;
  */
 class CompletedCases extends ListRecords
 {
+    use LogsTableRecordList;
+
     protected static string $resource = IntakeRequestResource::class;
 
     // 'finished' was listed here until now. It belonged to the pre-2026-06-25 vocabulary and
